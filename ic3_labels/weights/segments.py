@@ -212,6 +212,7 @@ def WeightEvents(tray, name,
                  dataset_n_events_per_run,
                  dataset_number,
                  key='weights',
+                 add_mese_weights=False,
                  check_n_files=True):
     """Calculate weights and add to frame
 
@@ -233,6 +234,9 @@ def WeightEvents(tray, name,
         Corsika dataset number.
     key : str
         Defines the key to which the weight dictionary will be booked.
+    add_mese_weights : bool, optional
+        If true, weights used for MESE 7yr cascade paper will be added.
+        (As well as an additional filtering step)
     check_n_files : bool, optional
         If true, check if provided n_files argument seems reasonable.
 
@@ -291,7 +295,7 @@ def WeightEvents(tray, name,
                     key='{}_{}'.format(key, dataset_type),
                     )
 
-    if dataset_type in ['muongun', 'nugen']:
+    if add_mese_weights and dataset_type in ['muongun', 'nugen']:
         tray.AddModule(MESEWeights, 'MESEWeights',
                        DatasetType=dataset_type,
                        DatasetNFiles=dataset_n_files,

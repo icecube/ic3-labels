@@ -5,6 +5,7 @@ from __future__ import print_function, division
 from icecube import dataclasses
 from icecube import NewNuFlux
 from icecube import AtmosphericSelfVeto
+from icecube.icetray.i3logging import log_info, log_warn
 
 from ic3_labels.labels.utils import muon as mu_utils
 
@@ -236,7 +237,7 @@ class MESEWeights(icetray.I3ConditionalModule):
                                                                     *veto_args)
 
             else:
-                print('WARNING: is_hese does not exist. Using MESE veto')
+                log_warn('WARNING: is_hese does not exist. Using MESE veto')
                 mese_dict['veto_conv'] = self.honda_veto_mese(*veto_args)
                 mese_dict['veto_prompt'] = self.honda_veto_mese(*veto_args)
 
@@ -279,7 +280,7 @@ class MESEWeights(icetray.I3ConditionalModule):
                 uniq_mask = np.r_[True, np.diff(mjd) != 0]
             mese_dict['passed_final_track_cut'] = track_mask & uniq_mask
         except Exception as e:
-            # print(e)
+            # log_warn(e)
             pass
         # -----------------------------------------------------
 
