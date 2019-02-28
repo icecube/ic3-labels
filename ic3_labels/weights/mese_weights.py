@@ -274,7 +274,7 @@ class MESEWeights(icetray.I3ConditionalModule):
             track_mask = data_dict['is_cascade_reco'] | \
                 ~((np.cos(TrackFit_zenith) > 0.3) & (energy_millipede < 10e3))
 
-            if dataset_type is in ['muongun', 'nugen']:
+            if dataset_type in ['muongun', 'nugen']:
                 uniq_mask = np.r_[True, np.diff(energy_true) != 0]
             else:
                 uniq_mask = np.r_[True, np.diff(mjd) != 0]
