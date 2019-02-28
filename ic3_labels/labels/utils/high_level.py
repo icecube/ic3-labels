@@ -801,7 +801,7 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0):
                 print('InteractionType: {!r}'.format(
                                 frame['I3MCWeightDict']['InteractionType']))
 
-    elif is_muon(primary):
+    elif mu_utils.is_muon(primary):
         # -----------------------------
         # muon primary: MuonGun dataset
         # -----------------------------
