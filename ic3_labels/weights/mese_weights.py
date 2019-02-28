@@ -226,8 +226,8 @@ class MESEWeights(icetray.I3ConditionalModule):
                          1950. - true_depth
                          )
 
-            if 'is_hese' in frame:
-                if frame['is_hese'].value:
+            if 'IsHese' in frame:
+                if frame['IsHese'].value:
                     mese_dict['veto_conv'] = self.honda_veto_hese(*veto_args)
                     mese_dict['veto_prompt'] = self.enberg_veto_hese(
                                                                     *veto_args)
@@ -237,7 +237,7 @@ class MESEWeights(icetray.I3ConditionalModule):
                                                                     *veto_args)
 
             else:
-                log_warn('WARNING: is_hese does not exist. Using MESE veto')
+                log_warn('WARNING: IsHese does not exist. Using MESE veto')
                 mese_dict['veto_conv'] = self.honda_veto_mese(*veto_args)
                 mese_dict['veto_prompt'] = self.honda_veto_mese(*veto_args)
 

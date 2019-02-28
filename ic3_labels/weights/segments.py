@@ -292,7 +292,7 @@ def WeightEvents(tray, name,
                     dataset_type=dataset_type,
                     dataset_n_files=dataset_n_files,
                     generator=generator,
-                    key='{}_{}'.format(key, dataset_type),
+                    key=key,
                     )
 
     if add_mese_weights and dataset_type in ['muongun', 'nugen']:
