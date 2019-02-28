@@ -15,7 +15,8 @@ class MCLabelsBase(icetray.I3ConditionalModule):
     """
 
     def __init__(self, context):
-        super(MCLabelsBase, self).__init__(self, context)
+        # super(MCLabelsBase, self).__init__(self, context)
+        icetray.I3ConditionalModule.__init__(self, context)
         self.AddParameter("PulseMapString", "Name of pulse map to use.",
                           'InIcePulses')
         self.AddParameter("PrimaryKey", "Name of the primary.", 'MCPrimary')
