@@ -282,7 +282,7 @@ def WeightEvents(tray, name,
             'n_files': dataset_n_files,
             'n_events_per_run': dataset_n_events_per_run,
         }
-        frame[frame_key] = dataclasses.I3MapStringDouble(meta_data)
+        frame[frame_key] = dataclasses.I3MapStringInt(meta_data)
         return True
     tray.AddModule(add_meta_data, 'add_meta_data')
 
