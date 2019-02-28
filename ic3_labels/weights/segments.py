@@ -7,6 +7,7 @@ from icecube.weighting import get_weighted_primary
 from icecube import icetray, dataclasses
 from icecube import MuonGun
 from icecube.icetray import I3Units
+from icecube.icetray.i3logging import log_info, log_warn
 
 from collections import Iterable
 from copy import deepcopy
@@ -54,6 +55,9 @@ def generate_generator(outpath, dataset_number, n_files):
 
 
 def calc_weights(frame, fluxes, flux_names, n_files, generator, key):
+    if 'MCPrimary' not in frame:
+        log_warn('MCPrimary not found in frame. Skipping Frame')
+        return True
     weight_dict = {}
     primary = frame['MCPrimary']
     energy = primary.energy
