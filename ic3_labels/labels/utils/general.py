@@ -8,7 +8,7 @@ from icecube import dataclasses, MuonGun, simclasses
 from icecube.phys_services import I3Calculator
 
 from ic3_labels.labels.utils import geometry
-from ic3_labels.labels.cascade import get_cascade_energy_deposited
+from ic3_labels.labels.utils.cascade import get_cascade_energy_deposited
 from ic3_labels.labels.utils.muon import get_muon_energy_deposited
 
 
