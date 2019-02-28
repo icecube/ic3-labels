@@ -11,7 +11,96 @@ from ic3_labels.labels.utils import geometry
 from ic3_labels.labels.utils import general
 from ic3_labels.labels.utils import muon as mu_utils
 from ic3_labels.labels.utils.cascade import get_cascade_of_primary_nu
+from ic3_labels.labels.utils.cascade import get_cascade_energy_deposited
 from ic3_labels.labels.utils.neutrino import get_interaction_neutrino
+from ic3_labels.labels.utils.muon import get_muon_energy_deposited
+
+
+def get_energy_deposited(frame, convex_hull, particle):
+    '''Function to get the total energy a particle deposited in the
+    volume defined by the convex hull.
+
+    Parameters
+    ----------
+    frame : current frame
+        needed to retrieve MMCTrackList and I3MCTree
+
+    convex_hull : scipy.spatial.ConvexHull
+        defining the desired convex volume
+
+    particle : I3Particle
+        Particle.
+        (Particle can be of any type: Muon, Cascade, Neutrino...)
+
+    Returns
+    -------
+    energy : float
+        Deposited Energy.
+    '''
+
+    raise NotImplementedError
+
+
+def get_energy_deposited_including_daughters(frame,
+                                             convex_hull,
+                                             particle,
+                                             muongun_primary_neutrino_id=None,
+                                             ):
+    '''Function to get the total energy a particle or any of its
+    daughters deposited in the volume defined by the convex hull.
+    Assumes that Cascades lose all of their energy in the convex
+    hull if their vetex is in the hull. Otherwise the energy
+    deposited by a cascade will be 0.
+    (naive: There is possibly a better solution to this)
+
+    Parameters
+    ----------
+    frame : current frame
+        needed to retrieve MMCTrackList and I3MCTree
+
+    convex_hull : scipy.spatial.ConvexHull
+        defining the desired convex volume
+
+    particle : I3Particle
+        Particle.
+        (Particle can be of any type: Muon, Cascade, Neutrino...)
+
+    muongun_primary_neutrino_id : I3ParticleID
+        In case of a MuonGun dataset, the primary neutrino has
+        an unknown type and a pdg_encoding of 0.
+        Therefore, the I3ParticleID of the primary needs to
+        be passed along.
+
+    Returns
+    -------
+    energy : float
+        Accumulated deposited Energy of the mother particle and
+        all of the daughters.
+    '''
+    energy_loss = 0
+    # Calculate EnergyLoss of current particle
+    if particle.is_cascade:
+        # cascade
+        energy_loss = get_cascade_energy_deposited(frame, convex_hull,
+                                                   particle)
+    elif particle.is_neutrino \
+            or particle.id == muongun_primary_neutrino_id:  # MuonGunFix
+        # neutrinos
+        for daughter in frame['I3MCTree'].get_daughters(particle):
+            energy_loss += get_energy_deposited_including_daughters(
+                                                frame, convex_hull, daughter)
+    elif particle.pdg_encoding in (13, -13):  # CC [Muon +/-]
+        energy_loss = get_muon_energy_deposited(frame, convex_hull, particle)
+
+    # sanity Checks
+    else:
+        raise ValueError('Particle of type {} was not handled.'.format(
+                                                                particle.type))
+    assert energy_loss >= 0, 'Energy deposited is negativ'
+    assert (energy_loss <= particle.energy + 1e-8 or
+            particle.id == muongun_primary_neutrino_id), \
+        'Deposited E is higher than total E'  # MuonGunFix
+    return energy_loss
 
 
 def get_muon_entry_info(frame, muon, convex_hull):
