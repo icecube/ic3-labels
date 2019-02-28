@@ -5,7 +5,7 @@
 from __future__ import print_function, division
 
 from icecube import dataclasses
-from IceCube import icetray
+from icecube import icetray
 from icecube import NewNuFlux
 from icecube import AtmosphericSelfVeto
 from icecube.icetray.i3logging import log_info, log_warn
