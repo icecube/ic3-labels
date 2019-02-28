@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*
 ''' I3Module Base Class
 '''
 from __future__ import print_function, division

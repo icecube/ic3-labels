@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*
 '''Helper functions for icecube specific labels.
 '''
 from __future__ import print_function, division

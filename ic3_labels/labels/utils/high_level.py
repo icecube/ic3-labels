@@ -1,6 +1,8 @@
 '''Helper functions for icecube specific labels.
 '''
 from __future__ import print_function, division
+#!/usr/bin/env python
+# -*- coding: utf-8 -*
 import numpy as np
 from icecube import dataclasses, MuonGun, simclasses
 from icecube.phys_services import I3Calculator

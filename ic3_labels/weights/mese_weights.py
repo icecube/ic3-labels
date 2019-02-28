@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*
 ''' Functions to compute MESE weights
 '''
 from __future__ import print_function, division
