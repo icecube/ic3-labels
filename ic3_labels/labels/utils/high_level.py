@@ -202,8 +202,11 @@ def get_muon_bundle_information(frame, convex_hull, energy_threshold=100):
     bundle_info['num_muons_at_entry'] = len(energies_at_entry)
     bundle_info['num_muons_at_entry_above_threshold'] = len(
         energies_at_entry[mult_mask])
-    bundle_info['leading_energy_rel_entry'] = np.max(
-        energies_at_entry) / np.sum(energies_at_entry)
+    if len(energies_at_entry) > 0:
+        bundle_info['leading_energy_rel_entry'] = np.max(
+            energies_at_entry) / np.sum(energies_at_entry)
+    else:
+        bundle_info['leading_energy_rel_entry'] = float('NaN')
 
     energies_at_cyl = np.array(energies_at_cyl)
     energies_at_cyl = energies_at_cyl[np.isfinite(energies_at_cyl)]
@@ -212,8 +215,11 @@ def get_muon_bundle_information(frame, convex_hull, energy_threshold=100):
     bundle_info['num_muons_at_cyl_above_threshold'] = len(
         energies_at_cyl[mult_mask])
 
-    bundle_info['leading_energy_rel_cyl'] = np.max(
-        energies_at_cyl) / np.sum(energies_at_cyl)
+    if len(energies_at_cyl) > 0:
+        bundle_info['leading_energy_rel_cyl'] = np.max(
+            energies_at_cyl) / np.sum(energies_at_cyl)
+    else:
+        bundle_info['leading_energy_rel_cyl'] = float('NaN')
 
     bundle_info['bundle_energy_at_entry'] = np.sum(energies_at_entry)
     bundle_info['bundle_energy_at_cyl'] = np.sum(energies_at_cyl)
