@@ -144,6 +144,84 @@ def get_muon_entry_info(frame, muon, convex_hull):
     return entry, time, energy
 
 
+def get_muon_bundle_information(frame, convex_hull, energy_threshold=100):
+    """Calculate muon bundle information:
+
+    Number of muons for certain selections, relative leading muon energy,
+    bundle energy.
+
+    This will calculate all muons in MMCTrackList, e.g. muons created inside
+    the detector will also be considered and counted.
+
+    Parameters
+    ----------
+    frame : I3Frame
+        Current I3Frame needed to retrieve MMCTrackList
+    convex_hull : scipy.spatial.ConvexHull, optional
+        Defines the desired convex volume.
+    energy_threshold : int, optional
+        Energy threshold in GeV at which to count muons.
+        Muons below this threshold will be discarded.
+
+    Returns
+    -------
+    dict
+        A dictionary with the calculated labels.
+    """
+    bundle_info = {}
+
+    energies_at_entry = []
+    energies_at_cyl = []
+    num_muons = 0
+
+    for particle in frame['MMCTrackList']:
+        muon = particle.particle
+        # Check if particle is a muon
+        if not mu_utils.is_muon(muon):
+            continue
+
+        # Determine entrance point into the convex hull
+        initial_point = mu_utils.get_muon_initial_point_inside(
+                                                    frame, muon, convex_hull)
+
+        # Get energy at entry point
+        if initial_point is not None:
+            entry_energy = mu_utils.get_muon_energy_at_position(
+                                                    frame, muon, initial_point)
+        else:
+            entry_energy = 0
+        energies_at_entry.append(entry_energy)
+
+        cyl_energy = particle.Ei
+        energies_at_cyl.append(cyl_energy)
+        num_muons += 1
+
+    energies_at_entry = np.array(energies_at_entry)
+    energies_at_entry = energies_at_entry[np.isfinite(energies_at_entry)]
+    mult_mask = energies_at_entry >= energy_threshold
+    bundle_info['num_muons_at_entry'] = len(energies_at_entry)
+    bundle_info['num_muons_at_entry_above_threshold'] = len(
+        energies_at_entry[mult_mask])
+    bundle_info['leading_energy_rel_entry'] = np.max(
+        energies_at_entry) / np.sum(energies_at_entry)
+
+    energies_at_cyl = np.array(energies_at_cyl)
+    energies_at_cyl = energies_at_cyl[np.isfinite(energies_at_cyl)]
+    mult_mask = energies_at_cyl >= energy_threshold
+    bundle_info['num_muons_at_cyl'] = len(energies_at_cyl)
+    bundle_info['num_muons_at_cyl_above_threshold'] = len(
+        energies_at_cyl[mult_mask])
+
+    bundle_info['leading_energy_rel_cyl'] = np.max(
+        energies_at_cyl) / np.sum(energies_at_cyl)
+
+    bundle_info['bundle_energy_at_entry'] = np.sum(energies_at_entry)
+    bundle_info['bundle_energy_at_cyl'] = np.sum(energies_at_cyl)
+    bundle_info['num_muons'] = num_muons
+
+    return bundle_info
+
+
 def get_muon_information(frame, muon, dom_pos_dict,
                          convex_hull, pulse_map_string='InIcePulses'):
     '''Function to get labels for a muon

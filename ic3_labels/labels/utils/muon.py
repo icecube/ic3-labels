@@ -421,6 +421,55 @@ def get_muon_initial_point_inside(frame, muon, convex_hull):
     return muon.pos + min_ts*muon.dir
 
 
+def is_stopping_muon(muon, convex_hull):
+    ''' Check if the the muon stops within the convex hull.
+
+    If the muon does not hit the convex hull this will return False.
+    This will return True for a starting muon that also stops within the
+    convex hull.
+
+    Parameters
+    ----------
+    muon : I3Particle
+
+    convex_hull : scipy.spatial.ConvexHull
+        defining the desired convex volume
+
+    Returns
+    -------
+    bool
+        Returns true if muon
+    '''
+    v_pos = (muon.pos.x, muon.pos.y, muon.pos.z)
+    v_dir = (muon.dir.x, muon.dir.y, muon.dir.z)
+    intersection_ts = geometry.get_intersections(convex_hull, v_pos, v_dir)
+
+    # muon didn't hit convex_hull
+    if intersection_ts.size == 0:
+        return False
+
+    # muon hit convex_hull:
+    #   Expecting two intersections
+    #   What happens if track is exactly along edge of hull?
+    #   If only one ts: track exactly hit a corner of hull?
+    assert len(intersection_ts) == 2, 'Expected exactly 2 intersections'
+
+    min_ts = min(intersection_ts)
+    max_ts = max(intersection_ts)
+    if min_ts > muon.length + 1e-8:
+        # muon stops before convex hull
+        return False
+    if max_ts < 0:
+        # muon created after the convex hull
+        return False
+    if max_ts > muon.length + 1e-8:
+        # stopping track
+        return True
+    else:
+        # muon exits detector
+        return False
+
+
 def get_muon_exit_point(muon, convex_hull):
     ''' Get point of the muon when it exits
         the convex hull. This is either the

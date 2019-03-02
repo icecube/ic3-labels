@@ -10,6 +10,21 @@ from icecube.phys_services import I3Calculator
 from ic3_labels.labels.utils import geometry
 
 
+def get_num_coincident_events(frame):
+    '''Get Number of coincident events (= number of primaries in I3MCTree).
+
+    Parameters
+    ----------
+    frame : current frame
+        needed to retrieve MMCTrackList, I3MCTree, I3MCPE...
+
+    Returns
+    -------
+    int
+    '''
+    return len(frame['I3MCTree'].get_primaries())
+
+
 def get_ids_of_particle_and_daughters(frame, particle, ids):
     '''Get particle ids of particle and all its daughters.
 

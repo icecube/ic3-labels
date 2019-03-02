@@ -10,6 +10,7 @@ from scipy.spatial import ConvexHull
 from ic3_labels.labels.base_module import MCLabelsBase
 from ic3_labels.labels.utils import high_level as hl
 from ic3_labels.labels.utils import muon as mu_utils
+from ic3_labels.labels.utils import general
 
 
 class MCLabelsDeepLearning(MCLabelsBase):
@@ -73,6 +74,18 @@ class MCLabelsCascades(MCLabelsBase):
 
         # write to frame
         frame.Put(self._output_key, labels)
+
+        self.PushFrame(frame)
+
+
+class MCLabelsCorsikaMultiplicity(MCLabelsBase):
+    def Physics(self, frame):
+        labels = hl.get_muon_bundle_information(frame=frame[self._primary_key],
+                                                convex_hull=self._convex_hull)
+        labels['num_coincident_events'] = general.get_num_coincident_events()
+
+        # write to frame
+        frame.Put(self._output_key, dataclasses.I3MapStringDouble(labels))
 
         self.PushFrame(frame)
 
