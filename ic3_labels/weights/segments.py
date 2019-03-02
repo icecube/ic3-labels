@@ -7,7 +7,6 @@ from icecube.weighting import get_weighted_primary
 from icecube import icetray, dataclasses
 from icecube import MuonGun
 from icecube.icetray import I3Units
-from icecube.icetray.i3logging import log_info, log_warn
 
 from collections import Iterable
 from copy import deepcopy
