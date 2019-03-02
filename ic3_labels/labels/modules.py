@@ -80,7 +80,7 @@ class MCLabelsCascades(MCLabelsBase):
 
 class MCLabelsCorsikaMultiplicity(MCLabelsBase):
     def Physics(self, frame):
-        labels = hl.get_muon_bundle_information(frame=frame[self._primary_key],
+        labels = hl.get_muon_bundle_information(frame=frame,
                                                 convex_hull=self._convex_hull)
         labels['num_coincident_events'] = general.get_num_coincident_events()
 
