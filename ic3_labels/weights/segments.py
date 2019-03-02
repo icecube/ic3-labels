@@ -56,10 +56,6 @@ def generate_generator(outpath, dataset_number, n_files):
 
 def calc_weights(frame, fluxes, flux_names, n_files, generator, key):
 
-    if 'MCPrimary' not in frame:
-        log_warn('MCPrimary not found in frame. Removing Event!')
-        return False
-
     weight_dict = {}
     primary = frame['MCPrimary']
     energy = primary.energy
