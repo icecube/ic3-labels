@@ -85,6 +85,14 @@ class MCLabelsCorsikaMultiplicity(MCLabelsBase):
         labels['num_coincident_events'] = \
             general.get_num_coincident_events(frame)
 
+        primary = frame[self._primary_key]
+        labels['PrimaryEnergy'] = primary.energy
+        labels['PrimaryAzimuth'] = primary.dir.azimuth
+        labels['PrimaryZenith'] = primary.dir.zenith
+        labels['PrimaryDirectionX'] = primary.dir.x
+        labels['PrimaryDirectionY'] = primary.dir.y
+        labels['PrimaryDirectionZ'] = primary.dir.z
+
         # write to frame
         frame.Put(self._output_key, dataclasses.I3MapStringDouble(labels))
 
