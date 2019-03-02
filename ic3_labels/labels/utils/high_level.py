@@ -188,9 +188,7 @@ def get_muon_bundle_information(frame, convex_hull, energy_threshold=100):
         if initial_point is not None:
             entry_energy = mu_utils.get_muon_energy_at_position(
                                                     frame, muon, initial_point)
-        else:
-            entry_energy = 0
-        energies_at_entry.append(entry_energy)
+            energies_at_entry.append(entry_energy)
 
         cyl_energy = particle.Ei
         energies_at_cyl.append(cyl_energy)
