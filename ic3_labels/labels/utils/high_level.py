@@ -144,7 +144,7 @@ def get_muon_entry_info(frame, muon, convex_hull):
     return entry, time, energy
 
 
-def get_muon_bundle_information(frame, convex_hull, energy_threshold=100):
+def get_muon_bundle_information(frame, convex_hull, energy_threshold=20):
     """Calculate muon bundle information:
 
     Number of muons for certain selections, relative leading muon energy,
