@@ -175,11 +175,13 @@ def get_muon_bundle_information(frame, convex_hull, energy_threshold=20):
     energies_at_cyl = []
     num_muons = 0
 
-    for particle in frame['MMCTrackList']:
-        muon = particle.particle
-        # Check if particle is a muon
-        if not mu_utils.is_muon(muon):
-            continue
+    if 'MMCTrackList' in frame:
+        muon_list = [p.particle for p in frame['MMCTrackList']
+                     if mu_utils.is_muon(p)]
+    else:
+        muon_list = [p for p in frame['I3MCTree'] if mu_utils.is_muon(p)]
+
+    for particle in muon_list:
 
         # Determine entrance point into the convex hull
         initial_point = mu_utils.get_muon_initial_point_inside(
