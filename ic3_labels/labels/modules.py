@@ -70,7 +70,8 @@ class MCLabelsCascades(MCLabelsBase):
     def Physics(self, frame):
         labels = hl.get_cascade_labels(frame=frame,
                                        primary=frame[self._primary_key],
-                                       convex_hull=self._convex_hull)
+                                       convex_hull=self._convex_hull,
+                                       extend_boundary=-60)
 
         # write to frame
         frame.Put(self._output_key, labels)

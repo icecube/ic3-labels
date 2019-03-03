@@ -690,16 +690,8 @@ def get_muon_closest_approach_to_center(frame, muon):
         # is either outside of the inice-volume or that the muon
         # is too low energetic to be listed in the frame['MMCTrackList']
 
-        # calculate center pos from muon directly
-        length_to_center = -muon.pos*muon.dir
-        if length_to_center < 0.0:
-            # closest point is before vertex, return vertex
-            return muon.pos
-        elif length_to_center > muon.length:
-            # closest point is after muon end point, return end point
-            return muon.pos + muon.length*muon.dir
-        else:
-            return muon.pos + length_to_center*muon.dir
+        return get_particle_closest_approach_to_position(
+                                        muon, dataclasses.I3Position(0, 0, 0))
 
     assert is_muon(mmc_muon), 'mmc_muon should be a muon'
 
@@ -1046,16 +1038,13 @@ def get_next_muon_daughter_of_nu(frame, particle,
         return None
 
 
-def get_muon_track_length_inside(frame, muon, convex_hull):
+def get_muon_track_length_inside(muon, convex_hull):
     ''' Get the track length of the muon
         inside the convex hull.
         Returns 0 if muon doesn't hit hull.
 
     Parameters
     ----------
-    frame : current frame
-        needed to retrieve MMCTrackList, I3MCTree
-
     muon : I3Particle
 
     convex_hull : scipy.spatial.ConvexHull
@@ -1085,11 +1074,11 @@ def get_muon_track_length_inside(frame, muon, convex_hull):
     max_ts = max(intersection_ts)
     if min_ts <= 0 and max_ts >= 0:
         # starting track
-        return max_ts
+        return min(max_ts, muon.length)
     if max_ts < 0:
         # muon created after the convex hull
         return 0
     if min_ts > muon.length + 1e-8:
         # muon stops before convex hull
         return 0
-    return max_ts - min_ts
+    return min(max_ts, muon.length) - min_ts

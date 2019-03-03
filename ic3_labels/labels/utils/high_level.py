@@ -12,6 +12,7 @@ from ic3_labels.labels.utils import general
 from ic3_labels.labels.utils import muon as mu_utils
 from ic3_labels.labels.utils.cascade import get_cascade_of_primary_nu
 from ic3_labels.labels.utils.cascade import get_cascade_energy_deposited
+from ic3_labels.labels.utils.cascade import get_interaction_extension_length
 from ic3_labels.labels.utils.neutrino import get_interaction_neutrino
 from ic3_labels.labels.utils.muon import get_muon_energy_deposited
 
@@ -708,8 +709,9 @@ def get_labels(frame, convex_hull,
     return labels
 
 
-def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0):
-    """Get cascade labels.
+def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
+                       track_length_threshold=30):
+    """Get general cascade labels.
 
     Parameters
     ----------
@@ -722,13 +724,30 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0):
         Will be used to compute muon entry point for an entering muon.
     extend_boundary : float, optional
         Extend boundary of convex_hull by this distance [in meters].
+    track_length_threshold : int, optional
+        The miminum length (in meter) of a cascade/muon after which it is
+        considered as a track event.
 
     Returns
     -------
     I3MapStringDouble
         Labels for cascade of primary neutrino.
+
+    Raises
+    ------
+    ValueError
+        Description
     """
     labels = dataclasses.I3MapStringDouble()
+
+    labels['num_coincident_events'] = \
+        general.get_num_coincident_events(frame)
+
+    bundle_info = get_muon_bundle_information(frame=frame,
+                                              convex_hull=convex_hull)
+    for k in ['leading_energy_rel_entry', 'num_muons_at_entry',
+              'num_muons_at_entry_above_threshold']:
+        labels[k] = bundle_info[k]
 
     labels['PrimaryEnergy'] = primary.energy
     labels['PrimaryAzimuth'] = primary.dir.azimuth
@@ -751,6 +770,7 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0):
 
     labels['p_entering'] = 0
     labels['p_entering_muon_single'] = 0
+    labels['p_entering_muon_single_stopping'] = 0
     labels['p_entering_muon_bundle'] = 0
 
     labels['p_outside_cascade'] = 0
@@ -802,12 +822,22 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0):
                     visible_energy += d.energy
                 assert len(daughters) > 0, 'Expected at least one daughter!'
 
+                cascade = dataclasses.I3Particle(nu_in_ice)
+                cascade.dir = dataclasses.I3Direction(primary.dir)
+                cascade.pos = dataclasses.I3Position(daughters[0].pos)
+                cascade.time = daughters[0].time
+                cascade.length = get_interaction_extension_length(frame,
+                                                                  nu_in_ice)
+
                 labels['p_outside_cascade'] = 1
-                labels['VertexX'] = daughters[0].pos.x
-                labels['VertexY'] = daughters[0].pos.y
-                labels['VertexZ'] = daughters[0].pos.z
-                labels['VertexTime'] = daughters[0].time
+                labels['VertexX'] = cascade.pos.x
+                labels['VertexY'] = cascade.pos.y
+                labels['VertexZ'] = cascade.pos.z
+                labels['VertexTime'] = cascade.time
                 labels['EnergyVisible'] = visible_energy
+                labels['Length'] = cascade.length
+                labels['LengthInDetector'] = \
+                    mu_utils.get_muon_track_length_inside(cascade, convex_hull)
             else:
                 # ------------------------------
                 # NuMu CC Muon entering detector
@@ -816,11 +846,16 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0):
                                                           convex_hull)
                 labels['p_entering'] = 1
                 labels['p_entering_muon_single'] = 1
+                labels['p_entering_muon_single_stopping'] = \
+                    mu_utils.is_stopping_muon(muon, convex_hull)
                 labels['VertexX'] = entry.x
                 labels['VertexY'] = entry.y
                 labels['VertexZ'] = entry.z
                 labels['VertexTime'] = time
                 labels['EnergyVisible'] = energy
+                labels['Length'] = muon.length
+                labels['LengthInDetector'] = \
+                    mu_utils.get_muon_track_length_inside(muon, convex_hull)
 
         else:
             # --------------------
@@ -831,6 +866,9 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0):
             labels['VertexZ'] = cascade.pos.z
             labels['VertexTime'] = cascade.time
             labels['EnergyVisible'] = cascade.energy
+            labels['Length'] = cascade.length
+            labels['LengthInDetector'] = \
+                mu_utils.get_muon_track_length_inside(cascade, convex_hull)
 
             labels['p_starting'] = 1
 
@@ -893,39 +931,77 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0):
         entry, time, energy = get_muon_entry_info(frame, primary, convex_hull)
         labels['p_entering'] = 1
         labels['p_entering_muon_single'] = 1
+        labels['p_entering_muon_single_stopping'] = \
+            mu_utils.is_stopping_muon(primary, convex_hull)
         labels['VertexX'] = entry.x
         labels['VertexY'] = entry.y
         labels['VertexZ'] = entry.z
         labels['VertexTime'] = time
         labels['EnergyVisible'] = energy
+        labels['Length'] = primary.length
+        labels['LengthInDetector'] = \
+            mu_utils.get_muon_track_length_inside(primary, convex_hull)
 
     else:
         # ---------------------------------------------
         # No neutrino or muon primary: Corsika dataset?
         # ---------------------------------------------
-        '''
-        if single muon:
-            entry, time, energy = get_muon_entry_info(frame, muon, convex_hull)
-            labels['p_entering'] = 1
+        muons = mu_utils.get_muons_inside(frame, convex_hull)
+        if len(muons) == 0:
+            muons = frame['MMCTrackList']
+
+        time_max = None
+        entry_max = None
+        energy_max = 0.
+        for m in muons:
+            if mu_utils.is_muon(m.particle):
+                entry, time, energy = get_muon_entry_info(frame, m.particle,
+                                                          convex_hull)
+                if energy > energy_max:
+                    time_max = time
+                    entry_max = entry
+                    energy_max = energy
+                    muon = m.particle
+
+        labels['p_entering'] = 1
+        labels['VertexX'] = entry_max.pos.x
+        labels['VertexY'] = entry_max.pos.y
+        labels['VertexZ'] = entry_max.pos.z
+        labels['VertexTime'] = time_max
+        labels['EnergyVisible'] = bundle_info['bundle_energy_at_entry']
+        labels['Length'] = muon.length
+        labels['LengthInDetector'] = \
+            mu_utils.get_muon_track_length_inside(muon, convex_hull)
+
+        if bundle_info['num_muons_at_entry_above_threshold'] > 0:
+            bundle_key = 'num_muons_at_entry_above_threshold'
+        elif bundle_info['num_muons_at_entry'] > 0:
+            bundle_key = 'num_muons_at_entry'
+        elif bundle_info['num_muons_at_cyl_above_threshold'] > 0:
+            bundle_key = 'num_muons_at_cyl_above_threshold'
+        elif bundle_info['num_muons_at_cyl'] > 0:
+            bundle_key = 'num_muons_at_cyl'
+        else:
+            raise ValueError('Expected at least one muon!', frame['I3MCTree'])
+
+        if bundle_info[bundle_key] == 1:
             labels['p_entering_muon_single'] = 1
-            labels['VertexX'] = entry.pos.x
-            labels['VertexY'] = entry.pos.y
-            labels['VertexZ'] = entry.pos.z
-            labels['VertexTime'] = time
-            labels['EnergyVisible'] = energy
-        elif muon bundle:
-            muon = get_leading_muon()
-            entry, time, energy = get_muon_entry_info(frame, muon, convex_hull)
-            labels['p_entering'] = 1
+            labels['p_entering_muon_single_stopping'] = \
+                mu_utils.is_stopping_muon(muon, convex_hull)
+        else:
             labels['p_entering_muon_bundle'] = 1
-            labels['VertexX'] = entry.pos.x
-            labels['VertexY'] = entry.pos.y
-            labels['VertexZ'] = entry.pos.z
-            labels['VertexTime'] = time
-            labels['EnergyVisible'] = energy
-        '''
-        raise NotImplementedError('Primary type {!r} is not supported'.format(
-                                                            primary.type))
+
+    # Check if event is track. Definition used here:
+    #   Event is track if at least one muon exists in cylinder and the length
+    #   of the shower/muon is greater than 20m
+    if bundle_info['num_muons_at_cyl'] < 1:
+        labels['p_is_track'] = 0
+    else:
+        if labels['Length'] > track_length_threshold:
+            labels['p_is_track'] = 1
+        else:
+            labels['p_is_track'] = 0
+
     return labels
 
 

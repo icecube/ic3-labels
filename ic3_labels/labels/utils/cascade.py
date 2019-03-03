@@ -4,11 +4,120 @@
 '''
 from __future__ import print_function, division
 import numpy as np
-from icecube import dataclasses, MuonGun, simclasses
-from icecube.phys_services import I3Calculator
+from icecube import dataclasses, simclasses
 
 from ic3_labels.labels.utils import geometry
 from ic3_labels.labels.utils.neutrino import get_interaction_neutrino
+
+
+def get_interaction_extension_length(frame, primary):
+    """Get the extension length of the interaction/cascade of the first
+    interaction of the primary particle.
+
+    Parameters
+    ----------
+    frame : current frame
+        Needed to retrieve I3MCTree
+    primary : I3Particle
+        The particle for which to calculate the extension length of the
+        first interaction.
+
+    Returns
+    -------
+    float
+        The maximum extension length.
+    """
+    tree = frame['I3MCTree']
+    daughters = tree.get_daughters(primary)
+
+    assert len(daughters) >= 2, 'Expected at least 2 daughters'
+
+    vertex = daughters[0].pos
+
+    extension = get_extension_from_vertex(frame, primary, vertex,
+                                          consider_particle_length=False)
+    return (vertex - extension).magnitude
+
+
+def get_interaction_extension_pos(frame, primary):
+    """Get the maximum extension position of the interaction/cascade of the
+    first interaction of the primary particle.
+
+    Parameters
+    ----------
+    frame : current frame
+        Needed to retrieve I3MCTree
+    primary : I3Particle
+        The particle for which to calculate the extension length of the
+        first interaction.
+
+    Returns
+    -------
+    I3Position
+        The position of the maximum extension.
+    """
+    tree = frame['I3MCTree']
+    daughters = tree.get_daughters(primary)
+
+    assert len(daughters) >= 2, 'Expected at least 2 daughters'
+
+    vertex = daughters[0].pos
+
+    return get_extension_from_vertex(frame, primary, vertex,
+                                     consider_particle_length=False)
+
+
+def get_extension_from_vertex(frame, particle, vertex,
+                              consider_particle_length=True):
+    """Get the maximum extension of a particle or any of its daughter particles
+    in regard to the given vertex.
+
+    Helper-function for 'get_interaction_extension'
+
+    Parameters
+    ----------
+    frame : current frame
+        Needed to retrieve I3MCTree
+    particle : I3Particle
+        The particle for which to calculate the maximum extension length.
+        This particle should be one of the daughter particles after the
+        interaction vertex.
+    vertex : I3Position
+        The vertex to which the maximum extension is to be calculated.
+    consider_particle_length : bool, optional
+        If True, consider the length of the particle itself.
+
+    Returns
+    -------
+    I3Position
+        The position of the maximum extension.
+    """
+    tree = frame['I3MCTree']
+    daughters = tree.get_daughters(particle)
+
+    if consider_particle_length:
+        if np.isfinite(particle.length) and particle.length > 0:
+            particle_end_pos = particle.pos + particle.dir * particle.length
+        else:
+            particle_end_pos = particle.pos
+
+        max_distance = (vertex - particle_end_pos).magnitude
+        max_extension = particle_end_pos
+    else:
+        max_distance = 0.
+        max_extension = None
+
+    for d in daughters:
+        extension = get_extension_from_vertex(frame, d, vertex)
+
+        # calculate distance to vertex
+        dist = (vertex - extension).magnitude
+        if dist > max_distance:
+            # found new furthest extension
+            max_distance = dist
+            max_extension = extension
+
+    return max_extension
 
 
 def get_cascade_energy_deposited(frame, convex_hull, cascade):
@@ -116,6 +225,7 @@ def get_cascade_of_primary_nu(frame, primary,
     cascade.dir = dataclasses.I3Direction(primary.dir)
     cascade.pos = dataclasses.I3Position(daughters[0].pos)
     cascade.time = daughters[0].time
+    cascade.length = get_interaction_extension_length(frame, neutrino)
 
     # sum up energies for daughters if not neutrinos
     # tau can immediately decay in neutrinos which carry away energy
