@@ -82,7 +82,7 @@ MEASURED_MODELS = MEASUREMENTS.keys()
 try:
     from icecube import neutrinoflux
 except ImportError:
-    NEUTRINOFLUX_MODELS = None
+    NEUTRINOFLUX_MODELS = []
 else:
     NEUTRINOFLUX_MODELS = [
         ['honda2006_gaisserH3a_elbert_v2_numu', 'conv'],
