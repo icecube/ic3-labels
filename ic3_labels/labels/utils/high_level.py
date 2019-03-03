@@ -187,13 +187,11 @@ def get_muon_bundle_information(frame, convex_hull, energy_threshold=20):
         # Get energy at entry point
         if initial_point is not None:
             # check if it is a starting muon, e.g. if intial point inside
-            # is the same as the vertex
+            # is the same as the vertex (Discard muon in this case)
             if (initial_point - muon.pos).magnitude > 1:
                 entry_energy = mu_utils.get_muon_energy_at_position(
                                                     frame, muon, initial_point)
                 energies_at_entry.append(entry_energy)
-            else:
-                print(muon.pos, initial_point, (initial_point - muon.pos).magnitude)
 
         cyl_energy = particle.Ei
         energies_at_cyl.append(cyl_energy)
