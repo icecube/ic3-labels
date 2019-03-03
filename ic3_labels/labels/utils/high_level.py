@@ -150,8 +150,8 @@ def get_muon_bundle_information(frame, convex_hull, energy_threshold=20):
     Number of muons for certain selections, relative leading muon energy,
     bundle energy.
 
-    This will calculate all muons in MMCTrackList, e.g. muons created inside
-    the detector will also be considered and counted.
+    This will calculate all muons in MMCTrackList for 'cyl', but for 'entry'
+    starting muons will not be considered.
 
     Parameters
     ----------
@@ -186,9 +186,13 @@ def get_muon_bundle_information(frame, convex_hull, energy_threshold=20):
 
         # Get energy at entry point
         if initial_point is not None:
-            entry_energy = mu_utils.get_muon_energy_at_position(
+            # check if it is an entering muon, e.g. if intial point inside
+            # is on the convex hull
+            print(geometry.distance_to_icecube_hull(initial_point))
+            if geometry.distance_to_icecube_hull(initial_point) < 1:
+                entry_energy = mu_utils.get_muon_energy_at_position(
                                                     frame, muon, initial_point)
-            energies_at_entry.append(entry_energy)
+                energies_at_entry.append(entry_energy)
 
         cyl_energy = particle.Ei
         energies_at_cyl.append(cyl_energy)
