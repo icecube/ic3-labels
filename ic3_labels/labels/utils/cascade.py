@@ -30,7 +30,7 @@ def get_interaction_extension_length(frame, primary):
     tree = frame['I3MCTree']
     daughters = tree.get_daughters(primary)
 
-    assert len(daughters) >= 2, 'Expected at least 2 daughters'
+    assert len(daughters) > 0, 'Expected at least 1 daughter'
 
     vertex = daughters[0].pos
 
