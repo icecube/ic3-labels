@@ -297,9 +297,10 @@ def WeightEvents(tray, name,
                     )
 
     if add_mese_weights and dataset_type in ['muongun', 'nugen']:
+        mese_key = '{}_mese'.format(key)
         tray.AddModule(MESEWeights, 'MESEWeights',
                        DatasetType=dataset_type,
                        DatasetNFiles=dataset_n_files,
                        DatasetNEventsPerRun=dataset_n_events_per_run,
-                       OutputKey='{}_mese'.format(key),
+                       OutputKey=mese_key,
                        )
