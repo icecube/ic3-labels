@@ -93,6 +93,7 @@ class MESEWeights(icetray.I3ConditionalModule):
     """
 
     def __init__(self, context):
+        icetray.I3ConditionalModule.__init__(self, context)
         self.AddParameter("DatasetType",
                           "Type of dataset. Must be one of: "
                           "'muongun', 'nugen'")
