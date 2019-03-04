@@ -91,6 +91,10 @@ def atmosphericFlux(
                     neutrinoEnergy[i],
                     np.cos(neutrinoZenith[i]))
             atmflux[i] = conv+prompt
+
+    if len(atmflux) == 1:
+        atmflux = atmflux[0]
+
     return atmflux
 
 
@@ -296,10 +300,6 @@ class MESEWeights(icetray.I3ConditionalModule):
             # log_warn(e)
             pass
         # -----------------------------------------------------
-        for k, item in mese_dict.items():
-            if not isinstance(item, float):
-                print(k, item)
-            mese_dict[k] = float(item)
 
         frame[self._output_key] = dataclasses.I3MapStringDouble(mese_dict)
 
