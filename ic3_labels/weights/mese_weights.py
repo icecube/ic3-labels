@@ -95,10 +95,12 @@ class MESEWeights(icetray.I3ConditionalModule):
     def __init__(self, context):
         self.AddParameter("DatasetType",
                           "Type of dataset. Must be one of: "
-                          "'muongun', 'nugen'")
-        self.AddParameter("DatasetNFiles", "Number of files")
+                          "'muongun', 'nugen'",
+                          None)
+        self.AddParameter("DatasetNFiles", "Number of files", None)
         self.AddParameter("DatasetNEventsPerRun",
-                          "Number of generated events per file")
+                          "Number of generated events per file",
+                           None)
         self.AddParameter("OutputKey", "Save weights to this frame key.",
                           'MESE_weights')
 
