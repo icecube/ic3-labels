@@ -167,7 +167,7 @@ class MESEWeights(icetray.I3ConditionalModule):
         # -------
         # NuGen
         # -------
-        if dataset_type == 'nugen':
+        if self._dataset_type == 'nugen':
             # get oneweight / n_gen
             oneweight = frame['I3MCWeightDict']['OneWeight'].value / self._ngen
             true_type = frame['I3MCWeightDict']['PrimaryNeutrinoType'].value
@@ -253,7 +253,7 @@ class MESEWeights(icetray.I3ConditionalModule):
         # -------
         # MuonGun
         # -------
-        elif dataset_type == 'muongun':
+        elif self._dataset_type == 'muongun':
             # --- Where does magic number of 1.6 come from? MuonMultiplier
             mese_dict['muon_weight'] = \
                 frame['MuonWeight_GaisserH4a'].value * 1.6 / self._ngen
@@ -261,7 +261,7 @@ class MESEWeights(icetray.I3ConditionalModule):
         # -----------------
         # Experimental Data
         # -----------------
-        elif dataset_type == 'data':
+        elif self._dataset_type == 'data':
             mjd = frame['I3EventHeader'].start_time.mod_julian_day_double
 
         # -----------------------------------------------------
@@ -279,7 +279,7 @@ class MESEWeights(icetray.I3ConditionalModule):
             track_mask = data_dict['is_cascade_reco'] | \
                 ~((np.cos(TrackFit_zenith) > 0.3) & (energy_millipede < 10e3))
 
-            if dataset_type in ['muongun', 'nugen']:
+            if self._dataset_type in ['muongun', 'nugen']:
                 uniq_mask = np.r_[True, np.diff(energy_true) != 0]
             else:
                 uniq_mask = np.r_[True, np.diff(mjd) != 0]
