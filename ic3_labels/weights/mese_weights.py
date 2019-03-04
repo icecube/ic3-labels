@@ -291,11 +291,13 @@ class MESEWeights(icetray.I3ConditionalModule):
                 uniq_mask = np.r_[True, np.diff(energy_true) != 0]
             else:
                 uniq_mask = np.r_[True, np.diff(mjd) != 0]
-            mese_dict['passed_final_track_cut'] = float(track_mask & uniq_mask)
+            mese_dict['passed_final_track_cut'] = track_mask & uniq_mask
         except Exception as e:
             # log_warn(e)
             pass
         # -----------------------------------------------------
+        for k, item in mese_dict.items():
+            mese_dict[k] = float(item)
 
         frame[self._output_key] = dataclasses.I3MapStringDouble(mese_dict)
 
