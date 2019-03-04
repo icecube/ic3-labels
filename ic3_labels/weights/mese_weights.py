@@ -169,8 +169,8 @@ class MESEWeights(icetray.I3ConditionalModule):
         # -------
         if self._dataset_type == 'nugen':
             # get oneweight / n_gen
-            oneweight = frame['I3MCWeightDict']['OneWeight'].value / self._ngen
-            true_type = frame['I3MCWeightDict']['PrimaryNeutrinoType'].value
+            oneweight = frame['I3MCWeightDict']['OneWeight'] / self._ngen
+            true_type = frame['I3MCWeightDict']['PrimaryNeutrinoType']
             is_tau = (np.abs(true_type) == 16).all()
 
             # calculate astrophysical weights
