@@ -109,9 +109,9 @@ class MESEWeights(icetray.I3ConditionalModule):
         self._ngen = self._n_events_per_run * self._n_files
         self._output_key = self.GetParameter("OutputKey")
 
-        dataset_type = dataset_type.lower()
+        self._dataset_type = self._dataset_type.lower()
 
-        if dataset_type not in ['muongun', 'nugen']:
+        if self._dataset_type not in ['muongun', 'nugen']:
             raise ValueError('Unkown dataset_type: {!r}'.format(dataset_type))
 
         # get Honda2006
