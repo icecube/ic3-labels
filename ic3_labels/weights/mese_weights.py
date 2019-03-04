@@ -33,7 +33,6 @@ def atmosphericFlux(
     if isinstance(neutrinoEnergy, float):
         neutrinoEnergy = [neutrinoEnergy]
         neutrinoZenith = [neutrinoZenith]
-        neutrinoType = [neutrinoType]
 
     atmflux = np.zeros(len(neutrinoEnergy))
 
