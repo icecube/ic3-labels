@@ -33,19 +33,21 @@ def atmosphericFlux(
     if isinstance(neutrinoEnergy, float):
         neutrinoEnergy = [neutrinoEnergy]
         neutrinoZenith = [neutrinoZenith]
+        neutrinoType = [neutrinoType]
 
+    p_types = [dataclasses.I3Particle.ParticleType(t) for t in neutrinoType]
     atmflux = np.zeros(len(neutrinoEnergy))
 
     badmask = neutrinoEnergy < 10.
     if atmFluxConv is not None:
         conv = atmFluxConv.getFlux(
-            map(dataclasses.I3Particle.ParticleType, neutrinoType),
+            p_types,
             neutrinoEnergy, np.cos(neutrinoZenith))
         conv[badmask] = np.nan
         atmflux += conv
     if atmFluxPrompt is not None:
         prompt = atmFluxPrompt.getFlux(
-            map(dataclasses.I3Particle.ParticleType, neutrinoType),
+            p_types,
             neutrinoEnergy, np.cos(neutrinoZenith))
         prompt[badmask] = np.nan
         atmflux += prompt
