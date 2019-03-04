@@ -53,8 +53,8 @@ def atmosphericFlux(
         atmflux += prompt
     # return atmflux
 
-    if ((not isinstance(neutrinoZenith, np.ndarray))
-            and (not isinstance(neutrinoType, np.ndarray))):
+    if ((isinstance(neutrinoZenith, float))
+            and (isinstance(neutrinoType, str))):
         for i in range(len(neutrinoEnergy)):
             if neutrinoEnergy[i] < 10.:
                 atmflux[i] = np.nan
