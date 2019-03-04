@@ -301,7 +301,7 @@ class MESEWeights(icetray.I3ConditionalModule):
             pass
         # -----------------------------------------------------
         for k, item in mese_dict.items():
-            print(k, item, type(item))
+            mese_dict[k] = float(item)
         frame[self._output_key] = dataclasses.I3MapStringDouble(mese_dict)
 
         self.PushFrame(frame)
