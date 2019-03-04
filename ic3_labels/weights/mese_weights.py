@@ -121,12 +121,12 @@ class MESEWeights(icetray.I3ConditionalModule):
         self.honda.relative_kaon_contribution = .91
         # get self-veto
         self.af = AtmosphericSelfVeto.AnalyticPassingFraction
-        self.honda_veto_hese = af('conventional', veto_threshold=1.25e3)
-        self.honda_veto_mese = af('conventional', veto_threshold=1e2)
+        self.honda_veto_hese = self.af('conventional', veto_threshold=1.25e3)
+        self.honda_veto_mese = self.af('conventional', veto_threshold=1e2)
         # get the sarcevic model for prompt neutrinos
         self.enberg = NewNuFlux.makeFlux("sarcevic_std")
-        self.enberg_veto_hese = af('charm', veto_threshold=1.25e3)
-        self.enberg_veto_mese = af('charm', veto_threshold=1e2)
+        self.enberg_veto_hese = self.af('charm', veto_threshold=1.25e3)
+        self.enberg_veto_mese = self.af('charm', veto_threshold=1e2)
         self.conv_flux_multiplier = 1.07
         self.prompt_flux_multiplier = .2
 
