@@ -194,27 +194,27 @@ class MESEWeights(icetray.I3ConditionalModule):
                         neutrinoZenith=zenith_true,
                         neutrinoType=true_type,
                         atmFluxConv=None,
-                        atmFluxPrompt=None,) * 2. * conv_flux_multiplier
+                        atmFluxPrompt=None,) * 2. * self.conv_flux_multiplier
 
                 mese_dict['weight_prompt'] = oneweight * atmosphericFlux(
                         neutrinoEnergy=energy_true,
                         neutrinoZenith=zenith_true,
                         neutrinoType=true_type,
                         atmFluxConv=None,
-                        atmFluxPrompt=None,) * 2. * prompt_flux_multiplier
+                        atmFluxPrompt=None,) * 2. * self.prompt_flux_multiplier
             else:
                 mese_dict['weight_conv'] = oneweight * atmosphericFlux(
                         neutrinoEnergy=energy_true,
                         neutrinoZenith=zenith_true,
                         neutrinoType=true_type,
                         atmFluxConv=self.honda,
-                        atmFluxPrompt=None,) * 2. * conv_flux_multiplier
+                        atmFluxPrompt=None,) * 2. * self.conv_flux_multiplier
                 mese_dict['weight_prompt'] = oneweight * atmosphericFlux(
-                        neutrinoEnergy=energy_true,
-                        neutrinoZenith=zenith_true,
-                        neutrinoType=true_type,
-                        atmFluxConv=None,
-                        atmFluxPrompt=self.enberg,)*2. * prompt_flux_multiplier
+                    neutrinoEnergy=energy_true,
+                    neutrinoZenith=zenith_true,
+                    neutrinoType=true_type,
+                    atmFluxConv=None,
+                    atmFluxPrompt=self.enberg,)*2.*self.prompt_flux_multiplier
 
             # ---------------------
             # Atmospheric Self Veto
