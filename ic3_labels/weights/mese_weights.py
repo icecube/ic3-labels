@@ -31,9 +31,11 @@ def atmosphericFlux(
     go through the potentially error-prone process of streamlining the code.
     """
     if isinstance(neutrinoEnergy, float):
-        atmflux = 0.
-    else:
-        atmflux = np.zeros(len(neutrinoEnergy))
+        neutrinoEnergy = [neutrinoEnergy]
+        neutrinoZenith = [neutrinoZenith]
+        neutrinoType = [neutrinoType]
+
+    atmflux = np.zeros(len(neutrinoEnergy))
 
     badmask = neutrinoEnergy < 10.
     if atmFluxConv is not None:
