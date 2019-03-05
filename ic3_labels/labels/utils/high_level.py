@@ -749,6 +749,9 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
               'num_muons_at_entry_above_threshold']:
         labels[k] = bundle_info[k]
 
+    if not np.isfinite(labels['leading_energy_rel_entry']):
+        labels['leading_energy_rel_entry'] = 0.
+
     labels['PrimaryEnergy'] = primary.energy
     labels['PrimaryAzimuth'] = primary.dir.azimuth
     labels['PrimaryZenith'] = primary.dir.zenith
