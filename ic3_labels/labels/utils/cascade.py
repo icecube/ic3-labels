@@ -112,7 +112,7 @@ def get_extension_from_vertex(frame, particle, vertex,
 
         # calculate distance to vertex
         dist = (vertex - extension).magnitude
-        if dist > max_distance:
+        if dist >= max_distance:
             # found new furthest extension
             max_distance = dist
             max_extension = extension
