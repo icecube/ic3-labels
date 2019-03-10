@@ -14,6 +14,7 @@ from icecube import AtmosphericSelfVeto
 from icecube.icetray.i3logging import log_info, log_warn
 
 from ic3_labels.labels.utils import muon as mu_utils
+from ic3_labels.labels.utils.cascade import get_cascade_of_primary_nu
 
 
 def atmosphericFlux(
@@ -230,15 +231,20 @@ class MESEWeights(icetray.I3ConditionalModule):
                 muon = mu_utils.get_next_muon_daughter_of_nu(
                                                 frame, frame['MCPrimary'])
                 if muon is None:
-                    print(frame['MCPrimary'])
-                    print(frame['I3MCTree'])
-                entry = mu_utils.get_muon_initial_point_inside(
+                    # no muon exists: cascade
+                    cascade = get_cascade_of_primary_nu(frame,
+                                                        frame['MCPrimary'],
+                                                        convex_hull=None,
+                                                        extend_boundary=500)
+                    true_depth = cascade.pos.z
+                else:
+                    entry = mu_utils.get_muon_initial_point_inside(
                                                 frame, muon, self._convex_hull)
-                if entry is None:
-                    # get closest approach point as entry approximation
-                    entry = mu_utils.get_muon_closest_approach_to_center(frame,
-                                                                         muon)
-                true_depth = entry.z
+                    if entry is None:
+                        # get closest approach point as entry approximation
+                        entry = mu_utils.get_muon_closest_approach_to_center(
+                                                            frame, muon)
+                    true_depth = entry.z
 
             # apply self veto
             veto_args = (true_type, energy_true,
