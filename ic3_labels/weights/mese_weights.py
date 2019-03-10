@@ -275,9 +275,10 @@ class MESEWeights(icetray.I3ConditionalModule):
         # MuonGun
         # -------
         elif self._dataset_type == 'muongun':
-            # --- Where does magic number of 1.6 come from? MuonMultiplier
-            mese_dict['muon_weight'] = \
-                frame['MuonWeight_GaisserH4a'].value * 1.6 / self._ngen
+            if 'MuonWeight_GaisserH4a' in frame:
+                # --- Where does magic number of 1.6 come from? MuonMultiplier
+                mese_dict['muon_weight'] = \
+                    frame['MuonWeight_GaisserH4a'].value * 1.6 / self._ngen
 
         # -----------------
         # Experimental Data
