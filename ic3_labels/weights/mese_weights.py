@@ -229,6 +229,9 @@ class MESEWeights(icetray.I3ConditionalModule):
             else:
                 muon = mu_utils.get_next_muon_daughter_of_nu(
                                                 frame, frame['MCPrimary'])
+                if muon is None:
+                    print(frame['MCPrimary'])
+                    print(frame['I3MCTree'])
                 entry = mu_utils.get_muon_initial_point_inside(
                                                 frame, muon, self._convex_hull)
                 if entry is None:
