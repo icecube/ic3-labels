@@ -228,7 +228,7 @@ class MESEWeights(icetray.I3ConditionalModule):
                 true_depth = frame['IntersectionPoint'].z
             else:
                 muon = mu_utils.get_next_muon_daughter_of_nu(
-                                                            frame['MCPrimary'])
+                                                frame, frame['MCPrimary'])
                 entry = mu_utils.get_muon_initial_point_inside(
                                                 frame, muon, self._convex_hull)
                 if entry is None:
