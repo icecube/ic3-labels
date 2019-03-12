@@ -931,19 +931,29 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
         # -----------------------------
         # muon primary: MuonGun dataset
         # -----------------------------
-        entry, time, energy = get_muon_entry_info(frame, primary, convex_hull)
+        muon = primary
+        if len(frame['I3MCTree']) > 1:
+            daughter = frame['I3MCTree'][1]
+            if mu_utils.is_muon(daughter) and \
+                ((daughter.id == primary.id) and
+                 (daughter.dir == primary.dir) and
+                 (daughter.pos == primary.pos) and
+                 (daughter.energy == primary.energy)):
+                    muon = daughter
+
+        entry, time, energy = get_muon_entry_info(frame, muon, convex_hull)
         labels['p_entering'] = 1
         labels['p_entering_muon_single'] = 1
         labels['p_entering_muon_single_stopping'] = \
-            mu_utils.is_stopping_muon(primary, convex_hull)
+            mu_utils.is_stopping_muon(muon, convex_hull)
         labels['VertexX'] = entry.x
         labels['VertexY'] = entry.y
         labels['VertexZ'] = entry.z
         labels['VertexTime'] = time
         labels['EnergyVisible'] = energy
-        labels['Length'] = primary.length
+        labels['Length'] = muon.length
         labels['LengthInDetector'] = \
-            mu_utils.get_muon_track_length_inside(primary, convex_hull)
+            mu_utils.get_muon_track_length_inside(muon, convex_hull)
 
     else:
         # ---------------------------------------------
