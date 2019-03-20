@@ -191,18 +191,18 @@ def do_the_weighting(tray, name,
                        key=key)
     else:
         # MuonGun
-        tray.AddModule('Rename', 'renaming_mctree',
-                       Keys=['I3MCTree_preMuonProp', 'I3MCTree'],
-                       If=lambda frame: not frame.Has('I3MCTree'))
+        # tray.AddModule('Rename', 'renaming_mctree',
+        #                Keys=['I3MCTree_preMuonProp', 'I3MCTree'],
+        #                If=lambda frame: not frame.Has('I3MCTree'))
         tray.AddSegment(calc_weights_muongun,
                         'WeightCalc',
                         fluxes=fluxes,
                         flux_names=flux_names,
                         generator=generator,
                         key=key)
-        tray.AddModule('Rename', 'revert_renaming_mctree',
-                       Keys=['I3MCTree', 'I3MCTree_preMuonProp'],
-                       If=lambda frame: not frame.Has('I3MCTree_preMuonProp'))
+        # tray.AddModule('Rename', 'revert_renaming_mctree',
+        #                Keys=['I3MCTree', 'I3MCTree_preMuonProp'],
+        #                If=lambda f: not f.Has('I3MCTree_preMuonProp'))
 
 
 @icetray.traysegment
