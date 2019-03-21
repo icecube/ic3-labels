@@ -235,7 +235,7 @@ class MESEWeights(icetray.I3ConditionalModule):
                     cascade = get_cascade_of_primary_nu(frame,
                                                         frame['MCPrimary'],
                                                         convex_hull=None,
-                                                        extend_boundary=500)
+                                                        extend_boundary=800)
                     true_depth = cascade.pos.z
                 else:
                     entry = mu_utils.get_muon_initial_point_inside(
