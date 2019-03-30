@@ -19,12 +19,14 @@ class MCLabelsDeepLearning(MCLabelsBase):
     """
 
     def __init__(self, context):
-        super(MCLabelsDeepLearning, self).__init__(self, context)
+        # super(MCLabelsDeepLearning, self).__init__(self, context)
+        MCLabelsBase.__init__(self, context)
         self.AddParameter("IsMuonGun",
                           "Indicate whether this is a MuonGun dataset.", False)
 
     def Configure(self):
-        super(MCLabelsDeepLearning, self).Configure(self)
+        # super(MCLabelsDeepLearning, self).Configure(self)
+        MCLabelsBase.Configure(self)
         self._is_muongun = self.GetParameter("IsMuonGun")
 
     def Physics(self, frame):
@@ -76,7 +78,8 @@ class MCLabelsCascades(MCLabelsBase):
                           0)
 
     def Configure(self):
-        super(MCLabelsCascades, self).Configure(self)
+        # super(MCLabelsCascades, self).Configure(self)
+        MCLabelsBase.Configure(self)
         self._extend_boundary = self.GetParameter("ExtendBoundary")
 
     def Physics(self, frame):
