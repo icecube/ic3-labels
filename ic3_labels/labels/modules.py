@@ -67,11 +67,22 @@ class MCLabelsCascadeParameters(MCLabelsBase):
 
 
 class MCLabelsCascades(MCLabelsBase):
+
+    def __init__(self, context):
+        super(MCLabelsCascades, self).__init__(self, context)
+        self.AddParameter("ExtendBoundary",
+                          "Extend boundary of convex hull [in meters].",
+                          0)
+
+    def Configure(self):
+        super(MCLabelsCascades, self).Configure(self)
+        self._extend_boundary = self.GetParameter("ExtendBoundary")
+
     def Physics(self, frame):
         labels = hl.get_cascade_labels(frame=frame,
                                        primary=frame[self._primary_key],
                                        convex_hull=self._convex_hull,
-                                       extend_boundary=-60)
+                                       extend_boundary=self._extend_boundary)
 
         # write to frame
         frame.Put(self._output_key, labels)
