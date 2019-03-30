@@ -69,7 +69,8 @@ class MCLabelsCascadeParameters(MCLabelsBase):
 class MCLabelsCascades(MCLabelsBase):
 
     def __init__(self, context):
-        super(MCLabelsCascades, self).__init__(self, context)
+        # super(MCLabelsCascades, self).__init__(self, context)
+        MCLabelsBase.__init__(self, context)
         self.AddParameter("ExtendBoundary",
                           "Extend boundary of convex hull [in meters].",
                           0)
