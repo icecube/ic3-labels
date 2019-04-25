@@ -15,7 +15,11 @@ import math
 import numpy as np
 
 import os
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except ModuleNotFoundError as e:
+    import pickle
+
 
 from ic3_labels.weights import fluxes_corsika, fluxes_muongun, fluxes_neutrino
 from ic3_labels.weights.mese_weights import MESEWeights
