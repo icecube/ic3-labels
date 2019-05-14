@@ -192,7 +192,8 @@ def get_cascade_of_primary_nu(frame, primary,
         Returns None if no cascade interaction exists inside the convex hull
         Returns the found cascade as an I3Particle.
         The returned I3Particle will have the vertex, direction and total
-        visible energy (EM equivalent) of the cascade.
+        visible energy (EM equivalent) of the cascade. In addition it will
+        have the type of the interaction NEUTRINO.
         The visible energy is defined here as the sum of the EM equivalent
         energies of the  daugther particles, unless these are neutrinos or
         dark particles. Only energies of particles that have 'InIce'
@@ -234,7 +235,7 @@ def get_cascade_of_primary_nu(frame, primary,
     # interaction is inside the convex hull/extension boundary: cascade found!
 
     # get cascade
-    cascade = dataclasses.I3Particle()
+    cascade = dataclasses.I3Particle(neutrino)
     cascade.shape = dataclasses.I3Particle.ParticleShape.Cascade
     cascade.dir = dataclasses.I3Direction(primary.dir)
     cascade.pos = dataclasses.I3Position(daughters[0].pos)
