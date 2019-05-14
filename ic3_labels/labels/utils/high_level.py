@@ -468,7 +468,7 @@ def get_primary_information(frame, primary,
     else:
         # Interaction outside of Detector
         IsStartingTrack = False
-    InDetectorEnergyLoss = general.get_energy_deposited_including_daughters(
+    InDetectorEnergyLoss = get_energy_deposited_including_daughters(
                     frame, convex_hull, primary,
                     muongun_primary_neutrino_id=muongun_primary_neutrino_id)
 
@@ -807,30 +807,10 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
                 # --------------------
                 # Cascade interaction outside of defined volume
                 # --------------------
-                # get first in ice neutrino
-                nu_in_ice = None
-                for p in mctree:
-                    if p.is_neutrino and p.location_type_string == 'InIce':
-                        nu_in_ice = p
-                        break
-
-                assert nu_in_ice is not None, 'Expected at least one in ice nu'
-
-                daughters = mctree.get_daughters(nu_in_ice)
-                visible_energy = 0.
-                for d in daughters:
-                    if d.is_neutrino:
-                        # skip neutrino: the energy is not visible
-                        continue
-                    visible_energy += d.energy
-                assert len(daughters) > 0, 'Expected at least one daughter!'
-
-                cascade = dataclasses.I3Particle(nu_in_ice)
-                cascade.dir = dataclasses.I3Direction(primary.dir)
-                cascade.pos = dataclasses.I3Position(daughters[0].pos)
-                cascade.time = daughters[0].time
-                cascade.length = get_interaction_extension_length(frame,
-                                                                  nu_in_ice)
+                cascade = get_cascade_of_primary_nu(
+                                                frame, primary,
+                                                convex_hull=None,
+                                                extend_boundary=float('inf'))
 
                 labels['p_outside_cascade'] = 1
                 labels['VertexX'] = cascade.pos.x
@@ -1052,32 +1032,9 @@ def get_cascade_parameters(frame, primary, convex_hull, extend_boundary=200):
             # --------------------
             # Cascade interaction outside of defined volume
             # --------------------
-            mctree = frame['I3MCTree']
-            # get first in ice neutrino
-            nu_in_ice = None
-            for p in mctree:
-                if p.is_neutrino and p.location_type_string == 'InIce':
-                    nu_in_ice = p
-                    break
-
-            assert nu_in_ice is not None, 'Expected at least one in ice nu'
-
-            daughters = mctree.get_daughters(nu_in_ice)
-            visible_energy = 0.
-            for d in daughters:
-                if d.is_neutrino:
-                    # skip neutrino: the energy is not visible
-                    continue
-                visible_energy += d.energy
-            assert len(daughters) > 0, 'Expected at least one daughter!'
-
-            cascade = dataclasses.I3Particle()
-            cascade.pos.x = daughters[0].pos.x
-            cascade.pos.y = daughters[0].pos.y
-            cascade.pos.z = daughters[0].pos.z
-            cascade.time = daughters[0].time
-            cascade.energy = visible_energy
-            cascade.dir = dataclasses.I3Direction(nu_in_ice.dir)
+            cascade = get_cascade_of_primary_nu(frame, primary,
+                                                convex_hull=None,
+                                                extend_boundary=float('inf'))
         else:
             # ------------------------------
             # NuMu CC Muon entering detector

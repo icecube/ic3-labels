@@ -458,4 +458,4 @@ def is_in_detector_bounds(pos, extend_boundary=60):
         True if within detector bounds + extend_boundary
     '''
     distance = distance_to_icecube_hull(pos)
-    return distance - extend_boundary <= 0
+    return distance <= extend_boundary

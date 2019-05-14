@@ -6,6 +6,16 @@ from __future__ import print_function, division
 import numpy as np
 from icecube import dataclasses, simclasses
 
+# Try to import ShowerParameters from I3SimConstants
+try:
+    from icecube.sim_services import I3SimConstants
+    ShowerParameters = I3SimConstants.ShowerParameters
+
+except (ImportError, AttributeError) as e:
+    print("Can not include 'ShowerParameters' from icecube.sim_services")
+    print('Using custom python module instead.')
+    from ic3_labels.labels.utils.shower_parameters import ShowerParameters
+
 from ic3_labels.labels.utils import geometry
 from ic3_labels.labels.utils.neutrino import get_interaction_neutrino
 
@@ -182,10 +192,13 @@ def get_cascade_of_primary_nu(frame, primary,
         Returns None if no cascade interaction exists inside the convex hull
         Returns the found cascade as an I3Particle.
         The returned I3Particle will have the vertex, direction and total
-        visible energy of the cascade and the type of the neutrino that
-        interacted in the detector. The deoposited energy is defined here
-        as the sum of the energies of the daugther particles, unless these are
-        neutrinos.
+        visible energy (EM equivalent) of the cascade.
+        The visible energy is defined here as the sum of the EM equivalent
+        energies of the  daugther particles, unless these are neutrinos or
+        dark particles. Only energies of particles that have 'InIce'
+        location_type are considered.
+        This meas that energies from hadron daughter particles get converted
+        to the EM equivalent energy.
         (Does not account for energy carried away by neutrinos of tau decay)
     """
     neutrino = get_interaction_neutrino(frame, primary,
@@ -218,10 +231,11 @@ def get_cascade_of_primary_nu(frame, primary,
     assert point_inside, 'Expected interaction to be inside defined volume!'
     # -----------------------
 
-    # interaction is inside the convex hull: cascade found!
+    # interaction is inside the convex hull/extension boundary: cascade found!
 
     # get cascade
-    cascade = dataclasses.I3Particle(neutrino)
+    cascade = dataclasses.I3Particle()
+    cascade.shape = dataclasses.I3Particle.ParticleShape.Cascade
     cascade.dir = dataclasses.I3Direction(primary.dir)
     cascade.pos = dataclasses.I3Position(daughters[0].pos)
     cascade.time = daughters[0].time
@@ -232,10 +246,22 @@ def get_cascade_of_primary_nu(frame, primary,
     # that would not be visible, this is currently not accounted for
     deposited_energy = 0.
     for d in daughters:
+
+        if d.shape == dataclasses.I3Particle.ParticleShape.Dark:
+            # skip dark particles
+            continue
+
         if d.is_neutrino:
             # skip neutrino: the energy is not visible
             continue
-        deposited_energy += d.energy
+
+        if d.location_type != dataclasses.I3Particle.LocationType.InIce:
+            # skip particles that are way outside of the detector volume
+            continue
+
+        # scale energy of daughter particle to EM equivalent
+        shower_params = ShowerParameters(d.type, d.energy)
+        deposited_energy += d.energy * shower_params.emScale
 
     cascade.energy = deposited_energy
     return cascade
