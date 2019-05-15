@@ -818,7 +818,7 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
                 labels['VertexY'] = cascade.pos.y
                 labels['VertexZ'] = cascade.pos.z
                 labels['VertexTime'] = cascade.time
-                labels['EnergyVisible'] = visible_energy
+                labels['EnergyVisible'] = cascade.energy
                 labels['Length'] = cascade.length
                 labels['LengthInDetector'] = \
                     mu_utils.get_muon_track_length_inside(cascade, convex_hull)
