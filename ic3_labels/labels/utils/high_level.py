@@ -13,8 +13,96 @@ from ic3_labels.labels.utils import muon as mu_utils
 from ic3_labels.labels.utils.cascade import get_cascade_of_primary_nu
 from ic3_labels.labels.utils.cascade import get_cascade_energy_deposited
 from ic3_labels.labels.utils.cascade import get_interaction_extension_length
+from ic3_labels.labels.utils.cascade import get_cascade_em_equivalent
 from ic3_labels.labels.utils.neutrino import get_interaction_neutrino
-from ic3_labels.labels.utils.muon import get_muon_energy_deposited
+
+
+def get_total_deposited_energy(frame, convex_hull=None, extend_boundary=None):
+    """Get total deposited energy in an event.
+
+    Traverses the I3MCTree and collects energies of particles.
+    The particles are handled in the following:
+
+        dark particles: ignore
+        particles not InIce or in convex hull (if provided): ignore
+        neutrinos: ignore
+        taus and muons: ignore
+            --> energy losses and decay products are collected
+            --> ionisation energy losses are disregarded
+            --> low energy muons created in cascades are disregarded
+        electron, hadrons, ...: collect EM equivalent energy
+
+    Note: the InIce volume is rather large. To provide a more stringent
+    defintion of the detector volume, a convex hull or a value to
+    extend_boundary can be provided.
+
+    Parameters
+    ----------
+    frame : I3Frame
+        Current I3Frame.
+    convex_hull : scipy.spatial.ConvexHull or None, optional
+        Defines the desired convex volume to check whether an energy deposit
+        was inside the detector volume.
+        This option can only be used if extend_boundary is None.
+    extend_boundary : float, optional
+        Use a convex hull around the IceCube detector and extend it by this
+        distance [in meters] to check if an energy deposit was in the detector
+        volume. This option can only be used if convex_hull is None.
+
+    Returns
+    -------
+    double
+        The deposited energy.
+    """
+    assert (convex_hull is None) or (extend_boundary is None), \
+        'Either the convex_hull or extend_boundary can be provided, not both'
+
+    deposited_energy = 0.
+
+    for p in frame["I3MCTree"]:
+
+        # skip dark particles
+        if p.shape == dataclasses.I3Particle.ParticleShape.Dark:
+            continue
+
+        # skip neutrino: the energy is not visible
+        if p.is_neutrino:
+            continue
+
+        # skip muons and taus:
+        # --> energy losses and decay products are still collected
+        # --> ionisation energy losses are disregarded
+        # --> low energy muons created in cascades are disregarded
+        if p.type in [dataclasses.I3Particle.ParticleType.MuPlus,
+                      dataclasses.I3Particle.ParticleType.MuMinus,
+                      dataclasses.I3Particle.ParticleType.TauMinus,
+                      dataclasses.I3Particle.ParticleType.TauPlus]:
+            continue
+
+        # Check if the energy deposit was inside the detector.
+        # Ignore it, if it was outside.
+        if convex_hull is not None:
+            # use convex hull to determine if inside detector
+            if not geometry.point_is_inside(convex_hull,
+                                            (p.pos.x, p.pos.y, p.pos.z)):
+                continue
+
+        elif extend_boundary is not None:
+            # use IceCube boundary + extent_boundary [meters] to check
+            if not geometry.is_in_detector_bounds(
+                                    p.pos, extend_boundary=extend_boundary):
+                continue
+
+        else:
+            # use location type of I3Particle to determine if inside detector
+            if p.location_type != dataclasses.I3Particle.LocationType.InIce:
+                # skip particles that are way outside of the detector volume
+                continue
+
+        # scale energy of cascades to EM equivalent
+        deposited_energy += get_cascade_em_equivalent(p)
+
+    return deposited_energy
 
 
 def get_energy_deposited(frame, convex_hull, particle):
@@ -91,7 +179,8 @@ def get_energy_deposited_including_daughters(frame,
             energy_loss += get_energy_deposited_including_daughters(
                                                 frame, convex_hull, daughter)
     elif particle.pdg_encoding in (13, -13):  # CC [Muon +/-]
-        energy_loss = get_muon_energy_deposited(frame, convex_hull, particle)
+        energy_loss = mu_utils.get_muon_energy_deposited(
+                                                frame, convex_hull, particle)
 
     # sanity Checks
     else:
@@ -752,6 +841,8 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
     if not np.isfinite(labels['leading_energy_rel_entry']):
         labels['leading_energy_rel_entry'] = 0.
 
+    labels['TotalDepositedEnergy'] = get_total_deposited_energy(
+                                                    frame, extend_boundary=300)
     labels['PrimaryEnergy'] = primary.energy
     labels['PrimaryAzimuth'] = primary.dir.azimuth
     labels['PrimaryZenith'] = primary.dir.zenith

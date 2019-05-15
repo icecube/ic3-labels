@@ -130,6 +130,24 @@ def get_extension_from_vertex(frame, particle, vertex,
     return max_extension
 
 
+def get_cascade_em_equivalent(cascade):
+    """Get electro-magnetic (EM) equivalent energy of a given cascade.
+
+    Parameters
+    ----------
+    cascade : I3Particle
+        The cascade.
+
+    Returns
+    -------
+    float
+        The EM equivalent energy of the given cascase.
+    """
+    # scale energy of cascade to EM equivalent
+    em_scale = ShowerParameters(cascade.type, cascade.energy).emScale
+    return cascade.energy * em_scale
+
+
 def get_cascade_energy_deposited(frame, convex_hull, cascade):
     '''Function to get the total energy a cascade deposited
         in the volume defined by the convex hull. Assumes
@@ -159,7 +177,7 @@ def get_cascade_energy_deposited(frame, convex_hull, cascade):
             (cascade.pos.x, cascade.pos.y, cascade.pos.z)
             ):
         # if inside convex hull: add all of the energy
-        return cascade.energy
+        return get_cascade_em_equivalent(cascade)
     else:
         return 0.0
 
@@ -279,8 +297,7 @@ def get_cascade_of_primary_nu(frame, primary,
             deposited_energy += d.energy
         else:
             # scale energy of daughter particle to EM equivalent
-            em_scale = ShowerParameters(d.type, d.energy).emScale
-            deposited_energy += d.energy * em_scale
+            deposited_energy += get_cascade_em_equivalent(d)
 
     cascade.energy = deposited_energy
     return cascade
