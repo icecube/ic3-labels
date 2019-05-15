@@ -197,13 +197,12 @@ def get_cascade_of_primary_nu(frame, primary,
         Returns the found cascade as an I3Particle.
         The returned I3Particle will have the vertex, direction and total
         visible energy (EM equivalent) of the cascade. In addition it will
-        have the type of the interaction NEUTRINO.
-        The visible energy is defined here as the sum of the EM equivalent
-        energies of the  daugther particles, unless these are neutrinos or
-        dark particles. Only energies of particles that have 'InIce'
-        location_type are considered.
-        This meas that energies from hadron daughter particles get converted
-        to the EM equivalent energy.
+        have the type of the interaction NEUTRINO. The visible energy is
+        defined here as the sum of the EM equivalent energies of the  daugther
+        particles, unless these are neutrinos.  Only energies of particles
+        that have 'InIce' location_type are considered. This meas that
+        energies from hadron daughter particles get converted to the EM
+        equivalent energy.
         (Does not account for energy carried away by neutrinos of tau decay)
     """
     neutrino = get_interaction_neutrino(frame, primary,
@@ -252,9 +251,11 @@ def get_cascade_of_primary_nu(frame, primary,
     deposited_energy = 0.
     for d in daughters:
 
-        if d.shape == dataclasses.I3Particle.ParticleShape.Dark:
-            # skip dark particles
-            continue
+        # The check for dark particles is only correct, if all daughter
+        # particles will instead be checked
+        # if d.shape == dataclasses.I3Particle.ParticleShape.Dark:
+        #     # skip dark particles
+        #     continue
 
         if d.is_neutrino:
             # skip neutrino: the energy is not visible
@@ -264,7 +265,7 @@ def get_cascade_of_primary_nu(frame, primary,
             # skip particles that are way outside of the detector volume
             continue
 
-        # Figure out if the energy of the daugher particle needs to be scaled
+        # Figure out if the energy of the daughter particle needs to be scaled
         # to EM equivalent.
         # Note: assuming that all energy of muons and taus can be visible.
         #       This can be invalid especially for the taus which can
@@ -275,11 +276,11 @@ def get_cascade_of_primary_nu(frame, primary,
                       dataclasses.I3Particle.ParticleType.TauMinus,
                       dataclasses.I3Particle.ParticleType.TauPlus,
                       ]:
-            em_scale = 1.
+            deposited_energy += d.energy
         else:
             # scale energy of daughter particle to EM equivalent
             em_scale = ShowerParameters(d.type, d.energy).emScale
-        deposited_energy += d.energy * em_scale
+            deposited_energy += d.energy * em_scale
 
     cascade.energy = deposited_energy
     return cascade
