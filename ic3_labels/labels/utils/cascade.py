@@ -260,9 +260,22 @@ def get_cascade_of_primary_nu(frame, primary,
             # skip particles that are way outside of the detector volume
             continue
 
-        # scale energy of daughter particle to EM equivalent
-        shower_params = ShowerParameters(d.type, d.energy)
-        deposited_energy += d.energy * shower_params.emScale
+        # Figure out if the energy of the daugher particle needs to be scaled
+        # to EM equivalent.
+        # Note: assuming that all energy of muons and taus can be visible.
+        #       This can be invalid especially for the taus which can
+        #       immediately decay to neutrinos, which can carry away
+        #       significant portions of the energy.
+        if d.type in [dataclasses.I3Particle.ParticleType.MuMinus,
+                      dataclasses.I3Particle.ParticleType.MuPlus,
+                      dataclasses.I3Particle.ParticleType.TauMinus,
+                      dataclasses.I3Particle.ParticleType.TauPlus,
+                      ]:
+            em_scale = 1.
+        else:
+            # scale energy of daughter particle to EM equivalent
+            em_scale = ShowerParameters(d.type, d.energy).emScale
+        deposited_energy += d.energy * em_scale
 
     cascade.energy = deposited_energy
     return cascade
