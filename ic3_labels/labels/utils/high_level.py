@@ -17,7 +17,10 @@ from ic3_labels.labels.utils.cascade import get_cascade_em_equivalent
 from ic3_labels.labels.utils.neutrino import get_interaction_neutrino
 
 
-def get_total_deposited_energy(frame, convex_hull=None, extend_boundary=None):
+def get_total_deposited_energy(frame,
+                               convex_hull=None,
+                               extend_boundary=None,
+                               cylinder_ext=None):
     """Get total deposited energy in an event.
 
     Traverses the I3MCTree and collects energies of particles.
@@ -32,9 +35,17 @@ def get_total_deposited_energy(frame, convex_hull=None, extend_boundary=None):
             --> low energy muons created in cascades are disregarded
         electron, hadrons, ...: collect EM equivalent energy
 
-    Note: the InIce volume is rather large. To provide a more stringent
-    defintion of the detector volume, a convex hull or a value to
-    extend_boundary can be provided.
+    Note: the InIce volume is rather large. To provide additional and
+    more stringent defintions of the detector volume, a convex hull, an
+    extended IceCube boundary, or a simple cut on the radius can be applied.
+    In this case, the InIce check will be performed in addition to:
+
+        If convex_hull is not None: check if particle is in convex hull
+        If extend_boundary is not None: check if particle is in extended
+                                        IceCube boundary.
+        If cylinder_ext is not None: check if particle is within the extended
+                                     cylinder (z +- 500 + ext, r=500 + ext)
+
 
     Parameters
     ----------
@@ -43,20 +54,18 @@ def get_total_deposited_energy(frame, convex_hull=None, extend_boundary=None):
     convex_hull : scipy.spatial.ConvexHull or None, optional
         Defines the desired convex volume to check whether an energy deposit
         was inside the detector volume.
-        This option can only be used if extend_boundary is None.
-    extend_boundary : float, optional
+    extend_boundary : float or None, optional
         Use a convex hull around the IceCube detector and extend it by this
         distance [in meters] to check if an energy deposit was in the detector
-        volume. This option can only be used if convex_hull is None.
+    cylinder_ext : float or None, optional
+        If provided, energy losses with a radius in x-y > 500 + cylinder_ext
+        and abs(z) > 500 + cylinder_ext will be discarded.
 
     Returns
     -------
     double
         The deposited energy.
     """
-    assert (convex_hull is None) or (extend_boundary is None), \
-        'Either the convex_hull or extend_boundary can be provided, not both'
-
     deposited_energy = 0.
 
     for p in frame["I3MCTree"]:
@@ -81,22 +90,27 @@ def get_total_deposited_energy(frame, convex_hull=None, extend_boundary=None):
 
         # Check if the energy deposit was inside the detector.
         # Ignore it, if it was outside.
+
+        if p.location_type != dataclasses.I3Particle.LocationType.InIce:
+            # skip particles that are way outside of the detector volume
+            continue
+
+        # use a basic cylinder to determine if particle was inside
+        if cylinder_ext is not None:
+            if (np.abs(p.pos.z) > 500 + cylinder_ext or
+                    np.sqrt(p.pos.x**2 + p.pos.y**2) > 500 + cylinder_ext):
+                continue
+
         if convex_hull is not None:
             # use convex hull to determine if inside detector
             if not geometry.point_is_inside(convex_hull,
                                             (p.pos.x, p.pos.y, p.pos.z)):
                 continue
 
-        elif extend_boundary is not None:
+        if extend_boundary is not None:
             # use IceCube boundary + extent_boundary [meters] to check
             if not geometry.is_in_detector_bounds(
                                     p.pos, extend_boundary=extend_boundary):
-                continue
-
-        else:
-            # use location type of I3Particle to determine if inside detector
-            if p.location_type != dataclasses.I3Particle.LocationType.InIce:
-                # skip particles that are way outside of the detector volume
                 continue
 
         # scale energy of cascades to EM equivalent
