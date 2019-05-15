@@ -810,7 +810,8 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
                 cascade = get_cascade_of_primary_nu(
                                                 frame, primary,
                                                 convex_hull=None,
-                                                extend_boundary=float('inf'))
+                                                extend_boundary=float('inf'),
+                                                sanity_check=False)
 
                 labels['p_outside_cascade'] = 1
                 labels['VertexX'] = cascade.pos.x
@@ -1034,7 +1035,8 @@ def get_cascade_parameters(frame, primary, convex_hull, extend_boundary=200):
             # --------------------
             cascade = get_cascade_of_primary_nu(frame, primary,
                                                 convex_hull=None,
-                                                extend_boundary=float('inf'))
+                                                extend_boundary=float('inf'),
+                                                sanity_check=False)
         else:
             # ------------------------------
             # NuMu CC Muon entering detector

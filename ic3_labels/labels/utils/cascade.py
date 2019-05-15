@@ -166,7 +166,8 @@ def get_cascade_energy_deposited(frame, convex_hull, cascade):
 
 def get_cascade_of_primary_nu(frame, primary,
                               convex_hull=None,
-                              extend_boundary=200):
+                              extend_boundary=200,
+                              sanity_check=True):
     """Get cascade of a primary particle.
 
     The I3MCTree is traversed to find the first interaction inside the convex
@@ -185,6 +186,9 @@ def get_cascade_of_primary_nu(frame, primary,
         Extend boundary of IceCube detector by this distance [in meters].
         This option is only used if convex_hull is None, e.g. if the IceCube
         detector is used.
+    sanity_check : bool, optional
+        If true, the neutrino is obtained by two different methods and cross
+        checked to see if results match.
 
     Returns
     -------
@@ -205,7 +209,7 @@ def get_cascade_of_primary_nu(frame, primary,
     neutrino = get_interaction_neutrino(frame, primary,
                                         convex_hull=convex_hull,
                                         extend_boundary=extend_boundary,
-                                        sanity_check=True)
+                                        sanity_check=sanity_check)
 
     if neutrino is None or not neutrino.is_neutrino:
         return None
