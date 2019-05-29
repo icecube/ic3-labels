@@ -25,7 +25,7 @@ def get_num_coincident_events(frame):
     return len(frame['I3MCTree'].get_primaries())
 
 
-def particle_is_inside(frame, particle, convex_hull):
+def particle_is_inside(particle, convex_hull):
     '''Checks if a particle is inside the convex hull.
     The particle is considered inside if any part of its track is inside
     the convex hull. In the case of point like particles with length zero,
@@ -34,8 +34,6 @@ def particle_is_inside(frame, particle, convex_hull):
 
     Parameters
     ----------
-    frame : current frame
-        needed to retrieve MMCTrackList, I3MCTree
     particle : I3Particle
         The Particle to check.
     convex_hull : scipy.spatial.ConvexHull

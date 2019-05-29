@@ -721,8 +721,7 @@ def is_mmc_particle_inside(frame, mmc_particle, convex_hull):
     '''
     if mmc_particle is None:
         return False
-    return particle_is_inside(frame=frame,
-                              particle=mmc_particle.particle,
+    return particle_is_inside(particle=mmc_particle.particle,
                               convex_hull=convex_hull)
 
 
@@ -748,8 +747,7 @@ def is_muon_inside(frame, muon, convex_hull):
     if not is_muon(muon):
         raise ValueError('Particle:\n{}\nis not a muon.'.format(muon))
 
-    return particle_is_inside(frame=frame,
-                              particle=muon,
+    return particle_is_inside(particle=muon,
                               convex_hull=convex_hull)
 
 
