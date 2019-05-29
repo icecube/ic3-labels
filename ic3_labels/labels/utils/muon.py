@@ -9,6 +9,7 @@ from icecube.phys_services import I3Calculator
 
 from ic3_labels.labels.utils import geometry
 from ic3_labels.labels.utils.general import get_ids_of_particle_and_daughters
+from ic3_labels.labels.utils.general import particle_is_inside
 
 
 def is_muon(particle):
@@ -720,9 +721,9 @@ def is_mmc_particle_inside(frame, mmc_particle, convex_hull):
     '''
     if mmc_particle is None:
         return False
-    point = get_mmc_closest_approach_to_center(frame, mmc_particle)
-    return geometry.point_is_inside(convex_hull,
-                                    (point.x, point.y, point.z))
+    return particle_is_inside(frame=frame,
+                              particle=mmc_particle.particle,
+                              convex_hull=convex_hull)
 
 
 def is_muon_inside(frame, muon, convex_hull):
@@ -747,11 +748,9 @@ def is_muon_inside(frame, muon, convex_hull):
     if not is_muon(muon):
         raise ValueError('Particle:\n{}\nis not a muon.'.format(muon))
 
-    mmc_muon = get_mmc_particle(frame, muon)
-
-    assert is_muon(mmc_muon), 'mmc_muon should be a muon'
-
-    return is_mmc_particle_inside(frame, mmc_muon, convex_hull)
+    return particle_is_inside(frame=frame,
+                              particle=muon,
+                              convex_hull=convex_hull)
 
 
 def get_mmc_particles_inside(frame, convex_hull):

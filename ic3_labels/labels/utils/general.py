@@ -25,6 +25,56 @@ def get_num_coincident_events(frame):
     return len(frame['I3MCTree'].get_primaries())
 
 
+def particle_is_inside(frame, particle, convex_hull):
+    '''Checks if a particle is inside the convex hull.
+    The particle is considered inside if any part of its track is inside
+    the convex hull. In the case of point like particles with length zero,
+    the particle will be considered to be inside if the vertex is inside
+    the convex hull.
+
+    Parameters
+    ----------
+    frame : current frame
+        needed to retrieve MMCTrackList, I3MCTree
+    particle : I3Particle
+        The Particle to check.
+    convex_hull : scipy.spatial.ConvexHull
+        Defines the desired convex volume.
+
+    Returns
+    -------
+    bool
+        True if particle is inside, otherwise False.
+    '''
+    v_pos = (particle.pos.x, particle.pos.y, particle.pos.z)
+    v_dir = (particle.dir.x, particle.dir.y, particle.dir.z)
+    intersection_ts = geometry.get_intersections(convex_hull, v_pos, v_dir)
+
+    # particle didn't hit convex_hull
+    if intersection_ts.size == 0:
+        return None
+
+    # particle hit convex_hull:
+    #   Expecting two intersections
+    #   What happens if track is exactly along edge of hull?
+    #   If only one ts: track exactly hit a corner of hull?
+    assert len(intersection_ts) == 2, 'Expected exactly 2 intersections'
+
+    min_ts = min(intersection_ts)
+    max_ts = max(intersection_ts)
+    if min_ts <= 0 and max_ts >= 0:
+        # starting event
+        return True
+    if max_ts < 0:
+        # particle created after the convex hull
+        return False
+    if min_ts > particle.length + 1e-8:
+        # particle stops before convex hull
+        return False
+    # everything else
+    return True
+
+
 def get_ids_of_particle_and_daughters(frame, particle, ids):
     '''Get particle ids of particle and all its daughters.
 
