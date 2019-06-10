@@ -741,7 +741,8 @@ def get_labels(frame, convex_hull,
 
     # get misc info
     misc_info = get_misc_information(frame, domPosDict, convex_hull,
-                                     pulse_map_string=pulse_map_string)
+                                     pulse_map_string=pulse_map_string,
+                                     mcpe_series_map_name=mcpe_series_map_name)
     labels.update(misc_info)
 
     muons_inside = mu_utils.get_muons_inside(frame, convex_hull)

@@ -29,7 +29,7 @@ def is_muon(particle):
         return False
     if isinstance(particle, simclasses.I3MMCTrack):
         particle = particle.particle
-    return particle.pdg_encoding in (-13, 13)
+    return particle.pdg_encoding in (-13, 13, 0)
 
 
 def get_muon_time_at_distance(frame, muon, distance):
