@@ -453,7 +453,7 @@ def get_muon_information(frame, muon, dom_pos_dict,
 
     # other labels
     InDetectorTrackLength = mu_utils.get_muon_track_length_inside(
-                                                    frame, muon, convex_hull)
+                                                    muon, convex_hull)
     InDetectorEnergyLoss = mu_utils.get_muon_energy_deposited(
                                                     frame, convex_hull, muon)
 
