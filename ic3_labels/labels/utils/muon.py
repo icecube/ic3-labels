@@ -873,6 +873,7 @@ def get_highest_deposit_muon_inside(frame, convex_hull,
 
 def get_most_visible_muon_inside(frame, convex_hull,
                                  pulse_map_string='InIcePulses',
+                                 mcpe_series_map_name='MCPESeriesMap',
                                  max_time_dif=100,
                                  method='noOfPulses'):
     '''Get Muon with the most deposited charge
@@ -945,16 +946,16 @@ def get_most_visible_muon_inside(frame, convex_hull,
             in_ice_pulses = in_ice_pulses.apply(frame)
 
         # get candidate keys
-        valid_keys = set(frame['I3MCPESeriesMap'].keys())
+        valid_keys = set(frame[mcpe_series_map_name].keys())
 
         # find all pulses resulting from particle or daughters of particle
         shared_keys = {key for key in in_ice_pulses.keys()
                        if key in valid_keys}
 
         for key in shared_keys:
-            # mc_pulses = [ p for p in frame['I3MCPESeriesMap'][key]
+            # mc_pulses = [ p for p in frame[mcpe_series_map_name][key]
             #                      if p.ID in ids_set]
-            mc_pulses = frame['I3MCPESeriesMap'][key]
+            mc_pulses = frame[mcpe_series_map_name][key]
             pulses = in_ice_pulses[key]
             if mc_pulses:
                 # speed things up:

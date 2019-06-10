@@ -334,7 +334,8 @@ def get_muon_bundle_information(frame, convex_hull, energy_threshold=20):
 
 
 def get_muon_information(frame, muon, dom_pos_dict,
-                         convex_hull, pulse_map_string='InIcePulses'):
+                         convex_hull, pulse_map_string='InIcePulses',
+                         mcpe_series_map_name='MCPESeriesMap'):
     '''Function to get labels for a muon
 
     Parameters
@@ -409,7 +410,8 @@ def get_muon_information(frame, muon, dom_pos_dict,
 
     # get labels depending on pulse map
     pulse_map = general.get_pulse_map(frame, muon,
-                                      pulse_map_string=pulse_map_string)
+                                      pulse_map_string=pulse_map_string,
+                                      mcpe_series_map_name=mcpe_series_map_name)
 
     NoOfHitDOMs = len(pulse_map.keys())
     NoOfPulses = 0
@@ -502,6 +504,7 @@ def get_muon_information(frame, muon, dom_pos_dict,
 def get_primary_information(frame, primary,
                             dom_pos_dict, convex_hull,
                             pulse_map_string='InIcePulses',
+                            mcpe_series_map_name='MCPESeriesMap',
                             muongun_primary_neutrino_id=None):
     '''Function to get labels for the primary
 
@@ -535,7 +538,8 @@ def get_primary_information(frame, primary,
 
     # get labels depending on pulse map
     pulse_map = general.get_pulse_map(frame, primary,
-                                      pulse_map_string=pulse_map_string)
+                                      pulse_map_string=pulse_map_string,
+                                      mcpe_series_map_name=mcpe_series_map_name)
 
     NoOfHitDOMs = len(pulse_map.keys())
     NoOfPulses = 0
@@ -598,7 +602,8 @@ def get_primary_information(frame, primary,
 
 def get_misc_information(frame,
                          dom_pos_dict, convex_hull,
-                         pulse_map_string='InIcePulses'):
+                         pulse_map_string='InIcePulses',
+                         mcpe_series_map_name='MCPESeriesMap'):
     '''Function to misc labels
 
     Parameters
@@ -641,7 +646,8 @@ def get_misc_information(frame,
     TotalCOG = dataclasses.I3Position(*TotalCOG)
 
     noise_pulses = general.get_noise_pulse_map(
-                                    frame, pulse_map_string=pulse_map_string)
+                                    frame, pulse_map_string=pulse_map_string,
+                                    mcpe_series_map_name=mcpe_series_map_name)
     NoiseNoOfHitDOMs = len(noise_pulses.keys())
     NoiseNoOfPulses = 0
     NoiseTotalCharge = 0
@@ -669,6 +675,7 @@ def get_misc_information(frame,
 def get_labels(frame, convex_hull,
                domPosDict, primary,
                pulse_map_string='InIcePulses',
+               mcpe_series_map_name='MCPESeriesMap',
                is_muongun=False):
     '''Function to get extensive labels for muons, primary and general event
     data.
@@ -749,7 +756,8 @@ def get_labels(frame, convex_hull,
                                                 muons_inside=muons_inside)
     mostVisibleMuon = mu_utils.get_most_visible_muon_inside(
                                             frame, convex_hull,
-                                            pulse_map_string=pulse_map_string)
+                                            pulse_map_string=pulse_map_string,
+                                            mcpe_series_map_name=mcpe_series_map_name)
     primaryMuon = mu_utils.get_next_muon_daughter_of_nu(
                     frame, primary,
                     muongun_primary_neutrino_id=muongun_primary_neutrino_id)

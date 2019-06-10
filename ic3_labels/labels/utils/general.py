@@ -103,6 +103,7 @@ def get_ids_of_particle_and_daughters(frame, particle, ids):
 
 def get_pulse_map(frame, particle,
                   pulse_map_string='InIcePulses',
+                  mcpe_series_map_name='MCPESeriesMap',
                   max_time_dif=100):
     '''Get map of pulses induced by a specific particle.
        Pulses to be used can be specified through
@@ -152,13 +153,13 @@ def get_pulse_map(frame, particle,
             in_ice_pulses = in_ice_pulses.apply(frame)
 
         # get candidate keys
-        valid_keys = set(frame['I3MCPESeriesMap'].keys())
+        valid_keys = set(frame[mcpe_series_map_name].keys())
 
         # find all pulses resulting from particle or daughters of particle
         shared_keys = {key for key in in_ice_pulses.keys()
                        if key in valid_keys}
         for key in shared_keys:
-            mc_pulse_times = [p.time for p in frame['I3MCPESeriesMap'][key]
+            mc_pulse_times = [p.time for p in frame[mcpe_series_map_name][key]
                               if (p.ID.majorID, p.ID.minorID) in ids]
             particle_in_ice_pulses = []
             if mc_pulse_times:
@@ -181,6 +182,7 @@ def get_pulse_map(frame, particle,
 
 def get_noise_pulse_map(frame,
                         pulse_map_string='InIcePulses',
+                        mcpe_series_map_name='MCPESeriesMap',
                         max_time_dif=100):
     '''Get map of pulses induced by noise.
         [This is only a guess on which reco Pulses
@@ -209,7 +211,7 @@ def get_noise_pulse_map(frame,
         empty_id = dataclasses.I3ParticleID()
 
         # get candidate keys
-        valid_keys = set(frame['I3MCPESeriesMap'].keys())
+        valid_keys = set(frame[mcpe_series_map_name].keys())
 
         # get pulses defined by pulse_map_string
         in_ice_pulses = frame[pulse_map_string]
@@ -220,7 +222,7 @@ def get_noise_pulse_map(frame,
         shared_keys = {key for key in in_ice_pulses.keys()
                        if key in valid_keys}
         for key in shared_keys:
-            mc_pulse_times = [p.time for p in frame['I3MCPESeriesMap'][key]
+            mc_pulse_times = [p.time for p in frame[mcpe_series_map_name][key]
                               if p.ID == empty_id]
             noise_in_ice_pulses = []
             if mc_pulse_times:
