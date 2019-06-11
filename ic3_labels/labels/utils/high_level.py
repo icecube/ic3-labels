@@ -446,9 +446,9 @@ def get_muon_information(frame, muon, dom_pos_dict,
     # get exit point labels
     Exit = mu_utils.get_muon_exit_point(muon, convex_hull)
     if Exit:
-        TimeAtEntry = mu_utils.get_muon_time_at_position(muon, Exit)
-        EntryDistanceToDeepCore = geometry.distance_to_deepcore_hull(Exit)
-        EnergyEntry = mu_utils.get_muon_energy_at_position(frame, muon, Exit)
+        TimeAtExit = mu_utils.get_muon_time_at_position(muon, Exit)
+        ExitDistanceToDeepCore = geometry.distance_to_deepcore_hull(Exit)
+        EnergyExit = mu_utils.get_muon_energy_at_position(frame, muon, Exit)
     else:
         # handle missing values
         Exit = dataclasses.I3Position(0, 0, 0)
