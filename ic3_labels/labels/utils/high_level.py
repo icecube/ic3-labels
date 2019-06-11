@@ -231,11 +231,11 @@ def get_muon_entry_info(frame, muon, convex_hull):
         Warning: If 'I3MCTree' does not exist in frame, this
                  will instead return the muon energy
     """
-    entry = mu_utils.get_muon_initial_point_inside(frame, muon, convex_hull)
+    entry = mu_utils.get_muon_initial_point_inside(muon, convex_hull)
     if entry is None:
         # get closest approach point as entry approximation
         entry = mu_utils.get_muon_closest_approach_to_center(frame, muon)
-    time = mu_utils.get_muon_time_at_position(frame, muon, entry)
+    time = mu_utils.get_muon_time_at_position(muon, entry)
 
     # Nancy's MuonGun simulation datasets do not have I3MCTree or MMCTrackList
     # included: use muon energy instead
@@ -285,8 +285,7 @@ def get_muon_bundle_information(frame, convex_hull, energy_threshold=20):
             continue
 
         # Determine entrance point into the convex hull
-        initial_point = mu_utils.get_muon_initial_point_inside(
-                                                    frame, muon, convex_hull)
+        initial_point = mu_utils.get_muon_initial_point_inside(muon, convex_hull)
 
         # Get energy at entry point
         if initial_point is not None:
@@ -432,9 +431,9 @@ def get_muon_information(frame, muon, dom_pos_dict,
     COGDistanceToDeepCore = geometry.distance_to_deepcore_hull(COG)
 
     # get entry point labels
-    Entry = mu_utils.get_muon_initial_point_inside(frame, muon, convex_hull)
+    Entry = mu_utils.get_muon_initial_point_inside(muon, convex_hull)
     if Entry:
-        TimeAtEntry = mu_utils.get_muon_time_at_position(frame, muon, Entry)
+        TimeAtEntry = mu_utils.get_muon_time_at_position(muon, Entry)
         EntryDistanceToDeepCore = geometry.distance_to_deepcore_hull(Entry)
         EnergyEntry = mu_utils.get_muon_energy_at_position(frame, muon, Entry)
     else:
@@ -444,9 +443,22 @@ def get_muon_information(frame, muon, dom_pos_dict,
         EntryDistanceToDeepCore = 0
         EnergyEntry = 0
 
+    # get exit point labels
+    Exit = mu_utils.get_muon_exit_point(muon, convex_hull)
+    if Exit:
+        TimeAtEntry = mu_utils.get_muon_time_at_position(muon, Exit)
+        EntryDistanceToDeepCore = geometry.distance_to_deepcore_hull(Exit)
+        EnergyEntry = mu_utils.get_muon_energy_at_position(frame, muon, Exit)
+    else:
+        # handle missing values
+        Exit = dataclasses.I3Position(0, 0, 0)
+        TimeAtExit = 0
+        ExitDistanceToDeepCore = 0
+        EnergyExit = 0
+
     # get center point labels
     Center = mu_utils.get_muon_closest_approach_to_center(frame, muon)
-    TimeAtCenter = mu_utils.get_muon_time_at_position(frame, muon, Center)
+    TimeAtCenter = mu_utils.get_muon_time_at_position(muon, Center)
     CenterDistanceToBorder = geometry.distance_to_icecube_hull(Center)
     CenterDistanceToDeepCore = geometry.distance_to_deepcore_hull(Center)
     EnergyCenter = mu_utils.get_muon_energy_at_position(frame, muon, Center)
@@ -482,6 +494,13 @@ def get_muon_information(frame, muon, dom_pos_dict,
     info_dict['Centery'] = Center.y
     info_dict['Centerz'] = Center.z
     info_dict['EnergyCenter'] = EnergyCenter
+
+    info_dict['ExitDistanceToDeepCore'] = ExitDistanceToDeepCore
+    info_dict['TimeAtExit'] = TimeAtExit
+    info_dict['Exitx'] = Exit.x
+    info_dict['Exity'] = Exit.y
+    info_dict['Exitz'] = Exit.z
+    info_dict['EnergyExit'] = EnergyExit
 
     info_dict['InDetectorTrackLength'] = InDetectorTrackLength
     info_dict['InDetectorEnergyLoss'] = InDetectorEnergyLoss

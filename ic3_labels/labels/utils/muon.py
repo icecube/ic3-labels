@@ -32,15 +32,13 @@ def is_muon(particle):
     return particle.pdg_encoding in (-13, 13, 0)
 
 
-def get_muon_time_at_distance(frame, muon, distance):
+def get_muon_time_at_distance(muon, distance):
     '''Function to get the time of a muon at a certain
         distance from the muon vertex.
         Assumes speed = c
 
     Parameters
     ----------
-    frame : I3Frame
-        Current frame.
     muon : I3Particle
         Muon.
 
@@ -57,14 +55,12 @@ def get_muon_time_at_distance(frame, muon, distance):
     return muon.time + dtime
 
 
-def get_muon_time_at_position(frame, muon, position):
+def get_muon_time_at_position(muon, position):
     '''Function to get the time of a muon at a certain
         position.
 
     Parameters
     ----------
-    frame : I3Frame
-        Current frame.
     muon : I3Particle
         Muon.
 
@@ -85,7 +81,7 @@ def get_muon_time_at_position(frame, muon, position):
     distance = get_distance_along_track_to_point(muon.pos, muon.dir, position)
     if distance < 0 or np.isnan(distance):
         return float('nan')
-    return get_muon_time_at_distance(frame, muon, distance)
+    return get_muon_time_at_distance(muon, distance)
 
 
 def get_muongun_track(frame, particle_id):
@@ -371,7 +367,7 @@ def get_muon_energy_deposited(frame, convex_hull, muon):
         get_muon_energy_at_distance(frame, muon, max_ts)
 
 
-def get_muon_initial_point_inside(frame, muon, convex_hull):
+def get_muon_initial_point_inside(muon, convex_hull):
     ''' Get initial point of the muon inside
         the convex hull. This is either the
         vertex for a starting muon or the
@@ -380,9 +376,6 @@ def get_muon_initial_point_inside(frame, muon, convex_hull):
 
     Parameters
     ----------
-    frame : current frame
-        needed to retrieve MMCTrackList, I3MCTree
-
     muon : I3Particle
 
     convex_hull : scipy.spatial.ConvexHull
@@ -619,7 +612,7 @@ def get_particle_closest_approach_to_position(particle,
     return closest_position
 
 
-def get_mmc_closest_approach_to_center(frame, mmc_track):
+def get_mmc_closest_approach_to_center(mmc_track):
     ''' Get closest aproach to center (0,0,0)
         of a an I3MMCTrack. Uses MMCTrackList center
         position, but checks, if particle is still on
@@ -628,9 +621,6 @@ def get_mmc_closest_approach_to_center(frame, mmc_track):
 
     Parameters
     ----------
-    frame : current frame
-        needed to retrieve MMCTrackList, I3MCTree
-
     mmc_track : I3MMCTrack
 
     Returns
@@ -696,18 +686,15 @@ def get_muon_closest_approach_to_center(frame, muon):
 
     assert is_muon(mmc_muon), 'mmc_muon should be a muon'
 
-    return get_mmc_closest_approach_to_center(frame, mmc_muon)
+    return get_mmc_closest_approach_to_center(mmc_muon)
 
 
-def is_mmc_particle_inside(frame, mmc_particle, convex_hull):
+def is_mmc_particle_inside(mmc_particle, convex_hull):
     ''' Find out if mmc particle is inside volume
         defined by the convex hull
 
     Parameters
     ----------
-    frame : current frame
-        needed to retrieve MMCTrackList, I3MCTree
-
     mmc_particle : I3MMCTrack
 
     convex_hull : scipy.spatial.ConvexHull
@@ -725,15 +712,12 @@ def is_mmc_particle_inside(frame, mmc_particle, convex_hull):
                               convex_hull=convex_hull)
 
 
-def is_muon_inside(frame, muon, convex_hull):
+def is_muon_inside(muon, convex_hull):
     ''' Find out if muon is insice volume
         defined by the convex hull
 
     Parameters
     ----------
-    frame : current frame
-        needed to retrieve MMCTrackList, I3MCTree
-
     muon : I3Particle
 
     convex_hull : scipy.spatial.ConvexHull
@@ -768,7 +752,7 @@ def get_mmc_particles_inside(frame, convex_hull):
         Particle mmcTracks that are inside
     '''
     mmc_particles_inside = [m for m in frame['MMCTrackList'] if
-                            is_mmc_particle_inside(frame, m, convex_hull)]
+                            is_mmc_particle_inside(m, convex_hull)]
     return mmc_particles_inside
 
 
@@ -789,7 +773,7 @@ def get_muons_inside(frame, convex_hull):
         Muons.
     '''
     muons_inside = [m.particle for m in frame['MMCTrackList'] if
-                    is_mmc_particle_inside(frame, m, convex_hull)
+                    is_mmc_particle_inside(m, convex_hull)
                     and is_muon(m.particle)]
     return muons_inside
 
@@ -826,7 +810,7 @@ def get_most_energetic_muon_inside(frame, convex_hull,
     most_energetic_muon_energy = 0
 
     for m in muons_inside:
-        initial_point = get_muon_initial_point_inside(frame, m, convex_hull)
+        initial_point = get_muon_initial_point_inside(m, convex_hull)
         intial_energy = get_muon_energy_at_position(frame, m, initial_point)
         if intial_energy > most_energetic_muon_energy:
             most_energetic_muon = m
