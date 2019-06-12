@@ -564,10 +564,10 @@ def get_distance_along_track_to_point(vertex, direction, point):
     '''
     distanceX = (point.x - vertex.x) / direction.x
     distanceY = (point.y - vertex.y) / direction.y
-    if not np.allclose(distanceX, distanceY):
+    if not np.allclose(distanceX, distanceY, rtol=1e-1):
         return float('nan')
     distanceZ = (point.z - vertex.z) / direction.z
-    if not np.allclose(distanceX, distanceZ):
+    if not np.allclose(distanceX, distanceZ, rtol=1e-1):
         return float('nan')
     else:
         return distanceX
