@@ -541,7 +541,8 @@ def get_distance_along_track_to_point(vertex, direction, point):
     ''' Get (signed) distance along a track (defined by position
         and direction) to a point. Negativ distance means the
         point is before the vertex.
-        Assumes that point is on the infinite track.
+        Assumes that point is on the infinite track
+        (within ~0.81 degree [rtol=1e-4]).
 
     Parameters
     ----------
@@ -560,14 +561,14 @@ def get_distance_along_track_to_point(vertex, direction, point):
         Distance along track to get to point starting
         from the vertex. Negative value indicates
         the point is before the vertex.
-        Returns nan if point is not on track
+        Returns nan if point is not on track (within ~0.81 degree [rtol=1e-4]).
     '''
     distanceX = (point.x - vertex.x) / direction.x
     distanceY = (point.y - vertex.y) / direction.y
-    if not np.allclose(distanceX, distanceY, rtol=1e-1):
+    if not np.allclose(distanceX, distanceY, rtol=1e-4):
         return float('nan')
     distanceZ = (point.z - vertex.z) / direction.z
-    if not np.allclose(distanceX, distanceZ, rtol=1e-1):
+    if not np.allclose(distanceX, distanceZ, rtol=1e-4):
         return float('nan')
     else:
         return distanceX
