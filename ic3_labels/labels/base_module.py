@@ -19,12 +19,15 @@ class MCLabelsBase(icetray.I3ConditionalModule):
         icetray.I3ConditionalModule.__init__(self, context)
         self.AddParameter("PulseMapString", "Name of pulse map to use.",
                           'InIcePulses')
+        self.AddParameter("MCPESeriesMapName", "Name of MCPE Series map to use.",
+                          'I3MCPESeriesMap')
         self.AddParameter("PrimaryKey", "Name of the primary.", 'MCPrimary')
         self.AddParameter("OutputKey", "Save labels to this frame key.",
                           'LabelsDeepLearning')
 
     def Configure(self):
         self._pulse_map_string = self.GetParameter("PulseMapString")
+        self._mcpe_series_map_name = self.GetParameter("MCPESeriesMapName")
         self._primary_key = self.GetParameter("PrimaryKey")
         self._output_key = self.GetParameter("OutputKey")
 

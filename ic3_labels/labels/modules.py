@@ -35,6 +35,7 @@ class MCLabelsDeepLearning(MCLabelsBase):
                                domPosDict=self._dom_pos_dict,
                                primary=frame[self._primary_key],
                                pulse_map_string=self._pulse_map_string,
+                               mcpe_series_map_name=self._mcpe_series_map_name,
                                is_muongun=self._is_muongun)
 
         # write to frame

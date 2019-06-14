@@ -231,11 +231,11 @@ def get_muon_entry_info(frame, muon, convex_hull):
         Warning: If 'I3MCTree' does not exist in frame, this
                  will instead return the muon energy
     """
-    entry = mu_utils.get_muon_initial_point_inside(frame, muon, convex_hull)
+    entry = mu_utils.get_muon_initial_point_inside(muon, convex_hull)
     if entry is None:
         # get closest approach point as entry approximation
         entry = mu_utils.get_muon_closest_approach_to_center(frame, muon)
-    time = mu_utils.get_muon_time_at_position(frame, muon, entry)
+    time = mu_utils.get_muon_time_at_position(muon, entry)
 
     # Nancy's MuonGun simulation datasets do not have I3MCTree or MMCTrackList
     # included: use muon energy instead
@@ -285,8 +285,7 @@ def get_muon_bundle_information(frame, convex_hull, energy_threshold=20):
             continue
 
         # Determine entrance point into the convex hull
-        initial_point = mu_utils.get_muon_initial_point_inside(
-                                                    frame, muon, convex_hull)
+        initial_point = mu_utils.get_muon_initial_point_inside(muon, convex_hull)
 
         # Get energy at entry point
         if initial_point is not None:
@@ -334,7 +333,8 @@ def get_muon_bundle_information(frame, convex_hull, energy_threshold=20):
 
 
 def get_muon_information(frame, muon, dom_pos_dict,
-                         convex_hull, pulse_map_string='InIcePulses'):
+                         convex_hull, pulse_map_string='InIcePulses',
+                         mcpe_series_map_name='I3MCPESeriesMap'):
     '''Function to get labels for a muon
 
     Parameters
@@ -349,6 +349,11 @@ def get_muon_information(frame, muon, dom_pos_dict,
 
     convex_hull : scipy.spatial.ConvexHull
         defining the desired convex volume
+
+    pulse_map_string : key of pulse map in frame,
+        of which the pulses should be computed for
+
+    mcpe_series_map_name : key of mcpe series map in frame
 
     Returns
     -------
@@ -409,7 +414,8 @@ def get_muon_information(frame, muon, dom_pos_dict,
 
     # get labels depending on pulse map
     pulse_map = general.get_pulse_map(frame, muon,
-                                      pulse_map_string=pulse_map_string)
+                                      pulse_map_string=pulse_map_string,
+                                      mcpe_series_map_name=mcpe_series_map_name)
 
     NoOfHitDOMs = len(pulse_map.keys())
     NoOfPulses = 0
@@ -430,9 +436,9 @@ def get_muon_information(frame, muon, dom_pos_dict,
     COGDistanceToDeepCore = geometry.distance_to_deepcore_hull(COG)
 
     # get entry point labels
-    Entry = mu_utils.get_muon_initial_point_inside(frame, muon, convex_hull)
+    Entry = mu_utils.get_muon_initial_point_inside(muon, convex_hull)
     if Entry:
-        TimeAtEntry = mu_utils.get_muon_time_at_position(frame, muon, Entry)
+        TimeAtEntry = mu_utils.get_muon_time_at_position(muon, Entry)
         EntryDistanceToDeepCore = geometry.distance_to_deepcore_hull(Entry)
         EnergyEntry = mu_utils.get_muon_energy_at_position(frame, muon, Entry)
     else:
@@ -442,16 +448,29 @@ def get_muon_information(frame, muon, dom_pos_dict,
         EntryDistanceToDeepCore = 0
         EnergyEntry = 0
 
+    # get exit point labels
+    Exit = mu_utils.get_muon_exit_point(muon, convex_hull)
+    if Exit:
+        TimeAtExit = mu_utils.get_muon_time_at_position(muon, Exit)
+        ExitDistanceToDeepCore = geometry.distance_to_deepcore_hull(Exit)
+        EnergyExit = mu_utils.get_muon_energy_at_position(frame, muon, Exit)
+    else:
+        # handle missing values
+        Exit = dataclasses.I3Position(0, 0, 0)
+        TimeAtExit = 0
+        ExitDistanceToDeepCore = 0
+        EnergyExit = 0
+
     # get center point labels
     Center = mu_utils.get_muon_closest_approach_to_center(frame, muon)
-    TimeAtCenter = mu_utils.get_muon_time_at_position(frame, muon, Center)
+    TimeAtCenter = mu_utils.get_muon_time_at_position(muon, Center)
     CenterDistanceToBorder = geometry.distance_to_icecube_hull(Center)
     CenterDistanceToDeepCore = geometry.distance_to_deepcore_hull(Center)
     EnergyCenter = mu_utils.get_muon_energy_at_position(frame, muon, Center)
 
     # other labels
     InDetectorTrackLength = mu_utils.get_muon_track_length_inside(
-                                                    frame, muon, convex_hull)
+                                                    muon, convex_hull)
     InDetectorEnergyLoss = mu_utils.get_muon_energy_deposited(
                                                     frame, convex_hull, muon)
 
@@ -481,6 +500,13 @@ def get_muon_information(frame, muon, dom_pos_dict,
     info_dict['Centerz'] = Center.z
     info_dict['EnergyCenter'] = EnergyCenter
 
+    info_dict['ExitDistanceToDeepCore'] = ExitDistanceToDeepCore
+    info_dict['TimeAtExit'] = TimeAtExit
+    info_dict['Exitx'] = Exit.x
+    info_dict['Exity'] = Exit.y
+    info_dict['Exitz'] = Exit.z
+    info_dict['EnergyExit'] = EnergyExit
+
     info_dict['InDetectorTrackLength'] = InDetectorTrackLength
     info_dict['InDetectorEnergyLoss'] = InDetectorEnergyLoss
 
@@ -502,6 +528,7 @@ def get_muon_information(frame, muon, dom_pos_dict,
 def get_primary_information(frame, primary,
                             dom_pos_dict, convex_hull,
                             pulse_map_string='InIcePulses',
+                            mcpe_series_map_name='I3MCPESeriesMap',
                             muongun_primary_neutrino_id=None):
     '''Function to get labels for the primary
 
@@ -520,6 +547,11 @@ def get_primary_information(frame, primary,
     convex_hull : scipy.spatial.ConvexHull
         defining the desired convex volume
 
+    pulse_map_string : key of pulse map in frame,
+        of which the pulses should be computed for
+
+    mcpe_series_map_name : key of mcpe series map in frame
+
     muongun_primary_neutrino_id : I3ParticleID
         In case of a MuonGun dataset, the primary neutrino has
         an unknown type and a pdg_encoding of 0.
@@ -535,7 +567,8 @@ def get_primary_information(frame, primary,
 
     # get labels depending on pulse map
     pulse_map = general.get_pulse_map(frame, primary,
-                                      pulse_map_string=pulse_map_string)
+                                      pulse_map_string=pulse_map_string,
+                                      mcpe_series_map_name=mcpe_series_map_name)
 
     NoOfHitDOMs = len(pulse_map.keys())
     NoOfPulses = 0
@@ -598,7 +631,8 @@ def get_primary_information(frame, primary,
 
 def get_misc_information(frame,
                          dom_pos_dict, convex_hull,
-                         pulse_map_string='InIcePulses'):
+                         pulse_map_string='InIcePulses',
+                         mcpe_series_map_name='I3MCPESeriesMap'):
     '''Function to misc labels
 
     Parameters
@@ -615,6 +649,11 @@ def get_misc_information(frame,
 
     convex_hull : scipy.spatial.ConvexHull
         defining the desired convex volume
+
+    pulse_map_string : key of pulse map in frame,
+        of which the pulses should be computed for
+
+    mcpe_series_map_name : key of mcpe series map in frame
 
     Returns
     -------
@@ -641,7 +680,8 @@ def get_misc_information(frame,
     TotalCOG = dataclasses.I3Position(*TotalCOG)
 
     noise_pulses = general.get_noise_pulse_map(
-                                    frame, pulse_map_string=pulse_map_string)
+                                    frame, pulse_map_string=pulse_map_string,
+                                    mcpe_series_map_name=mcpe_series_map_name)
     NoiseNoOfHitDOMs = len(noise_pulses.keys())
     NoiseNoOfPulses = 0
     NoiseTotalCharge = 0
@@ -669,6 +709,7 @@ def get_misc_information(frame,
 def get_labels(frame, convex_hull,
                domPosDict, primary,
                pulse_map_string='InIcePulses',
+               mcpe_series_map_name='I3MCPESeriesMap',
                is_muongun=False):
     '''Function to get extensive labels for muons, primary and general event
     data.
@@ -690,6 +731,8 @@ def get_labels(frame, convex_hull,
 
     pulse_map_string : key of pulse map in frame,
         of which the mask should be computed for
+
+    mcpe_series_map_name : key of mcpe series map in frame
 
     is_muongun : bool
         In case of a MuonGun dataset, the primary neutrino has
@@ -734,7 +777,8 @@ def get_labels(frame, convex_hull,
 
     # get misc info
     misc_info = get_misc_information(frame, domPosDict, convex_hull,
-                                     pulse_map_string=pulse_map_string)
+                                     pulse_map_string=pulse_map_string,
+                                     mcpe_series_map_name=mcpe_series_map_name)
     labels.update(misc_info)
 
     muons_inside = mu_utils.get_muons_inside(frame, convex_hull)
@@ -749,7 +793,8 @@ def get_labels(frame, convex_hull,
                                                 muons_inside=muons_inside)
     mostVisibleMuon = mu_utils.get_most_visible_muon_inside(
                                             frame, convex_hull,
-                                            pulse_map_string=pulse_map_string)
+                                            pulse_map_string=pulse_map_string,
+                                            mcpe_series_map_name=mcpe_series_map_name)
     primaryMuon = mu_utils.get_next_muon_daughter_of_nu(
                     frame, primary,
                     muongun_primary_neutrino_id=muongun_primary_neutrino_id)
