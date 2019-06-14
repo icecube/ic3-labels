@@ -29,7 +29,7 @@ def is_muon(particle):
         return False
     if isinstance(particle, simclasses.I3MMCTrack):
         particle = particle.particle
-    return particle.pdg_encoding in (-13, 13, 0)
+    return particle.pdg_encoding in (-13, 13)
 
 
 def get_muon_time_at_distance(muon, distance):
@@ -857,7 +857,7 @@ def get_highest_deposit_muon_inside(frame, convex_hull,
 
 def get_most_visible_muon_inside(frame, convex_hull,
                                  pulse_map_string='InIcePulses',
-                                 mcpe_series_map_name='MCPESeriesMap',
+                                 mcpe_series_map_name='I3MCPESeriesMap',
                                  max_time_dif=100,
                                  method='noOfPulses'):
     '''Get Muon with the most deposited charge
@@ -873,6 +873,8 @@ def get_most_visible_muon_inside(frame, convex_hull,
 
     pulse_map_string : key of pulse map in frame,
         of which the pulses should be computed for
+
+    mcpe_series_map_name : key of mcpe series map in frame
 
     method : string 'charge','noOfPulses'
         'charge' : select muon that deposits the

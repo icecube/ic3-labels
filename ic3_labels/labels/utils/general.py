@@ -103,7 +103,7 @@ def get_ids_of_particle_and_daughters(frame, particle, ids):
 
 def get_pulse_map(frame, particle,
                   pulse_map_string='InIcePulses',
-                  mcpe_series_map_name='MCPESeriesMap',
+                  mcpe_series_map_name='I3MCPESeriesMap',
                   max_time_dif=100):
     '''Get map of pulses induced by a specific particle.
        Pulses to be used can be specified through
@@ -122,6 +122,8 @@ def get_pulse_map(frame, particle,
 
     pulse_map_string : key of pulse map in frame,
         of which the pulses should be computed for
+
+    mcpe_series_map_name : key of mcpe series map in frame
 
     Returns
     -------
@@ -182,7 +184,7 @@ def get_pulse_map(frame, particle,
 
 def get_noise_pulse_map(frame,
                         pulse_map_string='InIcePulses',
-                        mcpe_series_map_name='MCPESeriesMap',
+                        mcpe_series_map_name='I3MCPESeriesMap',
                         max_time_dif=100):
     '''Get map of pulses induced by noise.
         [This is only a guess on which reco Pulses
@@ -195,6 +197,8 @@ def get_noise_pulse_map(frame,
 
     pulse_map_string : key of pulse map in frame,
         of which the mask should be computed for
+
+    mcpe_series_map_name : key of mcpe series map in frame
 
     Returns
     -------

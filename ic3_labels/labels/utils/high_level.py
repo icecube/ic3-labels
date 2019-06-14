@@ -334,7 +334,7 @@ def get_muon_bundle_information(frame, convex_hull, energy_threshold=20):
 
 def get_muon_information(frame, muon, dom_pos_dict,
                          convex_hull, pulse_map_string='InIcePulses',
-                         mcpe_series_map_name='MCPESeriesMap'):
+                         mcpe_series_map_name='I3MCPESeriesMap'):
     '''Function to get labels for a muon
 
     Parameters
@@ -349,6 +349,11 @@ def get_muon_information(frame, muon, dom_pos_dict,
 
     convex_hull : scipy.spatial.ConvexHull
         defining the desired convex volume
+
+    pulse_map_string : key of pulse map in frame,
+        of which the pulses should be computed for
+
+    mcpe_series_map_name : key of mcpe series map in frame
 
     Returns
     -------
@@ -523,7 +528,7 @@ def get_muon_information(frame, muon, dom_pos_dict,
 def get_primary_information(frame, primary,
                             dom_pos_dict, convex_hull,
                             pulse_map_string='InIcePulses',
-                            mcpe_series_map_name='MCPESeriesMap',
+                            mcpe_series_map_name='I3MCPESeriesMap',
                             muongun_primary_neutrino_id=None):
     '''Function to get labels for the primary
 
@@ -541,6 +546,11 @@ def get_primary_information(frame, primary,
 
     convex_hull : scipy.spatial.ConvexHull
         defining the desired convex volume
+
+    pulse_map_string : key of pulse map in frame,
+        of which the pulses should be computed for
+
+    mcpe_series_map_name : key of mcpe series map in frame
 
     muongun_primary_neutrino_id : I3ParticleID
         In case of a MuonGun dataset, the primary neutrino has
@@ -622,7 +632,7 @@ def get_primary_information(frame, primary,
 def get_misc_information(frame,
                          dom_pos_dict, convex_hull,
                          pulse_map_string='InIcePulses',
-                         mcpe_series_map_name='MCPESeriesMap'):
+                         mcpe_series_map_name='I3MCPESeriesMap'):
     '''Function to misc labels
 
     Parameters
@@ -639,6 +649,11 @@ def get_misc_information(frame,
 
     convex_hull : scipy.spatial.ConvexHull
         defining the desired convex volume
+
+    pulse_map_string : key of pulse map in frame,
+        of which the pulses should be computed for
+
+    mcpe_series_map_name : key of mcpe series map in frame
 
     Returns
     -------
@@ -694,7 +709,7 @@ def get_misc_information(frame,
 def get_labels(frame, convex_hull,
                domPosDict, primary,
                pulse_map_string='InIcePulses',
-               mcpe_series_map_name='MCPESeriesMap',
+               mcpe_series_map_name='I3MCPESeriesMap',
                is_muongun=False):
     '''Function to get extensive labels for muons, primary and general event
     data.
@@ -716,6 +731,8 @@ def get_labels(frame, convex_hull,
 
     pulse_map_string : key of pulse map in frame,
         of which the mask should be computed for
+
+    mcpe_series_map_name : key of mcpe series map in frame
 
     is_muongun : bool
         In case of a MuonGun dataset, the primary neutrino has
