@@ -1058,19 +1058,33 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
                 print('InteractionType: {!r}'.format(
                                 frame['I3MCWeightDict']['InteractionType']))
 
-    elif mu_utils.is_muon(primary):
-        # -----------------------------
-        # muon primary: MuonGun dataset
-        # -----------------------------
-        muon = primary
-        if len(frame['I3MCTree']) > 1:
-            daughter = frame['I3MCTree'][1]
-            if mu_utils.is_muon(daughter) and \
-                ((daughter.id == primary.id) and
-                 (daughter.dir == primary.dir) and
-                 (daughter.pos == primary.pos) and
-                 (daughter.energy == primary.energy)):
-                    muon = daughter
+    elif (primary.type_string == 'unknown' and primary.pdg_encoding == 0) or \
+            mu_utils.is_muon(primary):
+
+        if mu_utils.is_muon(primary):
+            muon = primary
+            # -----------------------------
+            # muon primary: MuonGun dataset
+            # -----------------------------
+            if len(frame['I3MCTree']) > 1:
+                daughter = frame['I3MCTree'][1]
+                if mu_utils.is_muon(daughter) and \
+                    ((daughter.id == primary.id) and
+                     (daughter.dir == primary.dir) and
+                     (daughter.pos == primary.pos) and
+                     (daughter.energy == primary.energy)):
+                        muon = daughter
+
+        else:
+            daughters = frame['I3MCTree'].get_daughters(primary)
+            muon = daughters[0]
+
+            # Perform some safety checks to make sure that this is MuonGun
+            assert len(daughters) == 1, \
+                'Expected only 1 daughter for MuonGun, but got {!r}'.format(
+                    daughters)
+            assert mu_utils.is_muon(muon), \
+                'Expected muon but got {!r}'.format(muon)
 
         entry, time, energy = get_muon_entry_info(frame, muon, convex_hull)
         labels['p_entering'] = 1
