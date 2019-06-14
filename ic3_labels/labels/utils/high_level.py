@@ -394,6 +394,13 @@ def get_muon_information(frame, muon, dom_pos_dict,
             'Centerz': zero.z,
             'EnergyCenter': 0.,
 
+            'ExitDistanceToDeepCore': zero_dist_deepcore,
+            'TimeAtExit': 0.,
+            'Exitx': zero.x,
+            'Exity': zero.y,
+            'Exitz': zero.z,
+            'EnergyExit': 0.,
+
             'InDetectorTrackLength': 0.,
             'InDetectorEnergyLoss': 0.,
 
@@ -413,9 +420,10 @@ def get_muon_information(frame, muon, dom_pos_dict,
     info_dict = {}
 
     # get labels depending on pulse map
-    pulse_map = general.get_pulse_map(frame, muon,
-                                      pulse_map_string=pulse_map_string,
-                                      mcpe_series_map_name=mcpe_series_map_name)
+    pulse_map = general.get_pulse_map(
+                                frame, muon,
+                                pulse_map_string=pulse_map_string,
+                                mcpe_series_map_name=mcpe_series_map_name)
 
     NoOfHitDOMs = len(pulse_map.keys())
     NoOfPulses = 0
