@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
 from distutils.core import setup
-exec(compile(open('version.py', "rb").read(),
-             'version.py',
+
+# get version number
+exec(compile(open('ic3_labels/__init__.py', "rb").read(),
+             'ic3_labels/__init__.py',
              'exec'))
 
 setup(name='ic3_labels',
