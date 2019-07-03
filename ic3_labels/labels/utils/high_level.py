@@ -1114,20 +1114,20 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
         # ---------------------------------------------
         muons = mu_utils.get_muons_inside(frame, convex_hull)
         if len(muons) == 0:
-            muons = frame['MMCTrackList']
+            muons = [m.particle for m in frame['MMCTrackList']]
 
         time_max = None
         entry_max = None
         energy_max = 0.
         for m in muons:
-            if mu_utils.is_muon(m.particle):
-                entry, time, energy = get_muon_entry_info(frame, m.particle,
+            if mu_utils.is_muon(m):
+                entry, time, energy = get_muon_entry_info(frame, m,
                                                           convex_hull)
                 if energy > energy_max:
                     time_max = time
                     entry_max = entry
                     energy_max = energy
-                    muon = m.particle
+                    muon = m
 
         labels['p_entering'] = 1
         labels['VertexX'] = entry_max.pos.x
