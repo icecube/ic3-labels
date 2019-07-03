@@ -1130,9 +1130,9 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
                     muon = m
 
         labels['p_entering'] = 1
-        labels['VertexX'] = entry_max.pos.x
-        labels['VertexY'] = entry_max.pos.y
-        labels['VertexZ'] = entry_max.pos.z
+        labels['VertexX'] = entry_max.x
+        labels['VertexY'] = entry_max.y
+        labels['VertexZ'] = entry_max.z
         labels['VertexTime'] = time_max
         labels['EnergyVisible'] = bundle_info['bundle_energy_at_entry']
         labels['Length'] = muon.length
