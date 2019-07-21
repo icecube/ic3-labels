@@ -239,7 +239,7 @@ class MESEWeights(icetray.I3ConditionalModule):
                     true_depth = cascade.pos.z
                 else:
                     entry = mu_utils.get_muon_initial_point_inside(
-                                                frame, muon, self._convex_hull)
+                                                muon, self._convex_hull)
                     if entry is None:
                         # get closest approach point as entry approximation
                         entry = mu_utils.get_muon_closest_approach_to_center(
