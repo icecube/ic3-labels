@@ -974,12 +974,52 @@ def get_most_visible_muon_inside(frame, convex_hull,
     return most_visible_muon
 
 
+def get_muon_of_inice_neutrino(frame, muongun_primary_neutrino_id=None):
+    '''Get the muon daughter of the first in ice neutrino in the I3MCTree.
+
+    Optionally a primary particle id can be passed for MuonGun simulation.
+    Returns None if no muons can be found.
+
+    Parameters
+    ----------
+    frame : current frame
+        needed to retrieve MMCTrackList, I3MCTree
+
+    muongun_primary_neutrino_id : I3ParticleID
+        In case of a MuonGun dataset, the primary neutrino has
+        an unknown type and a pdg_encoding of 0.
+        Therefore, the I3ParticleID of the primary needs to
+        be passed along.
+
+    Returns
+    -------
+    muon : I3Particle
+        Muon.
+        Returns None if no muon daughter can be found.
+    '''
+    nu_in_ice = None
+    for p in frame['I3MCTree']:
+        if (p.is_neutrino and p.location_type_string == 'InIce') or \
+                p.id == muongun_primary_neutrino_id:
+            nu_in_ice = p
+            break
+    daughters = frame['I3MCTree'].get_daughters(nu_in_ice)
+    muons = [p for p in daughters if p.pdg_encoding in (13, -13)]
+
+    if muons:
+        assert len(muons) == 1, \
+            'Found more or less than one expected muon.'
+        return muons[0]
+    else:
+        return None
+
+
 def get_next_muon_daughter_of_nu(frame, particle,
                                  muongun_primary_neutrino_id=None):
-    '''Get the next muon daughter of a neutrino.
-        Goes along I3MCTree to find the first
-        muon daughter.
-        Returns None if none can be found.
+    '''Get the next muon daughter of a muon-neutrino.
+    This will return None for any neutrinos other than muon-neutrinos.
+    Goes along I3MCTree to find the first muon daughter of the muon-neutrino.
+    Returns None if none can be found.
 
     Parameters
     ----------

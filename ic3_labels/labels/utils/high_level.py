@@ -803,8 +803,8 @@ def get_labels(frame, convex_hull,
                                             frame, convex_hull,
                                             pulse_map_string=pulse_map_string,
                                             mcpe_series_map_name=mcpe_series_map_name)
-    primaryMuon = mu_utils.get_next_muon_daughter_of_nu(
-                    frame, primary,
+    primaryMuon = mu_utils.get_muon_of_inice_neutrino(
+                    frame,
                     muongun_primary_neutrino_id=muongun_primary_neutrino_id)
 
     labels['PrimaryMuonExists'] = not (primaryMuon is None)
@@ -959,7 +959,7 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
             # --------------------
             # not a starting event
             # --------------------
-            muon = mu_utils.get_next_muon_daughter_of_nu(frame, primary)
+            muon = mu_utils.get_muon_of_inice_neutrino(frame)
 
             if muon is None:
                 # --------------------
@@ -1199,7 +1199,7 @@ def get_cascade_parameters(frame, primary, convex_hull, extend_boundary=200):
         # --------------------
         # not a starting event
         # --------------------
-        muon = mu_utils.get_next_muon_daughter_of_nu(frame, primary)
+        muon = mu_utils.get_muon_of_inice_neutrino(frame)
 
         if muon is None:
             # --------------------

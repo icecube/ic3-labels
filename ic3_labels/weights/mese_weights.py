@@ -228,8 +228,7 @@ class MESEWeights(icetray.I3ConditionalModule):
             if 'IntersectionPoint' in frame:
                 true_depth = frame['IntersectionPoint'].z
             else:
-                muon = mu_utils.get_next_muon_daughter_of_nu(
-                                                frame, frame['MCPrimary'])
+                muon = mu_utils.get_muon_of_inice_neutrino(frame)
                 if muon is None:
                     # no muon exists: cascade
                     cascade = get_cascade_of_primary_nu(frame,
