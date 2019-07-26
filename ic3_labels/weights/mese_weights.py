@@ -230,25 +230,35 @@ class MESEWeights(icetray.I3ConditionalModule):
             else:
                 muon = mu_utils.get_muon_of_inice_neutrino(frame)
                 tau = tau_utils.get_tau_of_inice_neutrino(frame)
-                entering_particle = muon
-                if muon is None:
-                    entering_particle = tau
 
-                if entering_particle is None:
+                if muon is not None:
+                    # found a muon
+                    entry = mu_utils.get_muon_initial_point_inside(
+                                        muon, self._convex_hull)
+                    if entry is None:
+                        # get closest approach point as entry approximation
+                        entry = mu_utils.get_muon_closest_approach_to_center(
+                                                    frame, muon)
+                    true_depth = entry.z
+
+                elif tau is not None:
+                    # found a tau
+                    entry = mu_utils.get_muon_initial_point_inside(
+                                        tau, self._convex_hull)
+                    if entry is None:
+                        # get closest approach point as entry approximation
+                        entry = \
+                            mu_utils.get_particle_closest_approach_to_position(
+                                        tau, dataclasses.I3Position(0, 0, 0))
+                    true_depth = entry.z
+                else:
+
                     # no muon or tau exists: cascade
                     cascade = get_cascade_of_primary_nu(frame,
                                                         frame['MCPrimary'],
                                                         convex_hull=None,
                                                         extend_boundary=800)
                     true_depth = cascade.pos.z
-                else:
-                    entry = mu_utils.get_muon_initial_point_inside(
-                                        entering_particle, self._convex_hull)
-                    if entry is None:
-                        # get closest approach point as entry approximation
-                        entry = mu_utils.get_muon_closest_approach_to_center(
-                                                    frame, entering_particle)
-                    true_depth = entry.z
 
             # apply self veto
             veto_args = (true_type, energy_true,

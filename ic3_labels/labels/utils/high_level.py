@@ -249,6 +249,47 @@ def get_muon_entry_info(frame, muon, convex_hull):
     return entry, time, energy
 
 
+def get_tau_entry_info(frame, tau, convex_hull):
+    """Helper function for 'get_cascade_labels'.
+
+    Get tau information for point of entry, or closest approach point,
+    if tau does not enter the volume defined by the convex_hull.
+
+    Parameters
+    ----------
+    frame : I3Frame
+        Current I3Frame needed to retrieve I3MCTree
+    tau : I3Particle
+        Tau I3Particle for which to get the entry information.
+    convex_hull : scipy.spatial.ConvexHull, optional
+        Defines the desired convex volume.
+
+    Returns
+    -------
+    I3Position, double, double
+        Entry Point (or closest approach point)
+        Time of entry point (or closest approach point)
+        Energy at entry point (or closest approach point)
+        Warning: If 'I3MCTree' does not exist in frame, this
+                 will instead return the muon energy
+    """
+    entry = mu_utils.get_muon_initial_point_inside(tau, convex_hull)
+    if entry is None:
+        # get closest approach point as entry approximation
+        entry = mu_utils.get_particle_closest_approach_to_position(
+                                        tau, dataclasses.I3Position(0, 0, 0))
+    time = mu_utils.get_muon_time_at_position(tau, entry)
+
+    # Todo: calculate energy at point of entry for tau as it is done for muon
+    # For now, just provide the total tau energy
+    if 'I3MCTree' not in frame:
+        energy = tau.energy
+    else:
+        energy = tau.energy
+        # energy = mu_utils.get_muon_energy_at_position(frame, tau, entry)
+    return entry, time, energy
+
+
 def get_muon_bundle_information(frame, convex_hull, energy_threshold=20):
     """Calculate muon bundle information:
 
@@ -989,8 +1030,8 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
                     # --------------------
                     # CC Tau interaction
                     # --------------------
-                    entry, time, energy = get_muon_entry_info(frame, tau,
-                                                              convex_hull)
+                    entry, time, energy = get_tau_entry_info(frame, tau,
+                                                             convex_hull)
                     labels['p_entering'] = 1
                     labels['VertexX'] = entry.pos.x
                     labels['VertexY'] = entry.pos.y
