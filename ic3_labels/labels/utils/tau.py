@@ -11,6 +11,38 @@ from ic3_labels.labels.utils import geometry
 from ic3_labels.labels.utils.muon import get_muon_energy_at_distance
 
 
+def get_tau_of_inice_neutrino(frame):
+    '''Get the tau daughter of the first in ice neutrino in the I3MCTree.
+    Returns None if no tau can be found.
+
+    Parameters
+    ----------
+    frame : current frame
+        needed to retrieve MMCTrackList, I3MCTree
+
+    Returns
+    -------
+    I3Particle
+        Tau.
+        Returns None if no tau daughter can be found.
+    '''
+    nu_in_ice = None
+    for p in frame['I3MCTree']:
+        if (p.is_neutrino and p.location_type_string == 'InIce') or \
+                p.id == muongun_primary_neutrino_id:
+            nu_in_ice = p
+            break
+    daughters = frame['I3MCTree'].get_daughters(nu_in_ice)
+    tau = [t for t in daughters if t.type_string in ['TauMinus', 'TauPlus']]
+
+    if tau:
+        assert len(tau) == 1, \
+            'Found more or less than one expected tau.'
+        return tau[0]
+    else:
+        return None
+
+
 def get_tau_energy_deposited(frame, convex_hull,
                              tau, first_cascade, second_cascade):
     '''Function to get the total energy a tau deposited in the

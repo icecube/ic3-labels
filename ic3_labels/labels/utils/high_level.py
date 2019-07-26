@@ -10,6 +10,7 @@ from icecube.phys_services import I3Calculator
 from ic3_labels.labels.utils import geometry
 from ic3_labels.labels.utils import general
 from ic3_labels.labels.utils import muon as mu_utils
+from ic3_labels.labels.utils import tau as tau_utils
 from ic3_labels.labels.utils.cascade import get_cascade_of_primary_nu
 from ic3_labels.labels.utils.cascade import get_cascade_energy_deposited
 from ic3_labels.labels.utils.cascade import get_interaction_extension_length
@@ -962,24 +963,43 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
             muon = mu_utils.get_muon_of_inice_neutrino(frame)
 
             if muon is None:
-                # --------------------
-                # Cascade interaction outside of defined volume
-                # --------------------
-                cascade = get_cascade_of_primary_nu(
+                tau = tau_utils.get_tau_of_inice_neutrino(frame)
+
+                if tau is None:
+                    # --------------------
+                    # Cascade interaction outside of defined volume
+                    # --------------------
+                    cascade = get_cascade_of_primary_nu(
                                                 frame, primary,
                                                 convex_hull=None,
                                                 extend_boundary=float('inf'),
                                                 sanity_check=False)
 
-                labels['p_outside_cascade'] = 1
-                labels['VertexX'] = cascade.pos.x
-                labels['VertexY'] = cascade.pos.y
-                labels['VertexZ'] = cascade.pos.z
-                labels['VertexTime'] = cascade.time
-                labels['EnergyVisible'] = cascade.energy
-                labels['Length'] = cascade.length
-                labels['LengthInDetector'] = \
-                    mu_utils.get_muon_track_length_inside(cascade, convex_hull)
+                    labels['p_outside_cascade'] = 1
+                    labels['VertexX'] = cascade.pos.x
+                    labels['VertexY'] = cascade.pos.y
+                    labels['VertexZ'] = cascade.pos.z
+                    labels['VertexTime'] = cascade.time
+                    labels['EnergyVisible'] = cascade.energy
+                    labels['Length'] = cascade.length
+                    labels['LengthInDetector'] = \
+                        mu_utils.get_muon_track_length_inside(cascade,
+                                                              convex_hull)
+                else:
+                    # --------------------
+                    # CC Tau interaction
+                    # --------------------
+                    entry, time, energy = get_muon_entry_info(frame, tau,
+                                                              convex_hull)
+                    labels['p_entering'] = 1
+                    labels['VertexX'] = entry.pos.x
+                    labels['VertexY'] = entry.pos.y
+                    labels['VertexZ'] = entry.pos.z
+                    labels['VertexTime'] = time
+                    labels['EnergyVisible'] = energy
+                    labels['Length'] = tau.length
+                    labels['LengthInDetector'] = \
+                        mu_utils.get_muon_track_length_inside(tau, convex_hull)
             else:
                 # ------------------------------
                 # NuMu CC Muon entering detector

@@ -229,8 +229,13 @@ class MESEWeights(icetray.I3ConditionalModule):
                 true_depth = frame['IntersectionPoint'].z
             else:
                 muon = mu_utils.get_muon_of_inice_neutrino(frame)
+                tau = tau_utils.get_tau_of_inice_neutrino(frame)
+                entering_particle = muon
                 if muon is None:
-                    # no muon exists: cascade
+                    entering_particle = tau
+
+                if entering_particle is None:
+                    # no muon or tau exists: cascade
                     cascade = get_cascade_of_primary_nu(frame,
                                                         frame['MCPrimary'],
                                                         convex_hull=None,
@@ -238,11 +243,11 @@ class MESEWeights(icetray.I3ConditionalModule):
                     true_depth = cascade.pos.z
                 else:
                     entry = mu_utils.get_muon_initial_point_inside(
-                                                muon, self._convex_hull)
+                                        entering_particle, self._convex_hull)
                     if entry is None:
                         # get closest approach point as entry approximation
                         entry = mu_utils.get_muon_closest_approach_to_center(
-                                                            frame, muon)
+                                                    frame, entering_particle)
                     true_depth = entry.z
 
             # apply self veto
