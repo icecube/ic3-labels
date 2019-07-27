@@ -28,8 +28,7 @@ def get_tau_of_inice_neutrino(frame):
     '''
     nu_in_ice = None
     for p in frame['I3MCTree']:
-        if (p.is_neutrino and p.location_type_string == 'InIce') or \
-                p.id == muongun_primary_neutrino_id:
+        if p.is_neutrino and p.location_type_string == 'InIce':
             nu_in_ice = p
             break
     daughters = frame['I3MCTree'].get_daughters(nu_in_ice)
