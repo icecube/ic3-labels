@@ -1033,9 +1033,9 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
                     entry, time, energy = get_tau_entry_info(frame, tau,
                                                              convex_hull)
                     labels['p_entering'] = 1
-                    labels['VertexX'] = entry.pos.x
-                    labels['VertexY'] = entry.pos.y
-                    labels['VertexZ'] = entry.pos.z
+                    labels['VertexX'] = entry.x
+                    labels['VertexY'] = entry.y
+                    labels['VertexZ'] = entry.z
                     labels['VertexTime'] = time
                     labels['EnergyVisible'] = energy
                     labels['Length'] = tau.length
