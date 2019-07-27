@@ -14,6 +14,7 @@ from icecube import AtmosphericSelfVeto
 from icecube.icetray.i3logging import log_info, log_warn
 
 from ic3_labels.labels.utils import muon as mu_utils
+from ic3_labels.labels.utils import tau as tau_utils
 from ic3_labels.labels.utils.cascade import get_cascade_of_primary_nu
 
 
