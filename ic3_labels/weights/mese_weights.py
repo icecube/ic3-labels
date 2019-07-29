@@ -347,7 +347,7 @@ class MESEWeights(icetray.I3ConditionalModule):
 
         self.PushFrame(frame)
 
-    _get_particle_entry(particle):
+    def _get_particle_entry(particle):
 
         entry = mu_utils.get_muon_initial_point_inside(
                                         particle, self._convex_hull)
@@ -357,7 +357,7 @@ class MESEWeights(icetray.I3ConditionalModule):
                                     particle, dataclasses.I3Position(0, 0, 0))
         return entry
 
-    _get_muon_entry(frame, muon):
+    def _get_muon_entry(frame, muon):
 
         entry = mu_utils.get_muon_initial_point_inside(muon, self._convex_hull)
         if entry is None:
