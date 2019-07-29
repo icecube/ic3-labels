@@ -185,7 +185,7 @@ def get_cascade_energy_deposited(frame, convex_hull, cascade):
 def get_cascade_of_primary_nu(frame, primary,
                               convex_hull=None,
                               extend_boundary=200,
-                              sanity_check=True):
+                              sanity_check=False):
     """Get cascade of a primary particle.
 
     The I3MCTree is traversed to find the first interaction inside the convex

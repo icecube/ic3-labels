@@ -1009,6 +1009,9 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
                 if tau is None:
                     # --------------------
                     # Cascade interaction outside of defined volume
+                    # Note: this could still be a muon created in a hadronic
+                    # shower that can enter the detector and look like a
+                    # normal track event! toDo: check this?
                     # --------------------
                     cascade = get_cascade_of_primary_nu(
                                                 frame, primary,

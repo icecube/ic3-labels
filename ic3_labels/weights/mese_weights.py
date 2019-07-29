@@ -234,23 +234,12 @@ class MESEWeights(icetray.I3ConditionalModule):
 
                 if muon is not None:
                     # found a muon
-                    entry = mu_utils.get_muon_initial_point_inside(
-                                        muon, self._convex_hull)
-                    if entry is None:
-                        # get closest approach point as entry approximation
-                        entry = mu_utils.get_muon_closest_approach_to_center(
-                                                    frame, muon)
+                    entry = self._get_muon_entry(frame, muon)
                     true_depth = entry.z
 
                 elif tau is not None:
                     # found a tau
-                    entry = mu_utils.get_muon_initial_point_inside(
-                                        tau, self._convex_hull)
-                    if entry is None:
-                        # get closest approach point as entry approximation
-                        entry = \
-                            mu_utils.get_particle_closest_approach_to_position(
-                                        tau, dataclasses.I3Position(0, 0, 0))
+                    entry = self._get_particle_entry(tau)
                     true_depth = entry.z
                 else:
 
@@ -259,7 +248,34 @@ class MESEWeights(icetray.I3ConditionalModule):
                                                         frame['MCPrimary'],
                                                         convex_hull=None,
                                                         extend_boundary=800)
-                    true_depth = cascade.pos.z
+
+                    if cascade is not None:
+                        true_depth = cascade.pos.z
+                    else:
+                        cascade = get_cascade_of_primary_nu(
+                                                frame,
+                                                frame['MCPrimary'],
+                                                convex_hull=None,
+                                                extend_boundary=float('inf'))
+
+                        # Muon coming out of hadronic shower?
+                        daughters = frame['I3MCTree'].get_daughters(cascade)
+
+                        # collect possible muons from daughters of daughters
+                        # e.g. Nu -> Nu + Hadrons -> Mu
+                        muons = []
+                        for d in daughters:
+                            muons.extend([
+                                m for m in frame['I3MCTree'].get_daughters(d)
+                                if mu_utils.is_muon(m)])
+                        if muons:
+                            # pick highest energy muon
+                            indices = np.argsort([m.energy for m in muons])
+                            muon = muons[indices[-1]]
+                            entry = self._get_muon_entry(frame, muon)
+                            true_depth = entry.z
+                        else:
+                            true_depth = cascade.pos.z
 
             # apply self veto
             veto_args = (true_type, energy_true,
@@ -330,3 +346,22 @@ class MESEWeights(icetray.I3ConditionalModule):
         frame[self._output_key] = dataclasses.I3MapStringDouble(mese_dict)
 
         self.PushFrame(frame)
+
+    _get_particle_entry(particle):
+
+        entry = mu_utils.get_muon_initial_point_inside(
+                                        particle, self._convex_hull)
+        if entry is None:
+            # get closest approach point as entry approximation
+            entry = mu_utils.get_particle_closest_approach_to_position(
+                                    particle, dataclasses.I3Position(0, 0, 0))
+        return entry
+
+    _get_muon_entry(frame, muon):
+
+        entry = mu_utils.get_muon_initial_point_inside(muon, self._convex_hull)
+        if entry is None:
+            # get closest approach point as entry approximation
+            entry = mu_utils.get_muon_closest_approach_to_center(frame, muon)
+
+        return entry
