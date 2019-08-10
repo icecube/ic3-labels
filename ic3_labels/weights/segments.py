@@ -256,15 +256,7 @@ def WeightEvents(tray, name,
 
         # get fluxes and generator
         fluxes, flux_names = fluxes_muongun.get_fluxes_and_names()
-
-        if isinstance(dataset_number, int):
-            # Official dataset with a dataset number
-            n_files = len([f for f in infiles if 'gcd' not in f.lower()])
-            generator = from_simprod(dataset_number) * n_files
-
-        else:
-            # MuonGun simulation with S-Frames
-            generator, n_files = fluxes_muongun.harvest_generators(
+        generator, n_files = fluxes_muongun.harvest_generators(
                                                     infiles,
                                                     n_files=-1,
                                                     equal_generators=False)
