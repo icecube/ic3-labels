@@ -1172,6 +1172,12 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
         labels['LengthInDetector'] = \
             mu_utils.get_muon_track_length_inside(muon, convex_hull)
 
+        # The primary particle for MuonGun simulation can have NaN energy
+        # replace this if necessary
+        # (Note: technically PrimarEnergy is not known for MuonGun)
+        if not np.isfinite(labels['PrimaryEnergy']):
+            labels['PrimaryEnergy'] = muon.energy
+
     else:
         # ---------------------------------------------
         # No neutrino or muon primary: Corsika dataset?
