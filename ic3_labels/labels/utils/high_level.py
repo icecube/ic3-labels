@@ -1188,7 +1188,7 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
 
         time_max = None
         entry_max = None
-        energy_max = 0.
+        energy_max = float('-inf')
         for m in muons:
             if mu_utils.is_muon(m):
                 entry, time, energy = get_muon_entry_info(frame, m,
