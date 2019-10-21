@@ -14,6 +14,6 @@ setup(name='ic3_labels',
       author_email='mirco.huennefeld@tu-dortmund.de',
       url='https://github.com/mhuen/ic3-labels',
       packages=['ic3_labels'],
-      install_requires=['numpy', 'click', 'pyyaml',
+      install_requires=['numpy', 'click', 'pyyaml', 'scipy',
                         ],
       )
