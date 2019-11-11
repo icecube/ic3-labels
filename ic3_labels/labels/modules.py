@@ -110,6 +110,19 @@ class MCLabelsCorsikaMultiplicity(MCLabelsBase):
         labels['PrimaryDirectionY'] = primary.dir.y
         labels['PrimaryDirectionZ'] = primary.dir.z
 
+        label_names = ['num_coincident_events', 'num_muons',
+                       'num_muons_at_cyl', 'num_muons_at_cyl_above_threshold',
+                       'num_muons_at_entry',
+                       'num_muons_at_entry_above_threshold']
+        pid_names = ['p_is_coincident_event', 'p_is_muon_bundle',
+                     'p_is_muon_bundle_at_cyl',
+                     'p_is_muon_bundle_at_cyl_above_threshold',
+                     'p_is_muon_bundle_at_entry',
+                     'p_is_muon_bundle_at_entry_above_threshold']
+
+        for label, p_name in zip(label_names, pid_names):
+            labels[p_name] = labels[label] > 1
+
         # write to frame
         frame.Put(self._output_key, dataclasses.I3MapStringDouble(labels))
 
