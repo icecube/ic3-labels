@@ -480,6 +480,7 @@ def get_muon_scattering_info(frame,
     labels['muon_loss_y'] = 0.
     labels['muon_loss_z'] = 0.
     labels['muon_loss_time'] = 0.
+    labels['rel_muon_loss_energy'] = 0.
     labels['p_scattering_candidate'] = 0.
 
     muon = get_muon(frame, primary, convex_hull)
@@ -549,6 +550,7 @@ def get_muon_scattering_info(frame,
     labels['muon_loss_y'] = max_energy_loss.pos.y
     labels['muon_loss_z'] = max_energy_loss.pos.z
     labels['muon_loss_time'] = max_energy_loss.time
+    labels['rel_muon_loss_energy'] = max_energy_loss.energy / entry_energy
     labels['p_scattering_candidate'] = p_scattering_candidate
 
     return labels
