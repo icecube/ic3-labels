@@ -208,47 +208,6 @@ def get_energy_deposited_including_daughters(frame,
     return energy_loss
 
 
-def get_muon_entry_info(frame, muon, convex_hull):
-    """Helper function for 'get_cascade_labels'.
-
-    Get muon information for point of entry, or closest approach point,
-    if muon does not enter the volume defined by the convex_hull.
-
-    Parameters
-    ----------
-    frame : I3Frame
-        Current I3Frame needed to retrieve I3MCTree
-    muon : I3Particle
-        Muon I3Particle for which to get the entry information.
-    convex_hull : scipy.spatial.ConvexHull, optional
-        Defines the desired convex volume.
-
-    Returns
-    -------
-    I3Position, double, double
-        Entry Point (or closest approach point)
-        Time of entry point (or closest approach point)
-        Energy at entry point (or closest approach point)
-        Warning: If 'I3MCTree' does not exist in frame, this
-                 will instead return the muon energy
-    """
-    entry = mu_utils.get_muon_initial_point_inside(muon, convex_hull)
-    if entry is None:
-        # get closest approach point as entry approximation
-        entry = mu_utils.get_muon_closest_approach_to_center(frame, muon)
-    time = mu_utils.get_muon_time_at_position(muon, entry)
-
-    # Nancy's MuonGun simulation datasets do not have I3MCTree or MMCTrackList
-    # included: use muon energy instead
-    # This might be an ok approximation, since MuonGun muons are often injected
-    # not too far out of detector volume
-    if 'I3MCTree' not in frame:
-        energy = muon.energy
-    else:
-        energy = mu_utils.get_muon_energy_at_position(frame, muon, entry)
-    return entry, time, energy
-
-
 def get_tau_entry_info(frame, tau, convex_hull):
     """Helper function for 'get_cascade_labels'.
 
@@ -1048,8 +1007,8 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
                 # ------------------------------
                 # NuMu CC Muon entering detector
                 # ------------------------------
-                entry, time, energy = get_muon_entry_info(frame, muon,
-                                                          convex_hull)
+                entry, time, energy = mu_utils.get_muon_entry_info(frame, muon,
+                                                                   convex_hull)
                 labels['p_entering'] = 1
                 labels['p_entering_muon_single'] = 1
                 labels['p_entering_muon_single_stopping'] = \
@@ -1158,7 +1117,8 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
             assert mu_utils.is_muon(muon), \
                 'Expected muon but got {!r}'.format(muon)
 
-        entry, time, energy = get_muon_entry_info(frame, muon, convex_hull)
+        entry, time, energy = mu_utils.get_muon_entry_info(frame, muon,
+                                                           convex_hull)
         labels['p_entering'] = 1
         labels['p_entering_muon_single'] = 1
         labels['p_entering_muon_single_stopping'] = \
@@ -1191,8 +1151,8 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
         energy_max = float('-inf')
         for m in muons:
             if mu_utils.is_muon(m):
-                entry, time, energy = get_muon_entry_info(frame, m,
-                                                          convex_hull)
+                entry, time, energy = mu_utils.get_muon_entry_info(frame, m,
+                                                                   convex_hull)
                 if energy > energy_max:
                     time_max = time
                     entry_max = entry
@@ -1284,8 +1244,8 @@ def get_cascade_parameters(frame, primary, convex_hull, extend_boundary=200):
             # NuMu CC Muon entering detector
             # ------------------------------
             # set cascade parameters to muon entry information
-            entry, time, energy = get_muon_entry_info(frame, muon,
-                                                      convex_hull)
+            entry, time, energy = mu_utils.get_muon_entry_info(frame, muon,
+                                                               convex_hull)
             cascade = dataclasses.I3Particle()
             cascade.pos.x = entry.x
             cascade.pos.y = entry.y

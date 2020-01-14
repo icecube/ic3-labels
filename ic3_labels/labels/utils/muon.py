@@ -267,27 +267,11 @@ def get_inf_muon_binned_energy_losses(
     if muon.pdg_encoding not in (13, -13):  # CC [Muon +/-]
         raise ValueError('Expected muon but got:', muon)
 
-    v_pos = (muon.pos.x, muon.pos.y, muon.pos.z)
-    v_dir = (muon.dir.x, muon.dir.y, muon.dir.z)
-    intersection_ts = geometry.get_intersections(convex_hull, v_pos, v_dir)
-
-    if len(intersection_ts) == 1:
-        # vertex is possible exactly on edge of convex hull
-        # move vertex slightly by eps
-        eps = 1e-4
-        muon_pos_shifted = muon.pos + eps * muon.dir
-        v_pos = (muon_pos_shifted.x, muon_pos_shifted.y, muon_pos_shifted.z)
-        intersection_ts = geometry.get_intersections(convex_hull, v_pos, v_dir)
+    intersection_ts = get_muon_convex_hull_intersections(muon, convex_hull)
 
     # muon didn't hit convex_hull
     if intersection_ts.size == 0:
         return []
-
-    # muon hit convex_hull:
-    #   Expecting two intersections
-    #   What happens if track is exactly along edge of hull?
-    #   If only one ts: track exactly hit a corner of hull?
-    assert len(intersection_ts) == 2, 'Expected exactly 2 intersections'
 
     min_ts = min(intersection_ts)
     max_ts = max(intersection_ts)
@@ -321,6 +305,255 @@ def get_inf_muon_binned_energy_losses(
     return binnned_energy_losses
 
 
+def get_muon_entry_info(frame, muon, convex_hull):
+    """Get muon information for point of entry, or closest approach point,
+    if muon does not enter the volume defined by the convex_hull.
+
+    Parameters
+    ----------
+    frame : I3Frame
+        Current I3Frame needed to retrieve I3MCTree
+    muon : I3Particle
+        Muon I3Particle for which to get the entry information.
+    convex_hull : scipy.spatial.ConvexHull, optional
+        Defines the desired convex volume.
+
+    Returns
+    -------
+    I3Position, double, double
+        Entry Point (or closest approach point)
+        Time of entry point (or closest approach point)
+        Energy at entry point (or closest approach point)
+        Warning: If 'I3MCTree' does not exist in frame, this
+                 will instead return the muon energy
+    """
+    entry = get_muon_initial_point_inside(muon, convex_hull)
+    if entry is None:
+        # get closest approach point as entry approximation
+        entry = get_muon_closest_approach_to_center(frame, muon)
+    time = get_muon_time_at_position(muon, entry)
+
+    # Nancy's MuonGun simulation datasets do not have I3MCTree or MMCTrackList
+    # included: use muon energy instead
+    # This might be an ok approximation, since MuonGun muons are often injected
+    # not too far out of detector volume
+    if 'I3MCTree' not in frame:
+        energy = muon.energy
+    else:
+        energy = get_muon_energy_at_position(frame, muon, entry)
+    return entry, time, energy
+
+
+def get_muon(frame, primary, convex_hull):
+    """Get muon from MCPrimary.
+
+    Parameters
+    ----------
+    frame : I3Frame
+        Current I3Frame needed to retrieve I3MCTree
+    primary : I3Particle
+        The primary I3Particle for which to find the muon.
+    convex_hull : scipy.spatial.ConvexHull, optional
+        Defines the desired convex volume.
+
+    Returns
+    -------
+    I3Particle
+        The muon from the primary particle or None, if no muon exists.
+    """
+    # NuGen dataset
+    if primary.is_neutrino:
+        muon = get_muon_of_inice_neutrino(frame)
+
+    # MuonGun dataset
+    elif (primary.type_string == 'unknown' and primary.pdg_encoding == 0) or \
+            is_muon(primary):
+
+        if is_muon(primary):
+            muon = primary
+            if len(frame['I3MCTree']) > 1:
+                daughter = frame['I3MCTree'][1]
+                if is_muon(daughter) and \
+                    ((daughter.id == primary.id) and
+                     (daughter.dir == primary.dir) and
+                     (daughter.pos == primary.pos) and
+                     (daughter.energy == primary.energy)):
+                        muon = daughter
+
+        else:
+            daughters = frame['I3MCTree'].get_daughters(primary)
+            muon = daughters[0]
+
+            # Perform some safety checks to make sure that this is MuonGun
+            assert len(daughters) == 1, \
+                'Expected only 1 daughter for MuonGun, but got {!r}'.format(
+                    daughters)
+            assert is_muon(muon), \
+                'Expected muon but got {!r}'.format(muon)
+
+    # No neutrino or muon primary: Corsika dataset?
+    else:
+        muons = get_muons_inside(frame, convex_hull)
+        if len(muons) == 0:
+            muons = [m.particle for m in frame['MMCTrackList']]
+
+        energy_max = float('-inf')
+        for m in muons:
+            if is_muon(m):
+                entry, time, energy = get_muon_entry_info(frame, m,
+                                                          convex_hull)
+                if energy > energy_max:
+                    energy_max = energy
+                    muon = m
+
+    return muon
+
+
+def get_muon_scattering_info(frame,
+                             convex_hull,
+                             primary,
+                             min_length=1000,
+                             min_length_before=400,
+                             min_length_after=400,
+                             min_muon_entry_energy=10000,
+                             min_rel_loss_energy=0.5,
+                             ):
+    '''Function to get labels that can be used to detect muon scattering.
+
+    The labels returned include:
+
+        'length':
+            Length in convex hull
+        'length_before':
+            Length in convex hull before biggest energy loss
+        'length_after':
+            Length in convex hull after biggest energy loss
+        'muon_energy':
+            Primary muon energy
+        'muon_energy_at_entry':
+            Energy of muon as it entters the detector
+        'max_muon_energy_loss':
+            Maximum energy loss in detector.
+        'p_scattering_candidate':
+            Muons that pass cuts
+
+    Parameters
+    ----------
+    frame : current frame
+        needed to retrieve I3MCTree
+    convex_hull : scipy.spatial.ConvexHull
+        defining the desired convex volume
+    muon : I3Particle
+        Muon
+
+    Returns
+    -------
+    labels : I3MapStringDouble
+        The computed muon scattering labels.
+
+    Raises
+    ------
+    ValueError
+        Description
+    '''
+
+    # fill in default values
+    labels = dataclasses.I3MapStringDouble()
+    labels['length'] = 0.
+    labels['length_before'] = 0.
+    labels['length_after'] = 0.
+    labels['muon_zenith'] = 0.
+    labels['muon_azimuth'] = 0.
+    labels['muon_energy'] = 0.
+    labels['muon_entry_energy'] = 0.
+    labels['muon_entry_x'] = 0.
+    labels['muon_entry_y'] = 0.
+    labels['muon_entry_z'] = 0.
+    labels['muon_entry_time'] = 0.
+    labels['muon_exit_energy'] = 0.
+    labels['muon_exit_x'] = 0.
+    labels['muon_exit_y'] = 0.
+    labels['muon_exit_z'] = 0.
+    labels['muon_exit_time'] = 0.
+    labels['muon_loss_energy'] = 0.
+    labels['muon_loss_x'] = 0.
+    labels['muon_loss_y'] = 0.
+    labels['muon_loss_z'] = 0.
+    labels['muon_loss_time'] = 0.
+    labels['p_scattering_candidate'] = 0.
+
+    muon = get_muon(frame, primary, convex_hull)
+    if muon.pdg_encoding not in (13, -13):  # CC [Muon +/-]
+        raise ValueError('Expected muon but got:', muon)
+
+    entry = get_muon_initial_point_inside(muon, convex_hull)
+
+    # muon didn't hit convex_hull
+    if entry is None:
+        labels['muon_zenith'] = muon.dir.zenith
+        labels['muon_azimuth'] = muon.dir.azimuth
+        labels['muon_energy'] = muon.energy
+        return labels
+
+    exit = get_muon_exit_point(muon, convex_hull)
+    total_length = (exit - entry).magnitude
+    entry_energy = get_muon_energy_at_position(frame, muon, entry)
+    exit_energy = get_muon_energy_at_position(frame, muon, exit)
+    entry_time = get_muon_time_at_position(muon, entry)
+    exit_time = get_muon_time_at_position(muon, exit)
+
+    # get max energy loss inside
+    max_energy_loss = None
+    max_energy = -float('inf')
+    for daughter in frame['I3MCTree'].get_daughters(muon):
+        if daughter.time > entry_time and daughter.time < exit_time:
+            if daughter.energy > max_energy:
+                max_energy = daughter.energy
+                max_energy_loss = daughter
+
+    if max_energy_loss is None:
+        max_energy_loss = dataclasses.I3Particle()
+
+    # calculate labels
+    length_before = (max_energy_loss.pos - entry).magnitude
+    length_after = (exit - max_energy_loss.pos).magnitude
+    rel_loss_energy = max_energy / entry_energy
+
+    if (total_length >= min_length and length_before >= min_length_before and
+            length_after >= min_length_after and
+            rel_loss_energy >= min_rel_loss_energy and
+            entry_energy > min_muon_entry_energy):
+        p_scattering_candidate = 1.
+    else:
+        p_scattering_candidate = 0.
+
+    # fill in labels
+    labels['length'] = total_length
+    labels['length_before'] = length_before
+    labels['length_after'] = length_after
+    labels['muon_zenith'] = muon.dir.zenith
+    labels['muon_azimuth'] = muon.dir.azimuth
+    labels['muon_energy'] = muon.energy
+    labels['muon_entry_energy'] = entry_energy
+    labels['muon_entry_x'] = entry.x
+    labels['muon_entry_y'] = entry.y
+    labels['muon_entry_z'] = entry.z
+    labels['muon_entry_time'] = entry_time
+    labels['muon_exit_energy'] = exit_energy
+    labels['muon_exit_x'] = exit.x
+    labels['muon_exit_y'] = exit.y
+    labels['muon_exit_z'] = exit.z
+    labels['muon_exit_time'] = exit_time
+    labels['muon_loss_energy'] = max_energy_loss.energy
+    labels['muon_loss_x'] = max_energy_loss.pos.x
+    labels['muon_loss_y'] = max_energy_loss.pos.y
+    labels['muon_loss_z'] = max_energy_loss.pos.z
+    labels['muon_loss_time'] = max_energy_loss.time
+    labels['p_scattering_candidate'] = p_scattering_candidate
+
+    return labels
+
+
 def get_muon_energy_deposited(frame, convex_hull, muon):
     '''Function to get the total energy a muon deposited in the
     volume defined by the convex hull.
@@ -341,19 +574,11 @@ def get_muon_energy_deposited(frame, convex_hull, muon):
     energy : float
         Deposited Energy.
     '''
-    v_pos = (muon.pos.x, muon.pos.y, muon.pos.z)
-    v_dir = (muon.dir.x, muon.dir.y, muon.dir.z)
-    intersection_ts = geometry.get_intersections(convex_hull, v_pos, v_dir)
+    intersection_ts = get_muon_convex_hull_intersections(muon, convex_hull)
 
     # muon didn't hit convex_hull
     if intersection_ts.size == 0:
         return 0.0
-
-    # muon hit convex_hull:
-    #   Expecting two intersections
-    #   What happens if track is exactly along edge of hull?
-    #   If only one ts: track exactly hit a corner of hull?
-    assert len(intersection_ts) == 2, 'Expected exactly 2 intersections'
 
     min_ts = min(intersection_ts)
     max_ts = max(intersection_ts)
@@ -387,19 +612,11 @@ def get_muon_initial_point_inside(muon, convex_hull):
         Returns None if muon doesn't hit
         convex hull.
     '''
-    v_pos = (muon.pos.x, muon.pos.y, muon.pos.z)
-    v_dir = (muon.dir.x, muon.dir.y, muon.dir.z)
-    intersection_ts = geometry.get_intersections(convex_hull, v_pos, v_dir)
+    intersection_ts = get_muon_convex_hull_intersections(muon, convex_hull)
 
     # muon didn't hit convex_hull
     if intersection_ts.size == 0:
         return None
-
-    # muon hit convex_hull:
-    #   Expecting two intersections
-    #   What happens if track is exactly along edge of hull?
-    #   If only one ts: track exactly hit a corner of hull?
-    assert len(intersection_ts) == 2, 'Expected exactly 2 intersections'
 
     min_ts = min(intersection_ts)
     max_ts = max(intersection_ts)
@@ -434,19 +651,11 @@ def is_stopping_muon(muon, convex_hull):
     bool
         Returns true if muon
     '''
-    v_pos = (muon.pos.x, muon.pos.y, muon.pos.z)
-    v_dir = (muon.dir.x, muon.dir.y, muon.dir.z)
-    intersection_ts = geometry.get_intersections(convex_hull, v_pos, v_dir)
+    intersection_ts = get_muon_convex_hull_intersections(muon, convex_hull)
 
     # muon didn't hit convex_hull
     if intersection_ts.size == 0:
         return False
-
-    # muon hit convex_hull:
-    #   Expecting two intersections
-    #   What happens if track is exactly along edge of hull?
-    #   If only one ts: track exactly hit a corner of hull?
-    assert len(intersection_ts) == 2, 'Expected exactly 2 intersections'
 
     min_ts = min(intersection_ts)
     max_ts = max(intersection_ts)
@@ -462,6 +671,44 @@ def is_stopping_muon(muon, convex_hull):
     else:
         # muon exits detector
         return False
+
+
+def get_muon_convex_hull_intersections(track, convex_hull):
+    """Get the intersections of an infinite track.
+
+    Parameters
+    ----------
+    track : I3Particle
+        The infinite track for which to compute the intersections with the
+        convex hull.
+    convex_hull : scipy.spatial.ConvexHull
+        defining the desired convex volume
+
+    Returns
+    -------
+    array_like
+        The two intersections points
+    """
+    v_pos = (track.pos.x, track.pos.y, track.pos.z)
+    v_dir = (track.dir.x, track.dir.y, track.dir.z)
+    intersection_ts = geometry.get_intersections(convex_hull, v_pos, v_dir)
+
+    if len(intersection_ts) == 1:
+        # vertex is possible exactly on edge of convex hull
+        # move vertex slightly by eps
+        eps = 1e-4
+        muon_pos_shifted = track.pos + eps * track.dir
+        v_pos = (muon_pos_shifted.x, muon_pos_shifted.y, muon_pos_shifted.z)
+        intersection_ts = geometry.get_intersections(convex_hull, v_pos, v_dir)
+
+    # track hit convex_hull:
+    #   Expecting zero or two intersections
+    #   What happens if track is exactly along edge of hull?
+    #   If only one ts: track exactly hit a corner of hull?
+    assert len(intersection_ts) in [0, 2], \
+        'Expected exactly 1 or 2 intersections'
+
+    return intersection_ts
 
 
 def get_muon_exit_point(muon, convex_hull):
@@ -484,19 +731,11 @@ def get_muon_exit_point(muon, convex_hull):
         Returns None if muon doesn't hit
         convex hull.
     '''
-    v_pos = (muon.pos.x, muon.pos.y, muon.pos.z)
-    v_dir = (muon.dir.x, muon.dir.y, muon.dir.z)
-    intersection_ts = geometry.get_intersections(convex_hull, v_pos, v_dir)
+    intersection_ts = get_muon_convex_hull_intersections(muon, convex_hull)
 
     # muon didn't hit convex_hull
     if intersection_ts.size == 0:
         return None
-
-    # muon hit convex_hull:
-    #   Expecting two intersections
-    #   What happens if track is exactly along edge of hull?
-    #   If only one ts: track exactly hit a corner of hull?
-    assert len(intersection_ts) == 2, 'Expected exactly 2 intersections'
 
     min_ts = min(intersection_ts)
     max_ts = max(intersection_ts)
@@ -506,7 +745,7 @@ def get_muon_exit_point(muon, convex_hull):
     if max_ts < 0:
         # muon created after the convex hull
         return None
-    if min_ts > muon.length + 1e-8 and max_ts > muon.length + 1e-8:
+    if min_ts < muon.length + 1e-8 and max_ts > muon.length + 1e-8:
         # stopping track
         return muon.pos + muon.length*muon.dir
 
@@ -1081,19 +1320,11 @@ def get_muon_track_length_inside(muon, convex_hull):
         Returns 0 if muon doesn't hit
         convex hull.
     '''
-    v_pos = (muon.pos.x, muon.pos.y, muon.pos.z)
-    v_dir = (muon.dir.x, muon.dir.y, muon.dir.z)
-    intersection_ts = geometry.get_intersections(convex_hull, v_pos, v_dir)
+    intersection_ts = get_muon_convex_hull_intersections(muon, convex_hull)
 
     # muon didn't hit convex_hull
     if intersection_ts.size == 0:
         return 0
-
-    # muon hit convex_hull:
-    #   Expecting two intersections
-    #   What happens if track is exactly along edge of hull?
-    #   If only one ts: track exactly hit a corner of hull?
-    assert len(intersection_ts) == 2, 'Expected exactly 2 intersections'
 
     min_ts = min(intersection_ts)
     max_ts = max(intersection_ts)

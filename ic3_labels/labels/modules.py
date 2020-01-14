@@ -164,6 +164,64 @@ class MCLabelsCorsikaAzimuthExcess(MCLabelsBase):
         self.PushFrame(frame)
 
 
+class MCLabelsMuonScattering(MCLabelsBase):
+
+    """Creates labels to identify muon scattering.
+    """
+
+    def __init__(self, context):
+        # super(MCLabelsDeepLearning, self).__init__(self, context)
+        MCLabelsBase.__init__(self, context)
+        self.AddParameter("MinLength",
+                          "Minimum required track lenth inside detector to "
+                          "qualify an event as a muon scattering event",
+                          1000)
+        self.AddParameter("MinLengthBefore",
+                          "Minimum required track lenth inside detector "
+                          "before the energy loss to qualify an event as a "
+                          "muon scattering event",
+                          400)
+        self.AddParameter("MinLengthAfter",
+                          "Minimum required track lenth inside detector "
+                          "after the energy loss to qualify an event as a "
+                          "muon scattering event",
+                          400)
+        self.AddParameter("MinMuonEntryEnergy",
+                          "Minimum required muon energy at point of entry "
+                          "to qualify an event as a muon scattering event",
+                          10000)
+        self.AddParameter("MinRelativeLossEnergy",
+                          "Minimum required relative energy of the muon loss "
+                          "to qualify an event as a muon scattering event. "
+                          "The relative energy loss is calculated as the "
+                          "loss energy / muon energy at entry",
+                          0.5)
+
+    def Configure(self):
+        # super(MCLabelsDeepLearning, self).Configure(self)
+        MCLabelsBase.Configure(self)
+        self._min_length = self.GetParameter("MinLength")
+        self._min_length_before = self.GetParameter("MinLengthBefore")
+        self._min_length_after = self.GetParameter("MinLengthAfter")
+        self._min_muon_entry_energy = self.GetParameter("MinMuonEntryEnergy")
+        self._min_rel_loss_energy = self.GetParameter("MinRelativeLossEnergy")
+
+    def Physics(self, frame):
+        labels = mu_utils.get_muon_scattering_info(
+                            frame=frame,
+                            primary=frame[self._primary_key],
+                            convex_hull=self._convex_hull,
+                            min_length=self._min_length,
+                            min_length_before=self._min_length_before,
+                            min_length_after=self._min_length_after,
+                            min_muon_entry_energy=self._min_muon_entry_energy,
+                            min_rel_loss_energy=self._min_rel_loss_energy,
+                            )
+        frame.Put(self._output_key, labels)
+
+        self.PushFrame(frame)
+
+
 class MCLabelsMuonEnergyLosses(MCLabelsBase):
     def __init__(self, context):
         super(MCLabelsMuonEnergyLosses, self).__init__(self, context)
