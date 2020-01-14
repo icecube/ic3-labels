@@ -10,6 +10,108 @@ from icecube.phys_services import I3Calculator
 from ic3_labels.labels.utils import geometry
 
 
+def get_significant_energy_loss(frame, pulse_key='InIceDSTPulses'):
+    """Get the most significant energy loss from the I3MCTree that may have
+    caused the hits given by the pulses 'pulse_key'.
+
+    Note: this is only approximative. The energy losses are weighted according
+    to their energy, their distance and angle to the DOM,
+    and the charge of the DOM.
+
+    Parameters
+    ----------
+    frame : I3Frame
+        The current I3Frame. Must contain the I3MCTree, I3Geometry, and the
+        specified pulses.
+    pulse_key : str, optional
+        The pulses to use.
+
+    Returns
+    -------
+    I3Particle
+        An energy loss of type Cascade and length 0, that has the position,
+        direction, energy, and time set.
+    """
+    # get pulses
+    pulses = frame[pulse_key]
+    if isinstance(pulses, dataclasses.I3RecoPulseSeriesMapMask) or \
+            isinstance(pulses, dataclasses.I3RecoPulseSeriesMapUnion):
+        pulses = pulses.apply(frame)
+
+    # collect positions and charge of hit DOMs
+    positions = []
+    charges = []
+    for om_key, dom_pulses in pulses:
+        positions.append(frame['I3Geometry'].omgeo[om_key].position)
+        charges.append(np.sum([p.charge for p in dom_pulses]))
+    total_charge = np.sum(charges)
+
+    def get_angle_factor(angle):
+        if angle < np.deg2rad(45):
+            return 1.
+        else:
+            return 1. - 0.9*((angle - np.deg2rad(45)) / np.deg2rad(135))
+
+    def calc_factor(particle):
+        factor = 0.
+
+        for pos, charge in zip(positions, charges):
+            diff = pos - particle.pos
+            diff_p = dataclasses.I3Particle()
+            diff_p.dir = dataclasses.I3Direction(diff.x, diff.y, diff.z)
+            angle = I3Calculator.angle(diff_p, particle)
+
+            distance = max(10, diff.magnitude)
+            if distance < 500:
+                factor += charge * get_angle_factor(angle) / (distance**3)
+        return factor * particle.energy
+
+    mctree = frame['I3MCTree']
+
+    def get_relevant_children(parent):
+
+        allowed_types = [dataclasses.I3Particle.NuclInt,
+                         dataclasses.I3Particle.PairProd,
+                         dataclasses.I3Particle.Brems,
+                         dataclasses.I3Particle.DeltaE,
+                         dataclasses.I3Particle.EMinus,
+                         dataclasses.I3Particle.EPlus,
+                         dataclasses.I3Particle.Hadrons,
+                         ]
+        # Rekursion stop
+        if parent.type in allowed_types and parent.pos.magnitude < 2000:
+            return [parent]
+
+        children = []
+        daughters = mctree.get_daughters(parent)
+        for daughter in daughters:
+            children.extend(get_relevant_children(daughter))
+        return children
+
+    # Now walk through energy losses and calculate factor for each
+    max_factor = -float('inf')
+    cascade = None
+
+    relevant_particles = []
+    for primary in mctree.get_primaries():
+        # go through all daughter particles
+        for p in get_relevant_children(primary):
+            factor = calc_factor(p)
+            if factor > max_factor:
+                cascade = p
+                max_factor = factor
+
+    # found our energy loss
+    energy_loss = dataclasses.I3Particle()
+    energy_loss.pos = dataclasses.I3Position(cascade.pos)
+    energy_loss.dir = dataclasses.I3Direction(cascade.dir)
+    energy_loss.time = cascade.time
+    energy_loss.length = cascade.length
+    energy_loss.energy = cascade.energy
+    energy_loss.shape = dataclasses.I3Particle.Cascade
+    return energy_loss
+
+
 def get_num_coincident_events(frame):
     '''Get Number of coincident events (= number of primaries in I3MCTree).
 
