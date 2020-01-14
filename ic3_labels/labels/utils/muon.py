@@ -484,6 +484,9 @@ def get_muon_scattering_info(frame,
     labels['p_scattering_candidate'] = 0.
 
     muon = get_muon(frame, primary, convex_hull)
+    if muon is None:
+        return labels
+
     if muon.pdg_encoding not in (13, -13):  # CC [Muon +/-]
         raise ValueError('Expected muon but got:', muon)
 
