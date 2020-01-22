@@ -232,7 +232,7 @@ def WeightEvents(tray, name,
     dataset_type : str
         Defines the kind of data: 'nugen', 'muongun', 'corsika'
     dataset_n_files : int
-        Number of files in dataset. Not needed for MuonGun data.
+        Number of files in dataset.
     dataset_n_events_per_run : int
         Number of events per run. Needed for MESE weights.
     dataset_number : int
@@ -242,8 +242,12 @@ def WeightEvents(tray, name,
     add_mese_weights : bool, optional
         If true, weights used for MESE 7yr cascade paper will be added.
         (As well as an additional filtering step)
-    check_n_files : bool, optional
+    check_n_files : bool or list of str, optional
         If true, check if provided n_files argument seems reasonable.
+        If list of str and if dataset_type is in the defined list:
+        check if provided n_files arguments seems reasonable.
+        The list of str defines the datatypes (in lower case) for which the
+        n_files will be checked.
 
     Raises
     ------
@@ -276,7 +280,7 @@ def WeightEvents(tray, name,
     else:
         raise ValueError('Unkown dataset_type: {!r}'.format(dataset_type))
 
-    if check_n_files:
+    if check_n_files is True or dataset_type in check_n_files:
         assert n_files == dataset_n_files, \
             'N_files do not match: {!r} != {!r}'.format(n_files,
                                                         dataset_n_files)
