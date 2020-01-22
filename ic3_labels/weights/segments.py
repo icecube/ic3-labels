@@ -280,7 +280,13 @@ def WeightEvents(tray, name,
     else:
         raise ValueError('Unkown dataset_type: {!r}'.format(dataset_type))
 
-    if check_n_files is True or dataset_type in check_n_files:
+    perform_check = False
+    if isinstance(check_n_files, bool):
+        perform_check = check_n_files
+    else:
+        if dataset_type in check_n_files:
+            perform_check = True
+    if perform_check:
         assert n_files == dataset_n_files, \
             'N_files do not match: {!r} != {!r}'.format(n_files,
                                                         dataset_n_files)
