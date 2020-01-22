@@ -232,7 +232,9 @@ def WeightEvents(tray, name,
     dataset_type : str
         Defines the kind of data: 'nugen', 'muongun', 'corsika'
     dataset_n_files : int
-        Number of files in dataset.
+        Number of files in dataset. For MuonGun this is overwritten by the
+        number of found generators. In this case, this value is only used
+        to check if it matches the found n_files (if check is performed).
     dataset_n_events_per_run : int
         Number of events per run. Needed for MESE weights.
     dataset_number : int
@@ -280,6 +282,7 @@ def WeightEvents(tray, name,
     else:
         raise ValueError('Unkown dataset_type: {!r}'.format(dataset_type))
 
+    # check if found number of events seems reasonable
     perform_check = False
     if isinstance(check_n_files, bool):
         perform_check = check_n_files
@@ -290,6 +293,10 @@ def WeightEvents(tray, name,
         assert n_files == dataset_n_files, \
             'N_files do not match: {!r} != {!r}'.format(n_files,
                                                         dataset_n_files)
+
+    # Use the number of found generators for MuonGun
+    if dataset_type == 'muongun':
+        dataset_n_files = n_files
 
     def add_meta_data(frame):
         frame_key = '{}_meta_info'.format(key)
