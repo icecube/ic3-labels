@@ -1,4 +1,1 @@
-"""Contains the package version number
-"""
-
-__version__ = '0.1.0-dev'
+from ic3_labels.__about__ import __version__, __description__, __url__

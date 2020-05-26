@@ -1,19 +1,27 @@
 #!/usr/bin/env python
+import os
+from setuptools import setup
 
-from distutils.core import setup
+here = os.path.dirname(__file__)
 
-# get version number
-exec(compile(open('ic3_labels/__init__.py', "rb").read(),
-             'ic3_labels/__init__.py',
-             'exec'))
+about = {}
+with open(os.path.join(here, 'ic3_labels', '__about__.py')) as fobj:
+    exec(fobj.read(), about)
 
-setup(name='ic3_labels',
-      version=__version__,
-      description='Creates MC labels for IceCube simulation data',
-      author='Mirco Huennefeld',
-      author_email='mirco.huennefeld@tu-dortmund.de',
-      url='https://github.com/mhuen/ic3-labels',
-      packages=['ic3_labels'],
-      install_requires=['numpy', 'click', 'pyyaml', 'scipy',
-                        ],
-      )
+setup(
+    name='ic3_labels',
+    version=about['__version__'],
+    packages=[
+        'ic3_labels',
+    ],
+    install_requires=[
+        'numpy', 'click', 'pyyaml', 'scipy',
+    ],
+    include_package_data=True,
+    author=about['__author__'],
+    author_email=about['__author_email__'],
+    maintainer=about['__author__'],
+    maintainer_email=about['__author_email__'],
+    description=about['__description__'],
+    url=about['__url__']
+)
