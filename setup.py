@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import os
-from setuptools import setup
+from setuptools import setup, find_packages
 
 here = os.path.dirname(__file__)
 
@@ -11,9 +11,7 @@ with open(os.path.join(here, 'ic3_labels', '__about__.py')) as fobj:
 setup(
     name='ic3_labels',
     version=about['__version__'],
-    packages=[
-        'ic3_labels',
-    ],
+    packages=find_packages(),
     install_requires=[
         'numpy', 'click', 'pyyaml', 'scipy',
     ],
