@@ -115,7 +115,7 @@ def get_total_deposited_energy(frame,
                 continue
 
         # scale energy of cascades to EM equivalent
-        deposited_energy += get_cascade_em_equivalent(p)
+        deposited_energy += get_cascade_em_equivalent(p, frame['I3MCTree'])
 
     return deposited_energy
 
