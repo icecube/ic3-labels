@@ -133,6 +133,9 @@ def get_extension_from_vertex(frame, particle, vertex,
 def get_cascade_em_equivalent(cascade):
     """Get electro-magnetic (EM) equivalent energy of a given cascade.
 
+    Note: this is only an average expected EM equivalent. Possible existing
+    daughter particles in the I3MCTree are not taken into account!
+
     Parameters
     ----------
     cascade : I3Particle
