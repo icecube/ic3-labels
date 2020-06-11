@@ -128,6 +128,10 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
     # keep track of returned energy
     returned_energy = 0
 
+    # keep track of unaccounted daughters, e.g. energy losses that do not have
+    # a matching track update. This should only happen for the decay point
+    unaccounted_daughters = []
+
     if len(update_distances) > 0:
         # values for sanity check
         previous_energy = float(update_energies[-1])
@@ -142,15 +146,22 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
             # find the track update at the point of the stochastic loss
             index = get_update_index(
                 update_distances, update_energies, distance, cascade)
-            assert index is not None
-            assert np.allclose(update_distances[index], distance, atol=0.01)
 
-            # update all of the remaining track updates
-            # (add energy back since we assume this did not get depsosited)
-            update_energies[index:] += cascade.energy
+            # the index should only be None if this cascade is part of the
+            # decay products, e.g. at the end of the track
+            if index is None and np.allclose(cascade.time, daughters[-1].time):
+                unaccounted_daughters.append((cascade, True))
+            else:
+                assert index is not None
+                assert np.allclose(
+                    update_distances[index], distance, atol=0.01)
 
-            # keep track of returned energy
-            returned_energy += cascade.energy
+                # update all of the remaining track updates
+                # (add energy back since we assume this did not get depsosited)
+                update_energies[index:] += cascade.energy
+
+                # keep track of returned energy
+                returned_energy += cascade.energy
 
         # sanity checks
         assert np.allclose(
@@ -160,7 +171,6 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
     # Now walk through the leftover stochastic energy losses and make sure
     # that they are all covered by the track updates, possibly correct
     # for EM equivalent light yield if `correct_for_em_loss` is set to True.
-    unaccounted_daughters = []
     for daughter in cascades_left:
 
         # distance to stochastic energy loss
@@ -199,20 +209,22 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
             # These should only be at end of track when muon decays
             index = np.searchsorted(update_distances, distance)
             assert len(update_distances) == index
-            unaccounted_daughters.append(daughter)
+            unaccounted_daughters.append((daughter, False))
 
     # If there are unnaccounted stochastic energy losses, make sure these
     # are the particle decay
     if len(unaccounted_daughters) > 0:
         assert len(unaccounted_daughters) == 3
-        assert unaccounted_daughters[0].pos == unaccounted_daughters[1].pos
-        assert unaccounted_daughters[0].pos == unaccounted_daughters[2].pos
+        assert unaccounted_daughters[0][0].pos == \
+            unaccounted_daughters[1][0].pos
+        assert unaccounted_daughters[0][0].pos == \
+            unaccounted_daughters[2][0].pos
 
         # add an update distance with the rest of the deposited energy
         energy_dep = update_energies[-1] - returned_energy
 
         # subtract off energy carried away by neutrinos or not visible
-        for daughter in unaccounted_daughters:
+        for daughter, is_accounted_for in unaccounted_daughters:
             if daughter.type in [
                     dataclasses.I3Particle.NuE,
                     dataclasses.I3Particle.NuMu,
@@ -220,7 +232,7 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
                     dataclasses.I3Particle.NuEBar,
                     dataclasses.I3Particle.NuMuBar,
                     dataclasses.I3Particle.NuTauBar,
-                    ]:
+                    ] or is_accounted_for:
                 energy_dep -= daughter.energy
 
             elif correct_for_em_loss:
@@ -232,7 +244,7 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
 
         update_distances = np.append(
             update_distances,
-            (track.pos - unaccounted_daughters[0].pos).magnitude)
+            (track.pos - unaccounted_daughters[0][0].pos).magnitude)
         update_energies = np.append(
             update_energies, update_energies[-1] - energy_dep)
 
@@ -305,7 +317,7 @@ def get_update_index(update_distances, update_energies, distance, cascade,
     elif index > 0 and np.allclose(
             update_distances[index-1], distance, atol=atol):
         return index - 1
-    elif (index < len(update_distances) and
+    elif (index < len(update_distances) - 1 and
           np.allclose(update_distances[index+1], distance, atol=atol)):
         return index + 1
 
