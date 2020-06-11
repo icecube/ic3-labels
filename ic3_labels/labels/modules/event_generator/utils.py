@@ -142,7 +142,7 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
             # find the track update at the point of the stochastic loss
             index = get_update_index(update_distances, distance)
             assert index is not None
-            assert np.allclose(update_distances[index], distance)
+            assert np.allclose(update_distances[index], distance, atol=0.01)
 
             # update all of the remaining track updates
             # (add energy back since we assume this did not get depsosited)
@@ -168,7 +168,7 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
         # find the track update at the point of the stochastic loss
         index = get_update_index(update_distances, distance)
         if (index is not None and
-                np.allclose(update_distances[index], distance)):
+                np.allclose(update_distances[index], distance, atol=0.01)):
 
             # sanity check to see if energy loss is included
             if index == 0:
@@ -176,11 +176,14 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
             else:
                 previous_energy = update_energies[index - 1]
             delta_energy = previous_energy - update_energies[index]
-            assert delta_energy > daughter.energy
+            assert delta_energy >= daughter.energy
 
             if correct_for_em_loss:
                 em_energy = get_cascade_em_equivalent(daughter)
                 delta_energy = daughter.energy - em_energy
+
+                assert delta_energy > -1e-7
+                delta_energy = np.clip(delta_energy, 0., np.inf)
 
                 # need to update additional delta_energy form
                 # update all of the remaining track updates
@@ -238,7 +241,7 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
     return update_distances, update_energies, cascades, track_updates
 
 
-def get_update_index(update_distances, distance):
+def get_update_index(update_distances, distance, atol=0.01):
     """Find the track update index at the given distance
 
     Parameters
@@ -247,6 +250,8 @@ def get_update_index(update_distances, distance):
         The distances of the track updates.
     distance : float
         The distance at which to find the index.
+    atol : float, optional
+        The maximum allowed difference in distance in order to accetp a match.
 
     Returns
     -------
@@ -259,20 +264,36 @@ def get_update_index(update_distances, distance):
     # find the track update at the point of the stochastic loss
     index = np.searchsorted(update_distances, distance)
 
+    # due to numerical issues, this can pick up the wrong index
+    # Check if neighbouring indices match better
+    delta_distances = []
+    indices = []
+    for idx in [index - 2, index - 1, index, index + 1, index + 2]:
+        if idx >= 0 and idx < len(update_distances):
+            delta_distance = np.abs(update_distances[idx] - distance)
+            if delta_distance < 1:
+                delta_distances.append(delta_distance)
+                indices.append(idx)
+
+    # choose best index if suitable matches were found
+    if len(indices) > 0:
+        index = indices[np.argmin(delta_distances)]
+
     # check if after last update distance
     if index == len(update_distances):
-        if np.allclose(update_distances[index-1], distance):
+        if np.allclose(update_distances[index-1], distance, atol=atol):
             return index - 1
         else:
             return None
 
     # check if the found index matches the distance
-    if np.allclose(update_distances[index], distance):
+    if np.allclose(update_distances[index], distance, atol=atol):
         return index
-    elif index > 0 and np.allclose(update_distances[index-1], distance):
+    elif index > 0 and np.allclose(
+            update_distances[index-1], distance, atol=atol):
         return index - 1
     elif (index < len(update_distances) and
-          np.allclose(update_distances[index+1], distance)):
+          np.allclose(update_distances[index+1], distance, atol=atol)):
         return index + 1
 
     return None
