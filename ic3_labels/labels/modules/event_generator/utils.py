@@ -140,7 +140,8 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
             distance = (cascade.pos - track.pos).magnitude
 
             # find the track update at the point of the stochastic loss
-            index = get_update_index(update_distances, distance)
+            index = get_update_index(
+                update_distances, update_energies, distance, cascade)
             assert index is not None
             assert np.allclose(update_distances[index], distance, atol=0.01)
 
@@ -166,7 +167,8 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
         distance = (daughter.pos - track.pos).magnitude
 
         # find the track update at the point of the stochastic loss
-        index = get_update_index(update_distances, distance)
+        index = get_update_index(
+            update_distances, update_energies, distance, daughter)
         if (index is not None and
                 np.allclose(update_distances[index], distance, atol=0.01)):
 
@@ -241,15 +243,20 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
     return update_distances, update_energies, cascades, track_updates
 
 
-def get_update_index(update_distances, distance, atol=0.01):
+def get_update_index(update_distances, update_energies, distance, cascade,
+                     atol=0.01):
     """Find the track update index at the given distance
 
     Parameters
     ----------
     update_distances : array_like
         The distances of the track updates.
+    update_energies : array_like
+        The energies of the track updates.
     distance : float
         The distance at which to find the index.
+    cascade : I3Particle
+        The cascade for which to find the equivalent track update.
     atol : float, optional
         The maximum allowed difference in distance in order to accetp a match.
 
@@ -271,7 +278,13 @@ def get_update_index(update_distances, distance, atol=0.01):
     for idx in [index - 2, index - 1, index, index + 1, index + 2]:
         if idx >= 0 and idx < len(update_distances):
             delta_distance = np.abs(update_distances[idx] - distance)
-            if delta_distance < 1:
+
+            if idx > 0:
+                delta_energy = update_energies[idx - 1] - update_energies[idx]
+                passed_energy_check = delta_energy >= cascade.energy
+            else:
+                passed_energy_check = True
+            if delta_distance < 1 and passed_energy_check:
                 delta_distances.append(delta_distance)
                 indices.append(idx)
 
