@@ -105,8 +105,8 @@ class EventGeneratorMuonTrackLabels(MCLabelsBase):
 
         # compute starting point of track updates
         if len(track_updates) == 0:
-            track_start = muon.pos
-            track_end = muon.pos
+            track_start = muon
+            track_end = muon
             stochasticity = 0.
             area_above = 0.
             area_below = 0.

@@ -14,6 +14,14 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
     """Get a list of track energy updates and a number of highest energy
     cascades that were removed from the track.
 
+    Note: this function has a lot of additional code and asserts to verify
+    that the assumptions made hold. The I3MCTree is not well specified and
+    may change between software revisions. In this case, the asserts will help
+    in letting this crash loudly.
+    The main driving assumption is that the corresponding track update particle
+    has a minor particle ID +1 from the stochastic loss. This is checked via
+    asserts on the delta time and position.
+
     Parameters
     ----------
     mc_tree : I3MCTree
@@ -73,20 +81,35 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
     # gather all track updates
     # (these define rest track energy at a certain point)
     update_distances = []
+    update_times = []
     update_energies = []
+    update_ids = []
     track_updates = []
     stoch_daughters = []
     stoch_energies = []
     last_update_outside = None
     track_entered_volume = False
-    for daughter in daughters:
+    for index, daughter in enumerate(daughters):
 
-        # check if these points are inside defined volumen
+        # check if these points are inside defined volume
         if extend_boundary is not None:
+
+            # due to slight deviations in particle positions of the
+            # corresponding track updates for each stochastic loss it
+            # can happen that the track update is just outside the
+            # defined volume while the stochastic loss is just inside.
+            # We want to avoid this and make sure that the track update
+            # is always inside (it does not hurt much if only the
+            # stochastic loss falls outside)
+            if daughter.type == track.type:
+                eps_boundary = 0.1
+            else:
+                eps_boundary = 0.
 
             # use IceCube boundary + extent_boundary [meters] to check
             if not geometry.is_in_detector_bounds(
-                    daughter.pos, extend_boundary=extend_boundary):
+                    daughter.pos,
+                    extend_boundary=extend_boundary + eps_boundary):
                 if daughter.type == track.type:
                     if not track_entered_volume:
                         last_update_outside = daughter
@@ -99,6 +122,8 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
             # this is probably a track segment updated
             update_distances.append((daughter.pos - track.pos).magnitude)
             update_energies.append(daughter.energy)
+            update_times.append(daughter.time)
+            update_ids.append(daughter.id.minorID)
             track_updates.append(daughter)
         else:
             stoch_daughters.append(daughter)
@@ -106,7 +131,13 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
 
     update_distances = np.array(update_distances)
     update_energies = np.array(update_energies)
-    assert (np.diff(update_distances) > 0).all()
+    update_times = np.array(update_times)
+    update_ids = np.array(update_ids)
+
+    # check that everything is sorted
+    assert (np.diff(update_distances) >= 0).all()
+    assert (np.diff(update_times) >= 0).all()
+    assert (np.diff(update_ids) > 0).all()
 
     # find the n highest energy depositions and remove these
     indices = np.argsort(stoch_energies)
@@ -140,21 +171,22 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
         # removed cascades
         for cascade in cascades:
 
-            # distance to cascade energy loss
-            distance = (cascade.pos - track.pos).magnitude
-
             # find the track update at the point of the stochastic loss
             index = get_update_index(
-                update_distances, update_energies, distance, cascade)
+                update_times, update_energies, update_ids, cascade)
 
             # the index should only be None if this cascade is part of the
             # decay products, e.g. at the end of the track
-            if index is None and np.allclose(cascade.time, daughters[-1].time):
+            if index is None and np.allclose(
+                    cascade.time, daughters[-1].time, atol=1e-2):
                 unaccounted_daughters.append((cascade, True))
             else:
                 assert index is not None
                 assert np.allclose(
-                    update_distances[index], distance, atol=0.01)
+                    update_times[index], cascade.time, atol=1e-2)
+                assert np.allclose(
+                    update_distances[index],
+                    (cascade.pos - track.pos).magnitude, atol=1e-1)
 
                 # update all of the remaining track updates
                 # (add energy back since we assume this did not get depsosited)
@@ -166,7 +198,7 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
         # sanity checks
         assert np.allclose(
             update_energies[-1] - returned_energy, previous_energy)
-        assert (np.diff(update_energies) < 0).all()
+        assert (np.diff(update_energies) <= 1e-4).all()
 
     # Now walk through the leftover stochastic energy losses and make sure
     # that they are all covered by the track updates, possibly correct
@@ -178,17 +210,30 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
 
         # find the track update at the point of the stochastic loss
         index = get_update_index(
-            update_distances, update_energies, distance, daughter)
-        if (index is not None and
-                np.allclose(update_distances[index], distance, atol=0.01)):
+            update_times, update_energies, update_ids, daughter)
+        if index is not None:
+
+            # perform some sanity checks
+            assert np.allclose(update_times[index], daughter.time, atol=1e-2)
+            assert np.allclose(
+                update_distances[index],
+                (daughter.pos - track.pos).magnitude,
+                atol=0.1,
+            )
 
             # sanity check to see if energy loss is included
             if index == 0:
-                previous_energy = last_update_outside.energy
+                if last_update_outside is None:
+                    # Sometimes there are no muons inserted previous to
+                    # the first stochastic energy loss.
+                    # use the track energy in this case
+                    previous_energy = track.energy
+                else:
+                    previous_energy = last_update_outside.energy
             else:
                 previous_energy = update_energies[index - 1]
             delta_energy = previous_energy - update_energies[index]
-            assert delta_energy >= daughter.energy
+            assert delta_energy >= daughter.energy - 1e-3
 
             if correct_for_em_loss:
                 em_energy = get_cascade_em_equivalent(daughter)
@@ -207,8 +252,11 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
         else:
             # This seems to be an unaccounted stochastic energy loss
             # These should only be at end of track when muon decays
-            index = np.searchsorted(update_distances, distance)
-            assert len(update_distances) == index
+            # or in some unlucky cases in which the track update happens
+            # to get cut away, while the stochastic energy is still inside.
+            # However, we account for the latter case by increasing the
+            # convex hull when checking for contained track updates.
+            assert np.allclose(daughter.time, daughters[-1].time, atol=1e-2)
             unaccounted_daughters.append((daughter, False))
 
     # If there are unnaccounted stochastic energy losses, make sure these
@@ -221,7 +269,16 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
             unaccounted_daughters[2][0].pos
 
         # add an update distance with the rest of the deposited energy
-        energy_dep = update_energies[-1] - returned_energy
+        if len(update_energies) == 0:
+
+            # this should only be the case if the only energy losses in the
+            # I3MCTree are the ones from the decay
+            assert len(stoch_daughters) == 3
+            previous_energy = track.energy
+        else:
+            previous_energy = update_energies[-1]
+
+        energy_dep = previous_energy - returned_energy
 
         # subtract off energy carried away by neutrinos or not visible
         for daughter, is_accounted_for in unaccounted_daughters:
@@ -240,88 +297,98 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
                 delta_energy = daughter.energy - em_energy
                 energy_dep -= delta_energy
 
-        assert energy_dep <= update_energies[-1]
+        assert energy_dep <= previous_energy
 
         update_distances = np.append(
             update_distances,
             (track.pos - unaccounted_daughters[0][0].pos).magnitude)
         update_energies = np.append(
-            update_energies, update_energies[-1] - energy_dep)
+            update_energies, previous_energy - energy_dep)
 
-    assert (np.diff(update_energies) < 0).all()
+    # If there is only one track update in the detector, prepend the last one
+    # before the detector
+    if len(update_distances) == 1:
+
+        # add last existing track update if it exists
+        if last_update_outside is not None:
+
+            distance = (track.pos - last_update_outside.pos).magnitude
+            energy = last_update_outside.energy
+
+            update_distances = np.insert(update_distances, 0, distance)
+            update_energies = np.insert(update_energies, 0, energy)
+            track_updates = [last_update_outside] + track_updates
+
+        # otherwise add the starting track position and energy
+        else:
+            update_distances = np.insert(update_distances, 0, 0.)
+            update_energies = np.insert(update_energies, 0, track.energy)
+            track_updates = [track] + track_updates
+
+    # energies should be monotonously decreasing except if updates are
+    # extremely close to each other
+    assert (np.diff(update_distances)[np.diff(update_energies) >= 0]
+            < 1e-1).all()
+
+    # Fix monoticity of energy updates that might have gotten broken due
+    # to numerical issues
+    energy_corrections = np.diff(update_energies)
+    mask = energy_corrections <= 0.
+    energy_corrections[mask] = 0.
+    assert (np.abs(energy_corrections) <= 1e-2).all()
+    update_energies[1:] -= energy_corrections
+
+    assert (np.diff(update_energies) <= 0).all()
     assert (np.all(update_energies) >= 0)
     assert (np.diff([c.energy for c in cascades]) < 0).all()
 
     return update_distances, update_energies, cascades, track_updates
 
 
-def get_update_index(update_distances, update_energies, distance, cascade,
-                     atol=0.01):
+def get_update_index(update_times, update_energies, update_ids, cascade,
+                     atol=1e-2):
     """Find the track update index at the given distance
 
     Parameters
     ----------
-    update_distances : array_like
-        The distances of the track updates.
+    update_times : array_like
+        The times of the track updates.
     update_energies : array_like
         The energies of the track updates.
-    distance : float
-        The distance at which to find the index.
+    update_ids : array_like
+        The minor particle ids of the track updates.
     cascade : I3Particle
         The cascade for which to find the equivalent track update.
     atol : float, optional
-        The maximum allowed difference in distance in order to accetp a match.
+        The maximum allowed difference in distance in order to accept a match.
 
     Returns
     -------
     int or None
         The index of the track update if there is a corresponding update.
     """
-    if len(update_distances) == 0:
+    if len(update_times) == 0:
         return None
 
     # find the track update at the point of the stochastic loss
-    index = np.searchsorted(update_distances, distance)
+    index = np.searchsorted(update_ids, cascade.id.minorID)
 
-    # due to numerical issues, this can pick up the wrong index
-    # Check if neighbouring indices match better
-    delta_distances = []
-    indices = []
-    for idx in [index - 2, index - 1, index, index + 1, index + 2]:
-        if idx >= 0 and idx < len(update_distances):
-            delta_distance = np.abs(update_distances[idx] - distance)
+    # check if after last update time
+    if index == len(update_times):
+        return None
 
-            if idx > 0:
-                delta_energy = update_energies[idx - 1] - update_energies[idx]
-                passed_energy_check = delta_energy >= cascade.energy
-            else:
-                passed_energy_check = True
-            if delta_distance < 1 and passed_energy_check:
-                delta_distances.append(delta_distance)
-                indices.append(idx)
+    # perform sanity checks
+    if not np.allclose(update_times[index], cascade.time, atol=atol):
+        raise ValueError('Times do not match: {} != {}!'.format(
+            update_times[index], cascade.time))
 
-    # choose best index if suitable matches were found
-    if len(indices) > 0:
-        index = indices[np.argmin(delta_distances)]
+    if index > 0:
+        delta_energy = update_energies[index - 1] - update_energies[index]
+        if delta_energy < get_cascade_em_equivalent(cascade) - 1e-3:
+            msg = 'Energy loss is larger than available energy: {} !> {}!'
+            raise ValueError(msg.format(delta_energy, cascade.energy))
 
-    # check if after last update distance
-    if index == len(update_distances):
-        if np.allclose(update_distances[index-1], distance, atol=atol):
-            return index - 1
-        else:
-            return None
-
-    # check if the found index matches the distance
-    if np.allclose(update_distances[index], distance, atol=atol):
-        return index
-    elif index > 0 and np.allclose(
-            update_distances[index-1], distance, atol=atol):
-        return index - 1
-    elif (index < len(update_distances) - 1 and
-          np.allclose(update_distances[index+1], distance, atol=atol)):
-        return index + 1
-
-    return None
+    return index
 
 
 def compute_stochasticity(update_distances, update_energies):
