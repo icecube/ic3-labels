@@ -14,7 +14,7 @@ from ic3_labels.labels.utils import tau as tau_utils
 from ic3_labels.labels.utils.cascade import get_cascade_of_primary_nu
 from ic3_labels.labels.utils.cascade import get_cascade_energy_deposited
 from ic3_labels.labels.utils.cascade import get_interaction_extension_length
-from ic3_labels.labels.utils.cascade import get_cascade_em_equivalent
+from ic3_labels.labels.utils.cascade import convert_to_em_equivalent
 from ic3_labels.labels.utils.neutrino import get_interaction_neutrino
 
 
@@ -115,7 +115,7 @@ def get_total_deposited_energy(frame,
                 continue
 
         # scale energy of cascades to EM equivalent
-        deposited_energy += get_cascade_em_equivalent(p, frame['I3MCTree'])
+        deposited_energy += convert_to_em_equivalent(p, frame['I3MCTree'])
 
     return deposited_energy
 
@@ -944,14 +944,14 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
         mctree = frame['I3MCTree']
         cascade = get_cascade_of_primary_nu(frame, primary,
                                             convex_hull=None,
-                                            extend_boundary=extend_boundary)
+                                            extend_boundary=extend_boundary)[0]
 
         # ---------------------------
         # 300m detector boundary test
         # ---------------------------
         cascade_300 = get_cascade_of_primary_nu(frame, primary,
                                                 convex_hull=None,
-                                                extend_boundary=300)
+                                                extend_boundary=300)[0]
         if cascade_300 is not None:
             labels['p_starting_300m'] = 1
         # ---------------------------
@@ -976,7 +976,7 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
                                                 frame, primary,
                                                 convex_hull=None,
                                                 extend_boundary=float('inf'),
-                                                sanity_check=False)
+                                                sanity_check=False)[0]
 
                     labels['p_outside_cascade'] = 1
                     labels['VertexX'] = cascade.pos.x
@@ -1222,9 +1222,13 @@ def get_cascade_parameters(frame, primary, convex_hull, extend_boundary=200):
         Cascade parameters of primary neutrino: x, y, z, t, azimuth, zenith, E
     """
     labels = dataclasses.I3MapStringDouble()
-    cascade = get_cascade_of_primary_nu(frame, primary,
-                                        convex_hull=None,
-                                        extend_boundary=extend_boundary)
+
+    cascade, e_em, e_hadron, e_track = get_cascade_of_primary_nu(
+        frame, primary,
+        convex_hull=None,
+        extend_boundary=extend_boundary,
+    )
+
     if cascade is None:
         # --------------------
         # not a starting event
@@ -1235,10 +1239,13 @@ def get_cascade_parameters(frame, primary, convex_hull, extend_boundary=200):
             # --------------------
             # Cascade interaction outside of defined volume
             # --------------------
-            cascade = get_cascade_of_primary_nu(frame, primary,
-                                                convex_hull=None,
-                                                extend_boundary=float('inf'),
-                                                sanity_check=False)
+            cascade, e_em, e_hadron, e_track = get_cascade_of_primary_nu(
+                frame, primary,
+                convex_hull=None,
+                extend_boundary=float('inf'),
+                sanity_check=False,
+            )
+
         else:
             # ------------------------------
             # NuMu CC Muon entering detector
@@ -1246,6 +1253,7 @@ def get_cascade_parameters(frame, primary, convex_hull, extend_boundary=200):
             # set cascade parameters to muon entry information
             entry, time, energy = mu_utils.get_muon_entry_info(frame, muon,
                                                                convex_hull)
+            length = mu_utils.get_muon_track_length_inside(muon, convex_hull)
             cascade = dataclasses.I3Particle()
             cascade.pos.x = entry.x
             cascade.pos.y = entry.y
@@ -1253,6 +1261,10 @@ def get_cascade_parameters(frame, primary, convex_hull, extend_boundary=200):
             cascade.time = time
             cascade.energy = energy
             cascade.dir = dataclasses.I3Direction(muon.dir)
+            cascade.length = length
+            e_em = 0.
+            e_hadron = 0.
+            e_track = energy
 
     frame['MCCascade'] = cascade
 
@@ -1263,5 +1275,11 @@ def get_cascade_parameters(frame, primary, convex_hull, extend_boundary=200):
     labels['cascade_energy'] = cascade.energy
     labels['cascade_azimuth'] = cascade.dir.azimuth
     labels['cascade_zenith'] = cascade.dir.zenith
+    labels['cascade_max_extension'] = cascade.length
+
+    # compute fraction of energy for each component: EM, hadronic, track
+    labels['energy_fraction_em'] = e_em / cascade.energy
+    labels['energy_fraction_hadron'] = e_hadron / cascade.energy
+    labels['energy_fraction_track'] = e_track / cascade.energy
 
     return labels

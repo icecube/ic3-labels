@@ -4,7 +4,7 @@ from icecube import dataclasses
 
 from ic3_labels.labels.utils import geometry
 from ic3_labels.labels.utils import muon as mu_utils
-from ic3_labels.labels.utils.cascade import get_cascade_em_equivalent
+from ic3_labels.labels.utils.cascade import convert_to_em_equivalent
 
 
 def get_track_energy_depositions(mc_tree, track, num_to_remove,
@@ -236,7 +236,7 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
             assert delta_energy >= daughter.energy - 1e-3
 
             if correct_for_em_loss:
-                em_energy = get_cascade_em_equivalent(daughter)
+                em_energy = convert_to_em_equivalent(daughter)
                 delta_energy = daughter.energy - em_energy
 
                 assert delta_energy > -1e-7
@@ -293,7 +293,7 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
                 energy_dep -= daughter.energy
 
             elif correct_for_em_loss:
-                em_energy = get_cascade_em_equivalent(daughter)
+                em_energy = convert_to_em_equivalent(daughter)
                 delta_energy = daughter.energy - em_energy
                 energy_dep -= delta_energy
 
@@ -384,7 +384,7 @@ def get_update_index(update_times, update_energies, update_ids, cascade,
 
     if index > 0:
         delta_energy = update_energies[index - 1] - update_energies[index]
-        if delta_energy < get_cascade_em_equivalent(cascade) - 1e-3:
+        if delta_energy < convert_to_em_equivalent(cascade) - 1e-3:
             msg = 'Energy loss is larger than available energy: {} !> {}!'
             raise ValueError(msg.format(delta_energy, cascade.energy))
 

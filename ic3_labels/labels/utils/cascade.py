@@ -20,6 +20,61 @@ from ic3_labels.labels.utils import geometry
 from ic3_labels.labels.utils.neutrino import get_interaction_neutrino
 
 
+EMTypes = [
+    dataclasses.I3Particle.ParticleType.EMinus,
+    dataclasses.I3Particle.ParticleType.EPlus,
+    dataclasses.I3Particle.ParticleType.Brems,
+    dataclasses.I3Particle.ParticleType.DeltaE,
+    dataclasses.I3Particle.ParticleType.PairProd,
+    dataclasses.I3Particle.ParticleType.Gamma,
+    # Pi0 decays to 2 gammas and produce EM showers
+    dataclasses.I3Particle.ParticleType.Pi0,
+    dataclasses.I3Particle.ParticleType.EMinus,
+    dataclasses.I3Particle.ParticleType.EMinus,
+]
+
+HadronTypes = [
+    dataclasses.I3Particle.ParticleType.Hadrons,
+    dataclasses.I3Particle.ParticleType.Neutron,
+    dataclasses.I3Particle.ParticleType.PiPlus,
+    dataclasses.I3Particle.ParticleType.PiMinus,
+    dataclasses.I3Particle.ParticleType.K0_Long,
+    dataclasses.I3Particle.ParticleType.KPlus,
+    dataclasses.I3Particle.ParticleType.KMinus,
+    dataclasses.I3Particle.ParticleType.PPlus,
+    dataclasses.I3Particle.ParticleType.PMinus,
+    dataclasses.I3Particle.ParticleType.K0_Short,
+
+    dataclasses.I3Particle.ParticleType.Eta,
+    dataclasses.I3Particle.ParticleType.Lambda,
+    dataclasses.I3Particle.ParticleType.SigmaPlus,
+    dataclasses.I3Particle.ParticleType.Sigma0,
+    dataclasses.I3Particle.ParticleType.SigmaMinus,
+    dataclasses.I3Particle.ParticleType.Xi0,
+    dataclasses.I3Particle.ParticleType.XiMinus,
+    dataclasses.I3Particle.ParticleType.OmegaMinus,
+    dataclasses.I3Particle.ParticleType.NeutronBar,
+    dataclasses.I3Particle.ParticleType.LambdaBar,
+    dataclasses.I3Particle.ParticleType.SigmaMinusBar,
+    dataclasses.I3Particle.ParticleType.Sigma0Bar,
+    dataclasses.I3Particle.ParticleType.SigmaPlusBar,
+    dataclasses.I3Particle.ParticleType.Xi0Bar,
+    dataclasses.I3Particle.ParticleType.XiPlusBar,
+    dataclasses.I3Particle.ParticleType.OmegaPlusBar,
+    dataclasses.I3Particle.ParticleType.DPlus,
+    dataclasses.I3Particle.ParticleType.DMinus,
+    dataclasses.I3Particle.ParticleType.D0,
+    dataclasses.I3Particle.ParticleType.D0Bar,
+    dataclasses.I3Particle.ParticleType.DsPlus,
+    dataclasses.I3Particle.ParticleType.DsMinusBar,
+    dataclasses.I3Particle.ParticleType.LambdacPlus,
+    dataclasses.I3Particle.ParticleType.WPlus,
+    dataclasses.I3Particle.ParticleType.WMinus,
+    dataclasses.I3Particle.ParticleType.Z0,
+    dataclasses.I3Particle.ParticleType.NuclInt,
+]
+
+
 def get_interaction_extension_length(frame, primary):
     """Get the extension length of the interaction/cascade of the first
     interaction of the primary particle.
@@ -130,7 +185,7 @@ def get_extension_from_vertex(frame, particle, vertex,
     return max_extension
 
 
-def get_cascade_em_equivalent(cascade):
+def convert_to_em_equivalent(cascade):
     """Get electro-magnetic (EM) equivalent energy of a given cascade.
 
     Note: this is only an average expected EM equivalent. Possible existing
@@ -144,11 +199,114 @@ def get_cascade_em_equivalent(cascade):
     Returns
     -------
     float
-        The EM equivalent energy of the given cascase.
+        The EM equivalent energy of the given cascade.
     """
     # scale energy of cascade to EM equivalent
     em_scale = ShowerParameters(cascade.type, cascade.energy).emScale
     return cascade.energy * em_scale
+
+
+def get_cascade_em_equivalent(mctree, cascade_primary):
+    """Get electro-magnetic (EM) equivalent energy of a given cascade.
+
+    Recursively walks through daughters of a provided cascade primary and
+    collects EM equivalent energy.
+    Note: muons and taus are added completely as EM equivalent energy!
+    This disregards the fact that a tau can for instance decay and the neutrino
+    may carry away a big portion of energy
+
+    Parameters
+    ----------
+    mctree : I3MCTree
+        The current I3MCTree
+    cascade_primary : I3Particle
+        The cascade primary particle.
+
+    Returns
+    -------
+    float
+        The total EM equivalent energy of the given cascade.
+    float
+        The total EM equivalent energy of the EM cascade.
+    float
+        The total EM equivalent energy of the hadronic cascade.
+    float
+        The total EM equivalent energy in muons and taus (tracks).
+    """
+
+    daughters = mctree.get_daughters(cascade_primary)
+
+    # ---------------------------------
+    # stopping conditions for recursion
+    # ---------------------------------
+    if (cascade_primary.location_type !=
+            dataclasses.I3Particle.LocationType.InIce):
+        # skip particles that are way outside of the detector volume
+        return 0., 0., 0., 0.
+
+    if len(daughters) == 0:
+
+        if cascade_primary.is_neutrino:
+            # skip neutrino: the energy is not visible
+            return 0., 0., 0., 0.
+
+        else:
+
+            # get EM equivalent energy
+            energy = convert_to_em_equivalent(cascade_primary)
+
+            # EM energy
+            if cascade_primary.type in EMTypes:
+                return energy, energy, 0., 0.
+
+            # Hadronic energy
+            elif cascade_primary.type in HadronTypes:
+                return energy, 0., energy, 0.
+
+            else:
+                raise ValueError('Unknown particly type: {}'.format(
+                    cascade_primary.type))
+
+    # check if we have a muon or tau
+    if cascade_primary.type in [
+            dataclasses.I3Particle.ParticleType.MuMinus,
+            dataclasses.I3Particle.ParticleType.MuPlus,
+            dataclasses.I3Particle.ParticleType.TauMinus,
+            dataclasses.I3Particle.ParticleType.TauPlus,
+            ]:
+        # For simplicity we will assume that all energy is deposited.
+        # Note: this is wrong for instance for taus that decay where the
+        # neutrino will carry away a large fraction of the energy
+        return cascade_primary.energy, 0., 0., cascade_primary.energy
+    # ---------------------------------
+
+    # collect energy from hadronic, em, and tracks
+    energy_total = 0.
+    energy_em = 0.
+    energy_hadron = 0.
+    energy_track = 0.
+
+    # recursively walk through daughters and accumulate energy
+    for daugther in daughters:
+
+        # get energy depositions of particle and its daughters
+        e_total, e_em, e_hadron, e_track = get_cascade_em_equivalent(
+            mctree, daugther)
+
+        # CMC splits up hadronic cascades to segments of electrons
+        # In other words: if the cascade primary is a hadron, the daughter
+        # particles need to contribute to the hadronic component of the shower
+        if cascade_primary.type in HadronTypes:
+            e_hadron += e_em
+            e_em = 0
+
+        # accumulate energies
+        energy_total += e_total
+        energy_em += e_em
+        energy_hadron += e_hadron
+        energy_track += e_track
+
+    return energy_total, energy_em, energy_hadron, energy_track
 
 
 def get_cascade_energy_deposited(frame, convex_hull, cascade):
@@ -180,7 +338,7 @@ def get_cascade_energy_deposited(frame, convex_hull, cascade):
             (cascade.pos.x, cascade.pos.y, cascade.pos.z)
             ):
         # if inside convex hull: add all of the energy
-        return get_cascade_em_equivalent(cascade)
+        return convert_to_em_equivalent(cascade)
     else:
         return 0.0
 
@@ -225,6 +383,12 @@ def get_cascade_of_primary_nu(frame, primary,
         energies from hadron daughter particles get converted to the EM
         equivalent energy.
         (Does not account for energy carried away by neutrinos of tau decay)
+    float
+        The total EM equivalent energy of the EM cascade.
+    float
+        The total EM equivalent energy of the hadronic cascade.
+    float
+        The total EM equivalent energy in muons and taus (tracks).
     """
     neutrino = get_interaction_neutrino(frame, primary,
                                         convex_hull=convex_hull,
@@ -269,38 +433,8 @@ def get_cascade_of_primary_nu(frame, primary,
     # sum up energies for daughters if not neutrinos
     # tau can immediately decay in neutrinos which carry away energy
     # that would not be visible, this is currently not accounted for
-    deposited_energy = 0.
-    for d in daughters:
+    e_total, e_em, e_hadron, e_track = get_cascade_em_equivalent(
+        mctree, neutrino)
 
-        # The check for dark particles is only correct, if all daughter
-        # particles will instead be checked
-        # if d.shape == dataclasses.I3Particle.ParticleShape.Dark:
-        #     # skip dark particles
-        #     continue
-
-        if d.is_neutrino:
-            # skip neutrino: the energy is not visible
-            continue
-
-        if d.location_type != dataclasses.I3Particle.LocationType.InIce:
-            # skip particles that are way outside of the detector volume
-            continue
-
-        # Figure out if the energy of the daughter particle needs to be scaled
-        # to EM equivalent.
-        # Note: assuming that all energy of muons and taus can be visible.
-        #       This can be invalid especially for the taus which can
-        #       immediately decay to neutrinos, which can carry away
-        #       significant portions of the energy.
-        if d.type in [dataclasses.I3Particle.ParticleType.MuMinus,
-                      dataclasses.I3Particle.ParticleType.MuPlus,
-                      dataclasses.I3Particle.ParticleType.TauMinus,
-                      dataclasses.I3Particle.ParticleType.TauPlus,
-                      ]:
-            deposited_energy += d.energy
-        else:
-            # scale energy of daughter particle to EM equivalent
-            deposited_energy += get_cascade_em_equivalent(d)
-
-    cascade.energy = deposited_energy
-    return cascade
+    cascade.energy = e_total
+    return cascade, e_em, e_hadron, e_track

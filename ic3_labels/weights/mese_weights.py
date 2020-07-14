@@ -247,16 +247,16 @@ class MESEWeights(icetray.I3ConditionalModule):
                     cascade = get_cascade_of_primary_nu(frame,
                                                         frame['MCPrimary'],
                                                         convex_hull=None,
-                                                        extend_boundary=800)
+                                                        extend_boundary=800)[0]
 
                     if cascade is not None:
                         true_depth = cascade.pos.z
                     else:
                         cascade = get_cascade_of_primary_nu(
-                                                frame,
-                                                frame['MCPrimary'],
-                                                convex_hull=None,
-                                                extend_boundary=float('inf'))
+                            frame,
+                            frame['MCPrimary'],
+                            convex_hull=None,
+                            extend_boundary=float('inf'))[0]
 
                         # Muon coming out of hadronic shower?
                         daughters = frame['I3MCTree'].get_daughters(cascade)
