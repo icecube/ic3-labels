@@ -244,6 +244,18 @@ def get_cascade_em_equivalent(mctree, cascade_primary):
         # skip particles that are way outside of the detector volume
         return 0., 0., 0., 0.
 
+    # check if we have a muon or tau
+    if cascade_primary.type in [
+            dataclasses.I3Particle.ParticleType.MuMinus,
+            dataclasses.I3Particle.ParticleType.MuPlus,
+            dataclasses.I3Particle.ParticleType.TauMinus,
+            dataclasses.I3Particle.ParticleType.TauPlus,
+            ]:
+        # For simplicity we will assume that all energy is deposited.
+        # Note: this is wrong for instance for taus that decay where the
+        # neutrino will carry away a large fraction of the energy
+        return cascade_primary.energy, 0., 0., cascade_primary.energy
+
     if len(daughters) == 0:
 
         if cascade_primary.is_neutrino:
@@ -267,17 +279,6 @@ def get_cascade_em_equivalent(mctree, cascade_primary):
                 raise ValueError('Unknown particly type: {}'.format(
                     cascade_primary.type))
 
-    # check if we have a muon or tau
-    if cascade_primary.type in [
-            dataclasses.I3Particle.ParticleType.MuMinus,
-            dataclasses.I3Particle.ParticleType.MuPlus,
-            dataclasses.I3Particle.ParticleType.TauMinus,
-            dataclasses.I3Particle.ParticleType.TauPlus,
-            ]:
-        # For simplicity we will assume that all energy is deposited.
-        # Note: this is wrong for instance for taus that decay where the
-        # neutrino will carry away a large fraction of the energy
-        return cascade_primary.energy, 0., 0., cascade_primary.energy
     # ---------------------------------
 
     # collect energy from hadronic, em, and tracks
