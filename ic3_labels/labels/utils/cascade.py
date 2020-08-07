@@ -397,7 +397,7 @@ def get_cascade_of_primary_nu(frame, primary,
                                         sanity_check=sanity_check)
 
     if neutrino is None or not neutrino.is_neutrino:
-        return None
+        return None, None, None, None
 
     mctree = frame['I3MCTree']
 
