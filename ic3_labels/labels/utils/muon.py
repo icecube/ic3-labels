@@ -344,7 +344,7 @@ def get_muon_entry_info(frame, muon, convex_hull):
     return entry, time, energy
 
 
-def get_muon(frame, primary, convex_hull):
+def get_muon(frame, primary, convex_hull, mctree_name='I3MCTree'):
     """Get muon from MCPrimary.
 
     Parameters
@@ -355,6 +355,8 @@ def get_muon(frame, primary, convex_hull):
         The primary I3Particle for which to find the muon.
     convex_hull : scipy.spatial.ConvexHull, optional
         Defines the desired convex volume.
+    mctree_name : str, optional
+        The name of the I3MCTree.
 
     Returns
     -------
@@ -371,8 +373,8 @@ def get_muon(frame, primary, convex_hull):
 
         if is_muon(primary):
             muon = primary
-            if len(frame['I3MCTree']) > 1:
-                daughter = frame['I3MCTree'][1]
+            if len(frame[mctree_name]) > 1:
+                daughter = frame[mctree_name][1]
                 if is_muon(daughter) and \
                     ((daughter.id == primary.id) and
                      (daughter.dir == primary.dir) and
@@ -381,7 +383,7 @@ def get_muon(frame, primary, convex_hull):
                         muon = daughter
 
         else:
-            daughters = frame['I3MCTree'].get_daughters(primary)
+            daughters = frame[mctree_name].get_daughters(primary)
             muon = daughters[0]
 
             # Perform some safety checks to make sure that this is MuonGun
