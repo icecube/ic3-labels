@@ -71,6 +71,7 @@ def harvest_generators(infiles, n_files=-1, equal_generators=True):
                     except KeyError:
                         log('WARNING: Could not retrieve {} from frame'.format(
                             key))
+                        frame_obj = None
                     if isinstance(frame_obj, MuonGun.GenerationProbability):
                         log('{}: found "{}" ({})'.format(
                             fname,
