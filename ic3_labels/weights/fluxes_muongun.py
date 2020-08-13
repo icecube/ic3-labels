@@ -66,7 +66,11 @@ def harvest_generators(infiles, n_files=-1, equal_generators=True):
         else:
             if frame is not None:
                 for key in frame.keys():
-                    frame_obj = frame[key]
+                    try:
+                        frame_obj = frame[key]
+                    except KeyError:
+                        log('WARNING: Could not retrieve {} from frame'.format(
+                            key))
                     if isinstance(frame_obj, MuonGun.GenerationProbability):
                         log('{}: found "{}" ({})'.format(
                             fname,
