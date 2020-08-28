@@ -15,10 +15,7 @@ import math
 import numpy as np
 
 import os
-try:
-    import cPickle as pickle
-except ModuleNotFoundError as e:
-    import pickle
+import pickle
 
 
 from ic3_labels.weights import fluxes_corsika, fluxes_muongun, fluxes_neutrino
@@ -53,7 +50,7 @@ def generate_generator(outpath, dataset_number, n_files):
                          'numbers (int or float) or be both Iterables of the '
                          'same length.')
     with open(outpath, 'w') as open_file:
-        pickle.dump(generator, open_file)
+        pickle.dump(generator, open_file, protocol=2)
     return outpath
 
 
@@ -87,24 +84,41 @@ def calc_weights(frame, fluxes, flux_names, n_files, generator, key):
                     generator(energy, ptype, costheta)
                 weight_dict[flux_name] = float(weight)
     else:
-        if not frame.Has('I3MCWeightDict'):
-            raise TypeError('For non neutrino simulation a generator '
-                            'object should be present!')
-        else:
+        if frame.Has('CorsikaWeightMap'):
+            cwm = frame["CorsikaWeightMap"]
+
+            # overwrite values obtained from MCPrimary
+            energy = cwm["PrimaryEnergy"]
+            ptype = cwm["PrimaryType"]
+            n_events = cwm['NEvents']
+            type_weight = 1.0
+
+            energy_integral = (
+                cwm['EnergyPrimaryMax']**(cwm["PrimarySpectralIndex"] + 1)
+                - cwm['EnergyPrimaryMin']**(cwm["PrimarySpectralIndex"] + 1)
+                ) / (cwm["PrimarySpectralIndex"] + 1)
+            energy_weight = cwm['PrimaryEnergy']**cwm["PrimarySpectralIndex"]
+            one_weight = energy_integral / energy_weight * cwm["AreaSum"]
+
+        elif frame.Has('I3MCWeightDict'):
             one_weight = frame['I3MCWeightDict']['OneWeight']
             n_events = frame['I3MCWeightDict']['NEvents']
             type_weight = .5
 
-            for flux, flux_name in zip(fluxes, flux_names):
-                try:
-                    flux_val = flux.getFlux(ptype, energy, costheta)
-                except RuntimeError:
-                    fluxes.remove(flux)
-                    flux_names.remove(flux_name)
-                else:
-                    weight = flux_val * one_weight / \
-                        (type_weight * n_events * n_files)
-                    weight_dict[flux_name] = float(weight)
+        else:
+            raise TypeError('No I3MCWeightDict or CorsikaWeightMap found!')
+
+
+        for flux, flux_name in zip(fluxes, flux_names):
+            try:
+                flux_val = flux.getFlux(ptype, energy, costheta)
+            except RuntimeError:
+                fluxes.remove(flux)
+                flux_names.remove(flux_name)
+            else:
+                weight = flux_val * one_weight / \
+                    (type_weight * n_events * n_files)
+                weight_dict[flux_name] = float(weight)
 
     frame[key] = dataclasses.I3MapStringDouble(weight_dict)
     return True
@@ -174,7 +188,7 @@ def do_the_weighting(tray, name,
         Description
     """
     if isinstance(generator, str):
-        import cPickle as pickle
+        import pickle
         if os.path.isfile(generator):
             with open(generator, 'r') as open_file:
                 generator = pickle.load(open_file)
@@ -217,6 +231,7 @@ def WeightEvents(tray, name,
                  dataset_n_events_per_run,
                  dataset_number,
                  key='weights',
+                 use_from_simprod=False,
                  add_mese_weights=False,
                  check_n_files=True):
     """Calculate weights and add to frame
@@ -241,6 +256,10 @@ def WeightEvents(tray, name,
         Corsika dataset number.
     key : str
         Defines the key to which the weight dictionary will be booked.
+    use_from_simprod : bool, optional
+        If True, weights will be calculated by obtaining a generator via
+        from_simprod. If False, weights will be calculated based on the
+        I3MCWeightDict for NuGen or CorsikaWeightMap (Corsika).
     add_mese_weights : bool, optional
         If true, weights used for MESE 7yr cascade paper will be added.
         (As well as an additional filtering step)
@@ -271,7 +290,10 @@ def WeightEvents(tray, name,
         fluxes, flux_names = fluxes_corsika.get_fluxes_and_names()
 
         n_files = len([f for f in infiles if 'gcd' not in f.lower()])
-        generator = from_simprod(dataset_number) * dataset_n_files
+        if use_from_simprod:
+            generator = from_simprod(dataset_number) * dataset_n_files
+        else:
+            generator = None
 
     elif dataset_type == 'nugen':
         fluxes, flux_names = fluxes_neutrino.get_fluxes_and_names()
