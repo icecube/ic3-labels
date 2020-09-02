@@ -108,7 +108,6 @@ def calc_weights(frame, fluxes, flux_names, n_files, generator, key):
         else:
             raise TypeError('No I3MCWeightDict or CorsikaWeightMap found!')
 
-
         for flux, flux_name in zip(fluxes, flux_names):
             try:
                 flux_val = flux.getFlux(ptype, energy, costheta)
@@ -223,6 +222,47 @@ def do_the_weighting(tray, name,
         #                If=lambda f: not f.Has('I3MCTree_preMuonProp'))
 
 
+class AddWeightMetaData(icetray.I3Module):
+    """
+    Add a "W" (weight) frame for the weight meta data.
+    """
+    def __init__(self, ctx):
+        super(AddWeightMetaData, self).__init__(ctx)
+        self.AddParameter("NFiles", "Number of files used for weighting", None)
+        self.AddParameter("NEventsPerRun", "Number of events per run.", None)
+        self.AddParameter("Key", "Output key of the weights.", 'weights')
+
+    def Configure(self):
+        self._n_files = self.GetParameter("NFiles")
+        self._n_events_per_run = self.GetParameter("NEventsPerRun")
+        self._key = self.GetParameter("Key")
+        self._frame_has_been_pushed = False
+        self._frame_key = '{}_meta_info'.format(self._key)
+
+    def Process(self):
+
+        # get next frame
+        frame = self.PopFrame()
+
+        if not self._frame_has_been_pushed:
+
+            # create weight frame and push it
+            weight_frame = icetray.I3Frame('W')
+
+            meta_data = {
+                'n_files': self._n_files,
+                'n_events_per_run': self._n_events_per_run,
+            }
+            weight_frame[self._frame_key] = dataclasses.I3MapStringInt(
+                meta_data)
+
+            self.PushFrame(weight_frame)
+
+            self._frame_has_been_pushed = True
+
+        self.PushFrame(frame)
+
+
 @icetray.traysegment
 def WeightEvents(tray, name,
                  infiles,
@@ -320,15 +360,12 @@ def WeightEvents(tray, name,
     if dataset_type == 'muongun':
         dataset_n_files = n_files
 
-    def add_meta_data(frame):
-        frame_key = '{}_meta_info'.format(key)
-        meta_data = {
-            'n_files': dataset_n_files,
-            'n_events_per_run': dataset_n_events_per_run,
-        }
-        frame[frame_key] = dataclasses.I3MapStringInt(meta_data)
-        return True
-    tray.AddModule(add_meta_data, 'add_meta_data')
+    tray.AddModule(
+        AddWeightMetaData, 'AddWeightMetaData',
+        NFiles=dataset_n_files,
+        NEventsPerRun=dataset_n_events_per_run,
+        Key=key,
+    )
 
     tray.AddSegment(do_the_weighting, 'do_the_weighting',
                     fluxes=fluxes,
@@ -346,3 +383,68 @@ def WeightEvents(tray, name,
                        DatasetNEventsPerRun=dataset_n_events_per_run,
                        OutputKey='{}_mese'.format(key),
                        )
+
+
+class UpdateMergedWeights(icetray.I3Module):
+    """
+    This updates the weights and meta data when merging files
+    """
+    def __init__(self, ctx):
+        super(UpdateMergedWeights, self).__init__(ctx)
+        self.AddParameter("Key", "Output key of the weights.", 'weights')
+        self.AddParameter(
+            "TotalNFiles",
+            "Total number of n files of all merged files.",
+            None,
+        )
+
+    def Configure(self):
+        self._total_n_files = self.GetParameter("TotalNFiles")
+        self._key = self.GetParameter("Key")
+        self._frame_key = '{}_meta_info'.format(self._key)
+        self._last_n_files = None
+        self._last_n_events_per_run = None
+
+    def Process(self):
+        frame = self.PopFrame()
+
+        # update meta data if it exists in this frame
+        if (self._frame_key in frame and
+                frame.get_stop(self._frame_key) == frame.Stop):
+            meta = frame[self._frame_key]
+
+            if self._last_n_events_per_run is not None:
+                if meta['n_events_per_run'] != self._last_n_events_per_run:
+                    raise ValueError('N events per Run changes: {} {}'.format(
+                        self._last_n_events_per_run,
+                        meta['n_events_per_run'],
+                    ))
+
+            # keep track of the last n_files: N_i
+            self._last_n_files = meta['n_files']
+            self._last_n_events_per_run = meta['n_events_per_run']
+
+            # update total n_files
+            meta['n_files'] = self._total_n_files
+
+            # replace meta data
+            del frame[self._frame_key]
+            frame[self._frame_key] = meta
+
+        # update weight data if it exists in this frame
+        if self._key in frame and frame.get_stop(self._key) == frame.Stop:
+            weights = frame[self._key]
+
+            if self._last_n_files is None:
+                raise ValueError('Did not find meta data!', frame)
+
+            updated_weights = dataclasses.I3MapStringDouble()
+            for name, weight in weights.items():
+                updated_weights[name] = (
+                    float(weight) * self._last_n_files
+                    / frame[self._frame_key]['n_files']
+                )
+            del frame[self._key]
+            frame[self._key] = updated_weights
+
+        self.PushFrame(frame)
