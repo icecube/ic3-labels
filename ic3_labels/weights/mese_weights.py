@@ -33,9 +33,9 @@ def atmosphericFlux(
     go through the potentially error-prone process of streamlining the code.
     """
     if isinstance(neutrinoEnergy, float):
-        neutrinoEnergy = [neutrinoEnergy]
-        neutrinoZenith = [neutrinoZenith]
-        neutrinoType = [neutrinoType]
+        neutrinoEnergy = np.atleast_1d(neutrinoEnergy)
+        neutrinoZenith = np.atleast_1d(neutrinoZenith)
+        neutrinoType = np.atleast_1d(neutrinoType)
 
     p_types = [dataclasses.I3Particle.ParticleType(t) for t in neutrinoType]
     atmflux = np.zeros(len(neutrinoEnergy))
