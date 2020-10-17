@@ -270,6 +270,7 @@ def WeightEvents(tray, name,
                  dataset_n_files,
                  dataset_n_events_per_run,
                  dataset_number,
+                 muongun_equal_generator=False,
                  key='weights',
                  use_from_simprod=False,
                  add_mese_weights=False,
@@ -294,6 +295,10 @@ def WeightEvents(tray, name,
         Number of events per run. Needed for MESE weights.
     dataset_number : int
         Corsika dataset number.
+    muongun_equal_generator : bool, optional
+        If True, it is assumed that all MuonGun generator objects are the same.
+        In this case, only the first found MuonGun generator will be used
+        and multiplied by the provided 'dataset_n_files'.
     key : str
         Defines the key to which the weight dictionary will be booked.
     use_from_simprod : bool, optional
@@ -322,9 +327,9 @@ def WeightEvents(tray, name,
         # get fluxes and generator
         fluxes, flux_names = fluxes_muongun.get_fluxes_and_names()
         generator, n_files = fluxes_muongun.harvest_generators(
-                                                    infiles,
-                                                    n_files=-1,
-                                                    equal_generators=False)
+                                    infiles,
+                                    n_files=dataset_n_files,
+                                    equal_generators=muongun_equal_generator)
 
     elif dataset_type == 'corsika':
         fluxes, flux_names = fluxes_corsika.get_fluxes_and_names()
