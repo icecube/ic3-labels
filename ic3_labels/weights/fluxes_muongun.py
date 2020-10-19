@@ -40,22 +40,19 @@ def harvest_generators(infiles, n_files=-1, equal_generators=True):
         given. This is needed, since only the first file of the input files
         will be used.
     '''
+    if not isinstance(infiles, list):
+        infiles = [infiles]
+
     generator = None
     n_generators = 0
     if equal_generators:
         log('Assuming all generator objects of the given file list are equal!')
-        if n_files == -1:
+        if n_files == -1 or not isinstance(n_files, int):
             raise ValueError('For equal generators the number of files needs '
                              'to be given explicitly!')
-        infiles = [infiles[0]]
-        if isinstance(infiles, list):
-            infiles = [infiles[0]]
-        else:
-            infiles = [infiles]
-    else:
-        if not isinstance(infiles, list):
-            infiles = [infiles]
+
     for fname in infiles:
+
         try:
             f = dataio.I3File(fname)
             frame = f.pop_frame(icetray.I3Frame.Stream('S'))
@@ -82,7 +79,14 @@ def harvest_generators(infiles, n_files=-1, equal_generators=True):
                             generator = frame_obj
                         else:
                             generator += frame_obj
+
+        # If we are using equal generators, we can stop once we found the
+        # first file with a generator
+        if equal_generators and generator:
+            break
+
     if equal_generators:
+        assert n_generators == 1
         generator = generator * n_files
         n_generators = n_files
     return generator, n_generators
