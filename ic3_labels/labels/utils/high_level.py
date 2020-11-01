@@ -1201,7 +1201,9 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
     return labels
 
 
-def get_cascade_parameters(frame, primary, convex_hull, extend_boundary=200):
+def get_cascade_parameters(
+        frame, primary, convex_hull,
+        extend_boundary=200, write_mc_cascade_to_frame=True):
     """Get cascade parameters.
 
     Parameters
@@ -1266,7 +1268,8 @@ def get_cascade_parameters(frame, primary, convex_hull, extend_boundary=200):
             e_hadron = 0.
             e_track = energy
 
-    frame['MCCascade'] = cascade
+    if write_mc_cascade_to_frame:
+        frame['MCCascade'] = cascade
 
     labels['cascade_x'] = cascade.pos.x
     labels['cascade_y'] = cascade.pos.y
