@@ -100,14 +100,14 @@ class EventGeneratorMultiCascadeLabels(MCLabelsBase):
                 sign = -1
 
             distance = (
-                primary_cascade.pos - primary.daughters[0].pos
+                primary_cascade.pos - daughters[0].pos
             ).magnitude * sign
 
             # sum up energies for daughters if not neutrinos
             # tau can immediately decay in neutrinos which carry away energy
             # that would not be visible, this is currently not accounted for
             e_total, e_em, e_hadron, e_track = get_cascade_em_equivalent(
-                mctree, neutrino)
+                mc_tree, neutrino)
 
             labels[cascade_name + 'x'] = daughters[0].pos.x
             labels[cascade_name + 'y'] = daughters[0].pos.y
