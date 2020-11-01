@@ -73,21 +73,23 @@ class EventGeneratorMultiCascadeLabels(MCLabelsBase):
         mc_tree = frame[self._mc_tree_name]
 
         # get cascades: for this synthetic simulation it is assumed
-        # that each cascade is injected as a primary neutrino, where
-        # the first one defines the primary cascade
-        neutrinos = mc_tree.get_primaries()
+        # that each cascade is injected as a daugther neutrino into
+        # the primary neutrino
+        primary = frame[self._primary_key]
 
         labels = hl.get_cascade_parameters(
-            frame, neutrinos[0],
+            frame, primary,
             convex_hull=self._convex_hull,
             extend_boundary=self._extend_boundary,
             write_mc_cascade_to_frame=False,
         )
 
-        # Now extract cascade info from each neutrino
-        for i, primary in enumerate(neutrinos[1:]):
+        # Now extract cascade info from each daughter neutrino
+        neutrinos = [p for p in mc_tree.get_daughters(primary)
+                     if p.is_neutrino]
+        for i, neutrino in enumerate(neutrinos):
             labels_i = hl.get_cascade_parameters(
-                frame, primary,
+                frame, neutrino,
                 convex_hull=self._convex_hull,
                 extend_boundary=self._extend_boundary,
                 write_mc_cascade_to_frame=False,
