@@ -95,7 +95,7 @@ class EventGeneratorMultiCascadeLabels(MCLabelsBase):
                 write_mc_cascade_to_frame=False,
             )
             for key, value in labels_i.items():
-                labels[key + '_{:05d}'] = value
+                labels[key + '_{:05d}'.format(i)] = value
 
         # write to frame
         frame.Put(self._output_key, labels)
