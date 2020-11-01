@@ -24,10 +24,6 @@ class EventGeneratorMultiCascadeLabels(MCLabelsBase):
                           "Extend boundary of convex hull around IceCube "
                           "[in meters].",
                           500)
-        self.AddParameter("UseEMEquivalenEnergy",
-                          "Correct energy losses to obtaine EM equivalent "
-                          "energy.",
-                          True)
         self.AddParameter("RunOnDAQFrames",
                           "If True, the label module will run on DAQ frames "
                           "instead of Physics frames",
@@ -38,7 +34,6 @@ class EventGeneratorMultiCascadeLabels(MCLabelsBase):
         MCLabelsBase.Configure(self)
         self._extend_boundary = self.GetParameter("ExtendBoundary")
         self._mc_tree_name = self.GetParameter("MCTreeName")
-        self._correct_for_em_loss = self.GetParameter("UseEMEquivalenEnergy")
         self._run_on_daq = self.GetParameter("RunOnDAQFrames")
 
     def DAQ(self, frame):
