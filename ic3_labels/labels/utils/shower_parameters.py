@@ -17,6 +17,7 @@ ToDo:
 import numpy as np
 from icecube.icetray import I3Units
 from icecube import dataclasses
+from icecube.icetray.i3logging import log_warn
 
 
 class ShowerParameters(object):
@@ -117,7 +118,11 @@ class ShowerParameters(object):
 
             # Added safety check: throw error in this case to make sure nothing
             # weird is happenning unkowingly
-            raise ValueError('Unkown particle type {!r}'.format(particle_type))
+            # raise ValueError('Unkown particle type {!r}'.format(particle_type))
+            log_warn(
+                'Unkown particle type {!r}. '.format(particle_type)
+                'Assuming this is a hadron!'
+            )
 
         if self.isElectron:
 
