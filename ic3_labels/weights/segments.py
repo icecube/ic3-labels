@@ -173,7 +173,7 @@ def do_the_weighting(tray, name,
     flux_names : TYPE
         Description
     dataset_type : str
-        Defines the kind of data: 'nugen', 'muongun', 'corsika'
+        Defines the kind of data: 'nugen', 'genie', 'muongun', 'corsika'
     dataset_n_files : int
         Number of files in dataset. Not needed for MuonGun data.
     generator : I3 generator object
@@ -198,7 +198,7 @@ def do_the_weighting(tray, name,
                    If=lambda frame: not frame.Has('MCPrimary'))
 
     if dataset_type.lower() != 'muongun':
-        # Corsika or NuGen
+        # Corsika, NuGen, or GENIE
         tray.AddModule(calc_weights,
                        'WeightCalc',
                        fluxes=fluxes,
@@ -286,7 +286,7 @@ def WeightEvents(tray, name,
     infiles : list of str
         A list of the input file paths.
     dataset_type : str
-        Defines the kind of data: 'nugen', 'muongun', 'corsika'
+        Defines the kind of data: 'nugen', 'genie', 'muongun', 'corsika'
     dataset_n_files : int
         Number of files in dataset. For MuonGun this is overwritten by the
         number of found generators. In this case, this value is only used
@@ -340,7 +340,7 @@ def WeightEvents(tray, name,
         else:
             generator = None
 
-    elif dataset_type == 'nugen':
+    elif dataset_type in ['nugen', 'genie']:
         fluxes, flux_names = fluxes_neutrino.get_fluxes_and_names()
 
         generator = None
@@ -381,7 +381,7 @@ def WeightEvents(tray, name,
                     key=key,
                     )
 
-    if add_mese_weights and dataset_type in ['muongun', 'nugen']:
+    if add_mese_weights and dataset_type in ['muongun', 'nugen', 'genie']:
         tray.AddModule(MESEWeights, 'MESEWeights',
                        DatasetType=dataset_type,
                        DatasetNFiles=dataset_n_files,

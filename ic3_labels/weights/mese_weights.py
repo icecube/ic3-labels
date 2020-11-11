@@ -111,7 +111,7 @@ class MESEWeights(icetray.I3ConditionalModule):
         icetray.I3ConditionalModule.__init__(self, context)
         self.AddParameter("DatasetType",
                           "Type of dataset. Must be one of: "
-                          "'muongun', 'nugen'")
+                          "'muongun', 'nugen', 'genie'")
         self.AddParameter("DatasetNFiles", "Number of files")
         self.AddParameter("DatasetNEventsPerRun",
                           "Number of generated events per file")
@@ -127,7 +127,7 @@ class MESEWeights(icetray.I3ConditionalModule):
 
         self._dataset_type = self._dataset_type.lower()
 
-        if self._dataset_type not in ['muongun', 'nugen']:
+        if self._dataset_type not in ['muongun', 'nugen', 'genie']:
             raise ValueError('Unkown dataset_type: {!r}'.format(dataset_type))
 
         # get Honda2006
@@ -181,7 +181,7 @@ class MESEWeights(icetray.I3ConditionalModule):
         # -------
         # NuGen
         # -------
-        if self._dataset_type == 'nugen':
+        if self._dataset_type in ['nugen', 'genie']:
             # get oneweight / n_gen
             oneweight = frame['I3MCWeightDict']['OneWeight'] / self._ngen
             true_type = frame['I3MCWeightDict']['PrimaryNeutrinoType']
@@ -332,7 +332,7 @@ class MESEWeights(icetray.I3ConditionalModule):
             track_mask = data_dict['is_cascade_reco'] | \
                 ~((np.cos(TrackFit_zenith) > 0.3) & (energy_millipede < 10e3))
 
-            if self._dataset_type in ['muongun', 'nugen']:
+            if self._dataset_type in ['muongun', 'nugen', 'genie']:
                 uniq_mask = np.r_[True, np.diff(energy_true) != 0]
             else:
                 uniq_mask = np.r_[True, np.diff(mjd) != 0]
