@@ -120,8 +120,8 @@ class ShowerParameters(object):
             # weird is happenning unkowingly
             # raise ValueError('Unkown particle type {!r}'.format(particle_type))
             log_warn(
-                'Unkown particle type {!r}. '.format(particle_type)
-                'Assuming this is a hadron!'
+                'Unkown particle type {!r}. Assuming this is a hadron!'.format(
+                    particle_type)
             )
 
         if self.isElectron:
