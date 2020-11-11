@@ -5,6 +5,7 @@
 from __future__ import print_function, division
 import numpy as np
 from icecube import dataclasses, simclasses
+from icecube.icetray.i3logging import log_warn
 
 # Try to import ShowerParameters from I3SimConstants
 try:
@@ -276,8 +277,9 @@ def get_cascade_em_equivalent(mctree, cascade_primary):
                 return energy, 0., energy, 0.
 
             else:
-                raise ValueError('Unknown particly type: {}'.format(
+                log_warn('Unknown particle type: {}. Assuming hadron!'.format(
                     cascade_primary.type))
+                return energy, 0., energy, 0.
 
     # ---------------------------------
 
