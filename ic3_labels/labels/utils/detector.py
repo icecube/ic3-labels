@@ -63,3 +63,41 @@ icecube_hull_lower = ConvexHull([
    [-347.88000488,  451.51998901, -150],  # string 75
    [-570.90002441, -125.13999939, -150],  # string 31
 ])
+
+# This is is convex hull around IceCube minus 1 outer layer and 3 in z
+icecube_veto_hull_m1 = ConvexHull([
+   [-447.74, -113.13, -450],  # string 32, DOM 57 (approx z)
+   [-211.35, -404.48, -450],  # string 8, DOM 57 (approx z)
+   [ 282.18, -325.74, -450],  # string 12, DOM 57 (approx z)
+   [ 472.05,  127.9 , -450],  # string 49, DOM 57 (approx z)
+   [ 303.41,  335.64, -450],  # string 66, DOM 57 (approx z)
+   [ -21.97,  393.24, -450],  # string 71, DOM 57 (approx z)
+   [-268.9 ,  354.24, -450],  # string 69, DOM 57 (approx z)
+   [-447.74, -113.13, -450],  # string 32, DOM 57 (approx z)
+   [-447.74, -113.13, 450],  # string 32, DOM 4 (approx z)
+   [-211.35, -404.48, 450],  # string 8, DOM 4 (approx z)
+   [ 282.18, -325.74, 450],  # string 12, DOM 4 (approx z)
+   [ 472.05,  127.9 , 450],  # string 49, DOM 4 (approx z)
+   [ 303.41,  335.64, 450],  # string 66, DOM 4 (approx z)
+   [ -21.97,  393.24, 450],  # string 71, DOM 4 (approx z)
+   [-268.9 ,  354.24, 450],  # string 69, DOM 4 (approx z)
+   [-447.74, -113.13, 450],  # string 32, DOM 4 (approx z)
+])
+
+# This is is convex hull around IceCube minus 2 outer layers and 6 in z
+icecube_veto_hull_m2 = ConvexHull([
+   [-324.39,  -93.43, -400],  # string 33, DOM 54 (approx z)
+   [-166.4 , -287.79, -400],  # string 16, DOM 54 (approx z)
+   [ 210.47, -209.77, -400],  # string 19, DOM 54 (approx z)
+   [ 330.03,  127.2 , -400],  # string 48, DOM 54 (approx z)
+   [ 174.47,  315.54, -400],  # string 65, DOM 54 (approx z)
+   [-189.98,  257.42, -400],  # string 62, DOM 54 (approx z)
+   [-324.39,  -93.43, -400],  # string 33, DOM 54 (approx z)
+   [-324.39,  -93.43, 400],  # string 33, DOM 7 (approx z)
+   [-166.4 , -287.79, 400],  # string 16, DOM 7 (approx z)
+   [ 210.47, -209.77, 400],  # string 19, DOM 7 (approx z)
+   [ 330.03,  127.2 , 400],  # string 48, DOM 7 (approx z)
+   [ 174.47,  315.54, 400],  # string 65, DOM 7 (approx z)
+   [-189.98,  257.42, 400],  # string 62, DOM 7 (approx z)
+   [-324.39,  -93.43, 400],  # string 33, DOM 7 (approx z)
+])
