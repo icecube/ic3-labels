@@ -140,8 +140,6 @@ def get_track_energy_wrapper(frame, track, distance):
         print('Distance:', distance)
         print('I3EventHeader:')
         print(frame['I3EventHeader'])
-        print('I3MCTree:')
-        print(frame['I3MCTree'])
         print('-----------')
 
         energy = float('nan')
