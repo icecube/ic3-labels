@@ -6,6 +6,7 @@ from __future__ import print_function, division
 import numpy as np
 from icecube import dataclasses, MuonGun, simclasses
 from icecube.phys_services import I3Calculator
+from icecube.icetray.i3logging import log_error
 
 from ic3_labels.labels.utils import geometry
 from ic3_labels.labels.utils.general import get_ids_of_particle_and_daughters
@@ -110,6 +111,46 @@ def get_muongun_track(frame, particle_id):
     return None
 
 
+def get_track_energy_wrapper(frame, track, distance):
+    """Wrapper around MuonGun track.get_energy function
+
+    In rare cases the sum of energy losses is larger than the checkpoint.
+    (Why is this the case?) Catch and handle the exception here.
+    While we are at it: print debug information, such that this issue can
+    be fixed.
+
+    Parameters
+    ----------
+    track : MuonGun.Track
+        The MuonGun track.
+    distance : float
+        The distance along the track at which to obtain the energy.
+    """
+
+    try:
+        energy = track.get_energy(distance)
+        raise RuntimeError('Dfasdfa')
+
+    except RuntimeError as e:
+        log_error('Caught exception: ' + str(e))
+        print('-----------')
+        print('Debug info:')
+        print('-----------')
+        print('Track:')
+        print(track)
+        print('Distance:', distance)
+        print('I3EventHeader:')
+        print(frame['I3EventHeader'])
+        print('I3MCTree:')
+        print(frame['I3MCTree'])
+        print('-----------')
+
+        energy = float('nan')
+        log_error('Setting energy to NaN and proceeding!')
+
+    return energy
+
+
 def get_muon_energy_at_position(frame, muon, position):
     '''Function to get the energy of a muon at a certain position.
 
@@ -158,7 +199,8 @@ def get_muon_energy_at_position(frame, muon, position):
     distance = get_distance_along_track_to_point(muon.pos, muon.dir, position)
     if distance < 0 or np.isnan(distance):
         return float('nan')
-    return track.get_energy(distance)
+    return get_track_energy_wrapper(frame, track, distance)
+    # return track.get_energy(distance)
 
 
 def get_muon_energy_at_distance(frame, muon, distance):
@@ -199,7 +241,8 @@ def get_muon_energy_at_distance(frame, muon, distance):
             if muon.energy < 20 or muon.length < distance:
                 return 0.0
         return float('nan')
-    return track.get_energy(distance)
+    return get_track_energy_wrapper(frame, track, distance)
+    # return track.get_energy(distance)
 
 
 def get_inf_muon_binned_energy_losses(
