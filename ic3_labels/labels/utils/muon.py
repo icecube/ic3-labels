@@ -129,7 +129,6 @@ def get_track_energy_wrapper(frame, track, distance):
 
     try:
         energy = track.get_energy(distance)
-        raise RuntimeError('Dfasdfa')
 
     except RuntimeError as e:
         log_error('Caught exception: ' + str(e))
