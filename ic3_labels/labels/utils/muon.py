@@ -762,7 +762,7 @@ def get_muon_convex_hull_intersections(track, convex_hull):
     #   What happens if track is exactly along edge of hull?
     #   If only one ts: track exactly hit a corner of hull?
     assert len(intersection_ts) in [0, 2], \
-        'Expected exactly 1 or 2 intersections'
+        'Expected exactly 0 or 2 intersections: {}'.format(intersection_ts)
 
     return intersection_ts
 

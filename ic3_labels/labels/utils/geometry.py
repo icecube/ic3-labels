@@ -103,7 +103,9 @@ def get_intersections(convex_hull, v_pos, v_dir, eps=1e-4):
         t_s_back = np.array(t_s_back)
         t_s_back = t_s_back[np.isfinite(t_s_back)]
         t_s = np.hstack((t_s, t_s_back * (-1.)))
-    if isinstance(eps, float):  # Remove similar intersections
+
+    # Remove similar intersections
+    if isinstance(eps, float) and len(t_s) > 2:
         if eps >= 0.:
             t_selected = []
             intersections = []
@@ -114,6 +116,11 @@ def get_intersections(convex_hull, v_pos, v_dir, eps=1e-4):
                 if not (np.array(distances) < eps).any():
                     t_selected.append(t_i)
                     intersections.append(intersection_i)
+
+            if not len(t_selected) in (0, 2):
+                print('Expected 0 or 2 intersections: {}'.format(t_selected))
+                print(t_s)
+
             t_s = np.array(t_selected)
     return t_s
 
