@@ -119,7 +119,10 @@ def get_intersections(convex_hull, v_pos, v_dir, eps=1e-4):
 
             if not len(t_selected) in (0, 2):
                 print('Expected 0 or 2 intersections: {}'.format(t_selected))
-                print(t_s)
+                print('t_s', t_s)
+                print('v_pos', v_pos)
+                print('v_dir', v_dir)
+                print('eps', eps)
 
             t_s = np.array(t_selected)
     return t_s
