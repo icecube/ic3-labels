@@ -6,7 +6,7 @@ from __future__ import print_function, division
 import numpy as np
 from icecube import dataclasses, MuonGun, simclasses
 from icecube.phys_services import I3Calculator
-from icecube.icetray.i3logging import log_error
+from icecube.icetray.i3logging import log_error, log_warn
 
 from ic3_labels.labels.utils import geometry
 from ic3_labels.labels.utils.general import get_ids_of_particle_and_daughters
@@ -115,7 +115,8 @@ def get_track_energy_wrapper(frame, track, distance):
     """Wrapper around MuonGun track.get_energy function
 
     In rare cases the sum of energy losses is larger than the checkpoint.
-    (Why is this the case?) Catch and handle the exception here.
+    (Why is this the case? I3MCTree reproduced incorrectly?)
+    Catch and handle the exception here.
     While we are at it: print debug information, such that this issue can
     be fixed.
 
@@ -378,9 +379,17 @@ def get_muon_entry_info(frame, muon, convex_hull):
     # This might be an ok approximation, since MuonGun muons are often injected
     # not too far out of detector volume
     if 'I3MCTree' not in frame:
+        log_warn('Frame does not include key `I3MCTree`. '
+                 'Setting muon entry energy to muon vertex energy!')
         energy = muon.energy
     else:
         energy = get_muon_energy_at_position(frame, muon, entry)
+
+        if not np.isfinite(energy):
+            log_warn(
+                'Muon entry energy is not finite!'
+                'Setting  energy to muon vertex energy!')
+            energy = muon.energy
     return entry, time, energy
 
 
