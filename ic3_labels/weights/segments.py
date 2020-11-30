@@ -22,7 +22,7 @@ from ic3_labels.weights import fluxes_corsika, fluxes_muongun, fluxes_neutrino
 from ic3_labels.weights.mese_weights import MESEWeights
 
 
-def generate_generator(outpath, dataset_number, n_files):
+def generate_generator(dataset_number, n_files, outpath=None):
     if isinstance(dataset_number, Iterable) and isinstance(n_files, Iterable):
         if len(dataset_number) != len(np.flatnonzero(
                 np.asarray(dataset_number))):
@@ -49,8 +49,9 @@ def generate_generator(outpath, dataset_number, n_files):
         raise ValueError('Dataset_number and n_files either have to be both '
                          'numbers (int or float) or be both Iterables of the '
                          'same length.')
-    with open(outpath, 'w') as open_file:
-        pickle.dump(generator, open_file, protocol=2)
+    if outpath is not None:
+        with open(outpath, 'w') as open_file:
+            pickle.dump(generator, open_file, protocol=2)
     return outpath
 
 
