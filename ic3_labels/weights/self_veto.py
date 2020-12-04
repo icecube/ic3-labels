@@ -81,7 +81,11 @@ class AtmosphericSelfVetoModule(icetray.I3ConditionalModule):
             energy_true = frame['MCPrimary'].energy
             zenith_true = frame['MCPrimary'].dir.zenith
             azimuth_true = frame['MCPrimary'].dir.azimuth
-            true_type = frame['I3MCWeightDict']['PrimaryNeutrinoType']
+
+            if self._dataset_type == 'nugen':
+                true_type = frame['I3MCWeightDict']['PrimaryNeutrinoType']
+            elif self._dataset_type == 'genie':
+                true_type = frame['MCPrimary'].type
 
             # --------------------
             # Get muon entry depth

@@ -398,6 +398,7 @@ def WeightEvents(tray, name,
     if add_atmospheric_self_veto and dataset_type in ['nugen', 'genie']:
         tray.AddModule(
             self_veto.AtmosphericSelfVetoModule, 'AtmosphericSelfVetoModule',
+            DatasetType=dataset_type,
         )
 
 
