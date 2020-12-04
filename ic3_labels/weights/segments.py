@@ -19,6 +19,7 @@ import pickle
 
 
 from ic3_labels.weights import fluxes_corsika, fluxes_muongun, fluxes_neutrino
+from ic3_labels.weights import self_veto
 from ic3_labels.weights.mese_weights import MESEWeights
 
 
@@ -275,6 +276,7 @@ def WeightEvents(tray, name,
                  key='weights',
                  use_from_simprod=False,
                  add_mese_weights=False,
+                 add_atmospheric_self_veto=True,
                  check_n_files=True):
     """Calculate weights and add to frame
 
@@ -309,6 +311,9 @@ def WeightEvents(tray, name,
     add_mese_weights : bool, optional
         If true, weights used for MESE 7yr cascade paper will be added.
         (As well as an additional filtering step)
+    add_atmospheric_self_veto : bool, optional
+        If True, the atmospheric self-veto passing fractions will be calculated
+        and written to the frame.
     check_n_files : bool or list of str, optional
         If true, check if provided n_files argument seems reasonable.
         If list of str and if dataset_type is in the defined list:
@@ -389,6 +394,11 @@ def WeightEvents(tray, name,
                        DatasetNEventsPerRun=dataset_n_events_per_run,
                        OutputKey='{}_mese'.format(key),
                        )
+
+    if add_atmospheric_self_veto and dataset_type in ['nugen', 'genie']:
+        tray.AddModule(
+            self_veto.AtmosphericSelfVetoModule, 'AtmosphericSelfVetoModule',
+        )
 
 
 class UpdateMergedWeights(icetray.I3Module):
