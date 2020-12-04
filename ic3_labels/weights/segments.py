@@ -276,7 +276,7 @@ def WeightEvents(tray, name,
                  key='weights',
                  use_from_simprod=False,
                  add_mese_weights=False,
-                 add_atmospheric_self_veto=True,
+                 add_atmospheric_self_veto=False,
                  check_n_files=True):
     """Calculate weights and add to frame
 
