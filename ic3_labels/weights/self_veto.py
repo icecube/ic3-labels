@@ -90,21 +90,37 @@ class AtmosphericSelfVetoModule(icetray.I3ConditionalModule):
             # --------------------
             # Get muon entry depth
             # --------------------
-            muon = mu_utils.get_muon_of_inice_neutrino(frame)
-            tau = tau_utils.get_tau_of_inice_neutrino(frame)
 
+            # Be more lenient with GENIE sets and catch assert
+            if self._dataset_type == 'genie':
+                try:
+                    muon = mu_utils.get_muon_of_inice_neutrino(frame)
+                except AssertionError as e:
+                    print(e)
+                    muon = None
+                try:
+                    tau = tau_utils.get_tau_of_inice_neutrino(frame)
+                except AssertionError as e:
+                    print(e)
+                    tau = None
+
+            # NuGen sets should not throw an assert
+            else:
+                tau = tau_utils.get_tau_of_inice_neutrino(frame)
+                muon = mu_utils.get_muon_of_inice_neutrino(frame)
+
+            # found a muon
             if muon is not None:
-                # found a muon
-                entry = self._get_muon_entry(frame, muon)
+                entry = self._get_particle_entry(muon)
                 entry_z = entry.z
 
+            # found a tau
             elif tau is not None:
-                # found a tau
                 entry = self._get_particle_entry(tau)
                 entry_z = entry.z
-            else:
 
-                # no muon or tau exists: cascade
+            # no muon or tau exists: cascade
+            else:
                 cascade = get_cascade_of_primary_nu(frame,
                                                     frame['MCPrimary'],
                                                     convex_hull=None,
@@ -167,13 +183,4 @@ class AtmosphericSelfVetoModule(icetray.I3ConditionalModule):
             # get closest approach point as entry approximation
             entry = mu_utils.get_particle_closest_approach_to_position(
                                     particle, dataclasses.I3Position(0, 0, 0))
-        return entry
-
-    def _get_muon_entry(self, frame, muon):
-
-        entry = mu_utils.get_muon_initial_point_inside(muon, self._convex_hull)
-        if entry is None:
-            # get closest approach point as entry approximation
-            entry = mu_utils.get_muon_closest_approach_to_center(frame, muon)
-
         return entry
