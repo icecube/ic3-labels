@@ -1298,6 +1298,11 @@ def get_muon_of_inice_neutrino(frame, muongun_primary_neutrino_id=None):
                 p.id == muongun_primary_neutrino_id:
             nu_in_ice = p
             break
+
+    if nu_in_ice is None:
+        log_warn('Could not find an "InIce" neutrino. Returning None')
+        return None
+
     daughters = frame['I3MCTree'].get_daughters(nu_in_ice)
     muons = [p for p in daughters if p.pdg_encoding in (13, -13)]
 
