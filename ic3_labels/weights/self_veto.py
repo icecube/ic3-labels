@@ -20,7 +20,7 @@ class AtmosphericSelfVetoModule(icetray.I3ConditionalModule):
         icetray.I3ConditionalModule.__init__(self, context)
         self.AddParameter("DatasetType",
                           "Type of dataset. Must be one of: "
-                          "'muongun', 'nugen', 'genie'")
+                          "'muongun', 'nugen', 'genie', 'corsika', 'exp'")
         self.AddParameter("OutputKey", "Save weights to this frame key.",
                           'AtmosphericSelfVetoFactors')
         self.AddParameter("VetoThresholds", "Veto thresholds to use.",
@@ -33,8 +33,10 @@ class AtmosphericSelfVetoModule(icetray.I3ConditionalModule):
 
         self._dataset_type = self._dataset_type.lower()
 
-        if self._dataset_type not in ['muongun', 'nugen', 'genie', 'data']:
-            raise ValueError('Unkown dataset_type: {!r}'.format(dataset_type))
+        if self._dataset_type not in [
+                'muongun', 'nugen', 'genie', 'corsika', 'exp']:
+            raise ValueError('Unkown dataset_type: {!r}'.format(
+                self._ataset_type))
 
         # get self-veto
         af = AtmosphericSelfVeto.AnalyticPassingFraction
