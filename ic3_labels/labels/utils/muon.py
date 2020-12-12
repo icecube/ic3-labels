@@ -561,6 +561,11 @@ def get_muon_scattering_info(frame,
     max_energy_loss = None
     max_energy = -float('inf')
     for daughter in frame['I3MCTree'].get_daughters(muon):
+
+        if is_muon(daughter):
+            # these are propably muon segment updates and not actual losses
+            continue
+
         if daughter.time > entry_time and daughter.time < exit_time:
             if daughter.energy > max_energy:
                 max_energy = daughter.energy
@@ -568,11 +573,15 @@ def get_muon_scattering_info(frame,
 
     if max_energy_loss is None:
         max_energy_loss = dataclasses.I3Particle()
+        length_before = 0.
+        length_after = 0.
+        rel_loss_energy = 0.
+    else:
 
-    # calculate labels
-    length_before = (max_energy_loss.pos - entry).magnitude
-    length_after = (exit - max_energy_loss.pos).magnitude
-    rel_loss_energy = max_energy / entry_energy
+        # calculate labels
+        length_before = (max_energy_loss.pos - entry).magnitude
+        length_after = (exit - max_energy_loss.pos).magnitude
+        rel_loss_energy = max_energy / entry_energy
 
     if (total_length >= min_length and length_before >= min_length_before and
             length_after >= min_length_after and
@@ -604,7 +613,7 @@ def get_muon_scattering_info(frame,
     labels['muon_loss_y'] = max_energy_loss.pos.y
     labels['muon_loss_z'] = max_energy_loss.pos.z
     labels['muon_loss_time'] = max_energy_loss.time
-    labels['rel_muon_loss_energy'] = max_energy_loss.energy / entry_energy
+    labels['rel_muon_loss_energy'] = rel_loss_energy
     labels['p_scattering_candidate'] = p_scattering_candidate
 
     return labels
