@@ -52,17 +52,21 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
 
     Returns
     -------
-    array_like
-        The distances for the energy updates wrt the muon vertex.
-    array_like
-        The energies for at the energy update positions.
-    list of I3Particle
-        List of removed cascades. This list is sorted from highest to lowest
-        energies.
-        Note this list may be smaller than `num_to_remove` if the number of
-        energy losses of the muon are smaller than this number.
-    List of I3Particle
-        List of track updates.
+    dict
+        update_distances : array_like
+            The distances for the energy updates wrt the muon vertex.
+        update_energies : array_like
+            The energies for at the energy update positions.
+        cascades : list of I3Particle
+            List of removed cascades. This list is sorted from highest to lowest
+            energies.
+            Note this list may be smaller than `num_to_remove` if the number of
+            energy losses of the muon are smaller than this number.
+        track_updates : List of I3Particle
+            List of track updates.
+        relative_energy_losses : array_like
+            The relative energy loss (momentum transfer q) of each cascade
+            energy deposition. Same length as `cascades`
     """
 
     # sanity check
@@ -163,6 +167,9 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
     # a matching track update. This should only happen for the decay point
     unaccounted_daughters = []
 
+    # compute relative energy loss (momentum transfer q) of each cascade
+    relative_energy_losses = []
+
     if len(update_distances) > 0:
         # values for sanity check
         previous_energy = float(update_energies[-1])
@@ -180,6 +187,11 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
             if index is None and np.allclose(
                     cascade.time, daughters[-1].time, atol=1e-2):
                 unaccounted_daughters.append((cascade, True))
+
+                # we would need to consider the continous losses to estimate
+                # the relative energy loss. Instead of doing this, we'll just
+                # add a NaN for now.
+                relative_energy_losses.append(float('nan'))
             else:
                 assert index is not None
                 assert np.allclose(
@@ -187,6 +199,15 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
                 assert np.allclose(
                     update_distances[index],
                     (cascade.pos - track.pos).magnitude, atol=1e-1)
+
+                # the energy of the muon update is already reduced by the loss.
+                # To obtain the muon energy prior to the loss, we need to add
+                # it back
+                relative_energy_losses.append(
+                    cascade.energy / (
+                        cascade.energy + track_updates[index].energy
+                        )
+                )
 
                 # update all of the remaining track updates
                 # (add energy back since we assume this did not get depsosited)
@@ -199,6 +220,17 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
         assert np.allclose(
             update_energies[-1] - returned_energy, previous_energy)
         assert (np.diff(update_energies) <= 1e-4).all()
+
+    else:
+
+        # No track updates exist. We would need to consider the continous
+        # losses to estimate the relative energy loss. Instead of doing this,
+        # we'll just add NaNs for now.
+        for cascade in cascades:
+            relative_energy_losses.append(float('nan'))
+
+    relative_energy_losses = np.array(relative_energy_losses)
+    assert len(relative_energy_losses) == len(cascades)
 
     # Now walk through the leftover stochastic energy losses and make sure
     # that they are all covered by the track updates, possibly correct
@@ -342,7 +374,13 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
     assert (np.all(update_energies) >= 0)
     assert (np.diff([c.energy for c in cascades]) < 0).all()
 
-    return update_distances, update_energies, cascades, track_updates
+    return {
+        'update_distances': update_distances,
+        'update_energies': update_energies,
+        'cascades': cascades,
+        'track_updates': track_updates,
+        'relative_energy_losses': relative_energy_losses,
+    }
 
 
 def get_update_index(update_times, update_energies, update_ids, cascade,

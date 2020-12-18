@@ -97,19 +97,25 @@ class MuonLossVisualizer(icetray.I3ConditionalModule):
                 'Particle type {} not yet supported'.format(track.type))
 
         # Calculate total energy by not removing any cascades
-        update_distances, update_energies, _, _ = \
-            get_track_energy_depositions(
+        energy_depositions_dict = get_track_energy_depositions(
                 mc_tree, track, 0,
                 correct_for_em_loss=correct_for_em_loss,
                 extend_boundary=extend_boundary)
+        update_distances = energy_depositions_dict['update_distances']
+        update_energies = energy_depositions_dict['update_energies']
+
         total_energy = update_energies[0] - update_energies[-1]
 
         # Calculate continous losses by removing all cascades
-        cont_distances, cont_energies, cont_cascades, _ = \
-            get_track_energy_depositions(
+        energy_depositions_dict = get_track_energy_depositions(
                 mc_tree, track, 10000,
                 correct_for_em_loss=correct_for_em_loss,
                 extend_boundary=extend_boundary)
+
+        cont_distances = energy_depositions_dict['update_distances']
+        cont_energies = energy_depositions_dict['update_energies']
+        cont_cascades = energy_depositions_dict['cascades']
+
         cont_stochasticity, cont_area_above, cont_area_below = \
             compute_stochasticity(cont_distances, cont_energies)
 
@@ -121,11 +127,15 @@ class MuonLossVisualizer(icetray.I3ConditionalModule):
         for num_remove in num_losses_to_remove:
 
             # compute energy losses
-            update_distances, update_energies, cascades, track_updates = \
-                get_track_energy_depositions(
+            energy_depositions_dict = get_track_energy_depositions(
                     mc_tree, track, num_remove,
                     correct_for_em_loss=correct_for_em_loss,
                     extend_boundary=extend_boundary)
+
+            update_distances = energy_depositions_dict['update_distances']
+            update_energies = energy_depositions_dict['update_energies']
+            cascades = energy_depositions_dict['cascades']
+            track_updates = energy_depositions_dict['track_updates']
 
             if len(update_distances) > 0:
 

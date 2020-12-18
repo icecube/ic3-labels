@@ -95,13 +95,16 @@ class EventGeneratorMuonTrackLabels(MCLabelsBase):
         muon = self.get_muon(frame, primary=frame[self._primary_key])
 
         # compute energy updates and high energy losses
-        update_distances, update_energies, cascades, track_updates = \
-            get_track_energy_depositions(
+        energy_depositions_dict = get_track_energy_depositions(
                 mc_tree=frame['I3MCTree'],
                 track=muon,
                 num_to_remove=self._num_cascades,
                 correct_for_em_loss=self._correct_for_em_loss,
                 extend_boundary=self._extend_boundary)
+        update_distances = energy_depositions_dict['update_distances']
+        update_energies = energy_depositions_dict['update_energies']
+        cascades = energy_depositions_dict['cascades']
+        track_updates = energy_depositions_dict['track_updates']
 
         # compute starting point of track updates
         if len(track_updates) == 0:
