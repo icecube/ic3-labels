@@ -223,7 +223,7 @@ class MCLabelsMuonScattering(MCLabelsBase):
 
 class MCLabelsMuonEnergyLosses(MCLabelsBase):
     def __init__(self, context):
-        super(MCLabelsMuonEnergyLosses, self).__init__(self, context)
+        MCLabelsBase.__init__(self, context)
         self.AddParameter("MuonKey", "Name of the muon.", 'MCPrimary')
         self.AddParameter("BinWidth", "Bin width [in meters].", 10)
         self.AddParameter("ExtendBoundary",
@@ -238,7 +238,7 @@ class MCLabelsMuonEnergyLosses(MCLabelsBase):
                           None)
 
     def Configure(self):
-        super(MCLabelsMuonEnergyLosses, self).Configure(self)
+        MCLabelsBase.Configure(self)
         self._muon_key = self.GetParameter("MuonKey")
         self._bin_width = self.GetParameter("BinWidth")
         self._extend_boundary = self.GetParameter("ExtendBoundary")
@@ -287,7 +287,7 @@ class MCLabelsMuonEnergyLosses(MCLabelsBase):
 
 class MCLabelsMuonEnergyLossesInCylinder(MCLabelsBase):
     def __init__(self, context):
-        super(MCLabelsMuonEnergyLossesInCylinder, self).__init__(self, context)
+        MCLabelsBase.__init__(self, context)
         self.AddParameter("BinWidth", "Bin width [in meters].", 15)
         self.AddParameter("NumBins", "Number of bins to create.", 100)
         self.AddParameter("CylinderHeight",
@@ -298,7 +298,7 @@ class MCLabelsMuonEnergyLossesInCylinder(MCLabelsBase):
                           600.)
 
     def Configure(self):
-        super(MCLabelsMuonEnergyLosses, self).Configure(self)
+        MCLabelsBase.Configure(self)
         self._bin_width = self.GetParameter("BinWidth")
         self._num_bins = self.GetParameter("NumBins")
         self._cylinder_height = self.GetParameter("CylinderHeight")
