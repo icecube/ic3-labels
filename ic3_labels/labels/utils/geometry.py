@@ -4,6 +4,7 @@
 '''
 from __future__ import print_function, division
 import numpy as np
+import logging
 
 
 def ray_triangle_intersection(ray_near, ray_dir, triangle):
@@ -57,6 +58,40 @@ def ray_triangle_intersection(ray_near, ray_dir, triangle):
     return t
 
 
+def remove_similar_intersections(t_s, eps=1e-4):
+    """Remove similar intersections
+
+    Parameters
+    ----------
+    t_s : array_like
+        Scaling factors for v_dir to get the intersection points.
+        Actual intersection points are v_pos + t * v_dir.
+    eps : float or None
+        Min distance between intersection points to be treated as
+        different points.
+
+    Returns
+    -------
+    array_like
+        Selected scaling factors for v_dir to get the intersection points.
+        Actual intersection points are v_pos + t * v_dir.
+    """
+    if isinstance(eps, float) and len(t_s) > 2:
+        if eps >= 0.:
+            t_selected = []
+            for t_i in t_s:
+                distances = [t_i - t_j for t_j in t_selected]
+                if not (np.array(distances) < eps).any():
+                    t_selected.append(t_i)
+
+            if not len(t_selected) in (0, 2):
+                msg = 'Expected 0 or 2 intersections: {}. eps: {} t_s: {}'
+                logging.warning(msg.format(t_selected, eps, t_s))
+
+            t_s = np.array(t_selected)
+    return t_s
+
+
 def get_intersections(convex_hull, v_pos, v_dir, eps=1e-4):
     '''Function to get the intersection points of an infinite line and the
     convex hull. The returned t's are the scaling factors for v_dir to
@@ -105,27 +140,77 @@ def get_intersections(convex_hull, v_pos, v_dir, eps=1e-4):
         t_s = np.hstack((t_s, t_s_back * (-1.)))
 
     # Remove similar intersections
-    if isinstance(eps, float) and len(t_s) > 2:
-        if eps >= 0.:
-            t_selected = []
-            intersections = []
-            for t_i in t_s:
-                intersection_i = v_pos + t_i * v_dir
-                distances = [np.linalg.norm(intersection_i - intersection_j)
-                             for intersection_j in intersections]
-                if not (np.array(distances) < eps).any():
-                    t_selected.append(t_i)
-                    intersections.append(intersection_i)
+    t_s = remove_similar_intersections(t_s, eps)
 
-            if not len(t_selected) in (0, 2):
-                print('Expected 0 or 2 intersections: {}'.format(t_selected))
-                print('t_s', t_s)
-                print('v_pos', v_pos)
-                print('v_dir', v_dir)
-                print('eps', eps)
-
-            t_s = np.array(t_selected)
     return t_s
+
+
+def get_axial_cylinder_intersections(
+        v_pos, v_dir, height=1000., radius=600., tol=1e-4):
+    '''Get intersection of infitite track with axial (along z) cylinder
+
+    The returned t's are the scaling factors for v_dir to
+    get the intersection points. If t < 0 the intersection is 'behind'
+    v_pos. This can be used decide whether a track is a starting track.
+
+    Parameters
+    ----------
+    v_pos : array-like
+        A point of the line.
+        Shape: [3]
+    v_dir : array-like
+        Directional vector of the line.
+        Shape: [3]
+    height : float, optional
+        Height of the cylinder.
+        The cylinder is aligned to the z-axis and centered at (0, 0, 0).
+    radius : float, optional
+        Radius of the cylinder.
+        The cylinder is aligned to the z-axis and centered at (0, 0, 0).
+    tol : float, optional
+        Tolerance on computed intersection points.
+
+    Returns
+    -------
+    t : array-like
+        Sorted scaling factors for v_dir to get the intersection points.
+        Actual intersection points are v_pos + t * v_dir.
+        Shape: [n_intersections] (0 or 2)
+    '''
+
+    x, y, z = v_pos
+    dx, dy, dz = v_dir
+
+    c_z = height / 2.
+    r2 = (radius + tol)**2
+
+    # distances to points with sqrt(x**2 + y**2) == r**2
+    # solution for |dz| != 1:
+    # t = -x**2*dy**2 + 2*x*y*dx*dy - y**2*dx**2 + (dx**2 + dy**2)*r**2
+    # l = +- (sqrt(t) - x*dx - y*dy) / (dx**2 + dy**2)
+    t1 = dx**2 + dy**2
+    t2 = -x**2*dy**2 + 2*x*y*dx*dy - y**2*dx**2 + t1*radius**2
+    t_p = (np.sqrt(t2) - x*dx - y*dy) / t1
+    t_n = (-np.sqrt(t2) - x*dx - y*dy) / t1
+
+    # distances to points with z == +- cylinder_ext
+    t_t = (c_z - z) / dz
+    t_b = (-c_z - z) / dz
+
+    # only accept points that are on the edge of the cylinder (plus tol)
+    intersections = []
+    for t_i in [t_p, t_n]:
+        if np.isfinite(t_i) and np.abs(z + t_i * dz) < c_z + tol:
+            intersections.append(t_i)
+
+    for t_i in [t_t, t_b]:
+        if np.isfinite(t_i) and (x + t_i * dx)**2 + (y + t_i * dy)**2 < r2:
+            intersections.append(t_i)
+
+    # Remove similar intersections
+    intersections = remove_similar_intersections(t_s=intersections, eps=tol)
+
+    return np.sort(intersections)
 
 
 def point_is_inside(convex_hull,

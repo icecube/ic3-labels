@@ -283,3 +283,51 @@ class MCLabelsMuonEnergyLosses(MCLabelsBase):
         frame.Put(self._output_key, labels)
 
         self.PushFrame(frame)
+
+
+class MCLabelsMuonEnergyLossesInCylinder(MCLabelsBase):
+    def __init__(self, context):
+        super(MCLabelsMuonEnergyLossesInCylinder, self).__init__(self, context)
+        self.AddParameter("BinWidth", "Bin width [in meters].", 15)
+        self.AddParameter("NumBins", "Number of bins to create.", 100)
+        self.AddParameter("CylinderHeight",
+                          "The height (z) of the axial clinder [in meters].",
+                          1000.)
+        self.AddParameter("CylinderRadius",
+                          "The radius (x-y) of the axial clinder [in meters].",
+                          600.)
+
+    def Configure(self):
+        super(MCLabelsMuonEnergyLosses, self).Configure(self)
+        self._bin_width = self.GetParameter("BinWidth")
+        self._num_bins = self.GetParameter("NumBins")
+        self._cylinder_height = self.GetParameter("CylinderHeight")
+        self._cylinder_radius = self.GetParameter("CylinderRadius")
+
+    def Physics(self, frame):
+
+        # get muon
+        muon = mu_utils.get_muon(
+            frame=frame,
+            primary=frame[self._primary_key],
+            convex_hull=self._convex_hull,
+        )
+
+        labels = dataclasses.I3MapStringDouble()
+
+        binnned_energy_losses = mu_utils.get_binned_energy_losses_in_cylinder(
+            frame=frame,
+            muon=muon,
+            bin_width=self._bin_width,
+            num_bins=self._num_bins,
+            cylinder_height=self._cylinder_height,
+            cylinder_radius=self._cylinder_radius,
+          )
+
+        # write to frame
+        for i, energy_i in enumerate(binnned_energy_losses):
+            labels['EnergyLoss_{:05d}'.format(i)] = energy_i
+
+        frame.Put(self._output_key, labels)
+
+        self.PushFrame(frame)

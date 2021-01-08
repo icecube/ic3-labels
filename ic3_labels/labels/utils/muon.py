@@ -211,7 +211,6 @@ def get_muon_energy_at_distance(frame, muon, distance):
         Current frame.
     muon : I3Particle
         Muon.
-
     distance : float
         Distance.
 
@@ -243,6 +242,108 @@ def get_muon_energy_at_distance(frame, muon, distance):
     # return track.get_energy(distance)
 
 
+def bin_muon_energy_losses_along_track(frame, muon, bin_edges):
+    """Bin energy losses of Muon along the track
+
+    Parameters
+    ----------
+    frame : I3Frame
+        Current I3 frame.
+    muon : I3Particle
+        The track I3Particle for which to bin the energy losses.
+    bin_edges : array_like
+        The bin edges in which the energy osses will be accumulated.
+        These are defined as distances along the track relative to the
+        particle vertex.
+        The binned energy losses will have a length of len(bin_edges) - 1.
+
+    Returns
+    -------
+    array_like
+        The binned energy losses.
+        Shape: [len(bin_edges) - 1]
+    """
+    energies_at_edges = []
+    for bin_edge in bin_edges:
+        energies_at_edges.append(
+            get_muon_energy_at_distance(frame, muon, bin_edge))
+
+    energy_diffs = np.diff(energies_at_edges)
+
+    # Energy before track vertex may be zero, therefore the diffs can contain
+    # negative numbers. These will now be set to zero
+    energy_diffs[energy_diffs < 0] = 0.
+
+    return energy_diffs
+
+
+def get_binned_energy_losses_in_cylinder(
+            frame, muon, bin_width=15., num_bins=100,
+            cylinder_height=1000., cylinder_radius=600.
+        ):
+    """Bin energy losses along inf track in axial cylinder
+
+    The energy losses along the infite track are binned in a total of
+    `num_bins` bins, which have a spacing of `bin_width`. The first bin
+    edge is computed as the entry point of the infinite track into the defined
+    cylinder. If the infinite track does not intersect the cylinder, the
+    closest approach point minus half of the binned track length will be used
+    as the first bin edge.
+
+    Parameters
+    ----------
+    frame : I3Frame
+        Current I3 frame.
+    muon : I3Particle
+        The track I3Particle for which to bin the energy losses.
+    bin_width : float, optional
+        Defines the width of bins [in meters] along the track.
+        Energy losses are binned along the track in bins of this width.
+    num_bins : int, optional
+        The number of bins to create. The total binned track length depends
+        on the chosen number of bins and the bin width `bin_width`.
+    cylinder_height : float, optional
+        Height of the cylinder.
+        The cylinder is aligned to the z-axis and centered at (0, 0, 0).
+    cylinder_radius : float, optional
+        Radius of the cylinder.
+        The cylinder is aligned to the z-axis and centered at (0, 0, 0).
+
+    Returns
+    -------
+    array_like
+        The binned energy losses.
+        Shape: [num_bins]
+    """
+
+    # compute intersection with cylinder
+    v_pos = (muon.pos.x, muon.pos.y, muon.pos.z)
+    v_dir = (muon.dir.x, muon.dir.y, muon.dir.z)
+    intersection_ts = geometry.get_axial_cylinder_intersections(
+        v_pos, v_dir, height=cylinder_height, radius=cylinder_radius)
+
+    if len(intersection_ts) > 0:
+        bin_start = intersection_ts[0]
+
+    else:
+        # The infinite track does not intersect the axial cylinder
+        # Compute the closest approach distance to the detector center
+        dist_closest = I3Calculator.closest_approach_distance(
+            muon, dataclasses.I3Position(0., 0., 0.))
+        bin_start = dist_closest - 0.5*(bin_width * max(0, num_bins - 1))
+
+    # compute bin edges
+    bin_edges = []
+    for i in range(num_bins + 1):
+        bin_edges.append(bin_start + i * bin_width)
+
+    # Now bin energy losses in these bins
+    binnned_energy_losses = bin_muon_energy_losses_along_track(
+        frame=frame, muon=muon, bin_edges=bin_edges)
+
+    return binnned_energy_losses
+
+
 def get_inf_muon_binned_energy_losses(
                                 frame,
                                 convex_hull,
@@ -268,22 +369,17 @@ def get_inf_muon_binned_energy_losses(
     ----------
     frame : current frame
         needed to retrieve I3MCTree
-
     convex_hull : scipy.spatial.ConvexHull
         defining the desired convex volume
-
     muon : I3Particle
         Muon
-
     bin_width : float.
         defines width of bins [in meters]
         Energy losses in I3MCtree are binned along the
         track in bins of this width
-
     extend_boundary : float.
         Extend boundary of convex_hull by this distance [in meters].
         The first bin will be at convex_hull + extend_boundary
-
     include_under_over_flow : bool.
         If True, an underflow and overflow bin is added for energy
         losses outside of convex_hull + extend_boundary
@@ -292,11 +388,6 @@ def get_inf_muon_binned_energy_losses(
     -------
     binnned_energy_losses : list of float
         Returns a list of energy losses for each bin
-
-    Deleted Parameters
-    ------------------
-    particle : I3Particle
-        primary particle
 
 
     Raises
@@ -331,6 +422,11 @@ def get_inf_muon_binned_energy_losses(
     distances = []
     energies = []
     for daughter in frame['I3MCTree'].get_daughters(muon):
+
+        if is_muon(daughter):
+            # this is likely a track segment update: skip this
+            continue
+
         distances.append((daughter.pos - bin_start).magnitude)
         energies.append(daughter.energy)
 
