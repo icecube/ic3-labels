@@ -325,6 +325,13 @@ class MCLabelsMuonEnergyLossesInCylinder(MCLabelsBase):
           )
 
         # write to frame
+        labels['track_anchor_x'] = muon.pos.x
+        labels['track_anchor_y'] = muon.pos.y
+        labels['track_anchor_z'] = muon.pos.z
+        labels['track_anchor_time'] = muon.time
+        labels['azimuth'] = muon.dir.azimuth
+        labels['zenith'] = muon.dir.zenith
+
         for i, energy_i in enumerate(binnned_energy_losses):
             labels['EnergyLoss_{:05d}'.format(i)] = energy_i
 

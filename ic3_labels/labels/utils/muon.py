@@ -268,13 +268,13 @@ def bin_muon_energy_losses_along_track(frame, muon, bin_edges):
         energies_at_edges.append(
             get_muon_energy_at_distance(frame, muon, bin_edge))
 
-    energy_diffs = np.diff(energies_at_edges)
+    energy_lost = np.diff(energies_at_edges) * -1
 
     # Energy before track vertex may be zero, therefore the diffs can contain
     # negative numbers. These will now be set to zero
-    energy_diffs[energy_diffs < 0] = 0.
+    energy_lost[energy_lost < 0] = 0.
 
-    return energy_diffs
+    return energy_lost
 
 
 def get_binned_energy_losses_in_cylinder(
