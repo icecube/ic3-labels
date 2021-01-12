@@ -344,6 +344,72 @@ def get_binned_energy_losses_in_cylinder(
     return binnned_energy_losses
 
 
+def get_binned_energy_losses_in_cube(
+        frame, muon, bin_width=15., boundary=600.):
+    """Bin energy losses along inf track in a cube around IceCubes center.
+
+    The energy losses along the infite track are binned with a spacing of
+    `bin_width`. The first bin edge is computed as the entry point of the
+    infinite track into the defined cube.
+    If the infinite track does not intersect the cube, the
+    closest approach point minus half of the binned track length will be used
+    as the first bin edge.
+
+    Parameters
+    ----------
+    frame : I3Frame
+        Current I3 frame.
+    muon : I3Particle
+        The track I3Particle for which to bin the energy losses.
+    bin_width : float, optional
+        Defines the width of bins [in meters] along the track.
+        Energy losses are binned along the track in bins of this width.
+    boundary: float, optional
+        Defines half the edge length of a cube positioned at IceCube's
+        center.
+
+    Returns
+    -------
+    array_like
+        The binned energy losses.
+        Shape: [num_bins]
+    """
+
+    # compute intersection with cube
+    v_pos = (muon.pos.x, muon.pos.y, muon.pos.z)
+    v_dir = (muon.dir.x, muon.dir.y, muon.dir.z)
+    intersection_ts = geometry.get_cube_intersections(
+        v_pos, v_dir, boundary=boundary)
+
+    if len(intersection_ts) > 0:
+        entry_t = intersection_ts[0]
+        exit_t = intersection_ts[1]
+    else:
+        # The infinite track does not intersect cube
+        # Compute the closest approach distance to the detector center
+        dist_closest = I3Calculator.closest_approach_distance(
+            muon, dataclasses.I3Position(0., 0., 0.))
+        entry_t = dist_closest - 0.5*(bin_width * max(0, num_bins - 1))
+        exit_t = dist_closest + 0.5*(bin_width * max(0, num_bins - 1))
+
+    # Shift the entry point to be an integer number of the bin width
+    # away from v_pos
+    bin_start = np.round(entry_t / np.linalg.norm(v_dir) * bin_width) / \
+        bin_width * np.linalg.norm(v_dir)
+    # compute bin edges
+    bin_edges = [bin_start]
+    bin_edge = bin_start
+    while bin_edge <= exit_t:
+        bin_edge = bin_edge + bin_width / np.linalg.norm(v_dir)
+        bin_edges.append(bin_edge)
+
+    # Now bin energy losses in these bins
+    binnned_energy_losses = bin_muon_energy_losses_along_track(
+        frame=frame, muon=muon, bin_edges=bin_edges)
+
+    return binnned_energy_losses
+
+
 def get_inf_muon_binned_energy_losses(
                                 frame,
                                 convex_hull,

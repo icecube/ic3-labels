@@ -213,6 +213,53 @@ def get_axial_cylinder_intersections(
     return np.sort(intersections)
 
 
+def get_cube_intersection(v_pos, v_dir, boundary=600):
+    '''Get intersection of infitite track with a zero-centered cube
+    and half edge length of boundary
+
+    The returned t's are the scaling factors for v_dir to
+    get the intersection points. If t < 0 the intersection is 'behind'
+    v_pos. This can be used decide whether a track is a starting track.
+
+    Parameters
+    ----------
+    v_pos : array-like
+        A point of the line.
+        Shape: [3]
+    v_dir : array-like
+        Directional vector of the line.
+        Shape: [3]
+    boundary : float, optional
+        Half edge length of the cube.
+        The cube is centered at (0, 0, 0).
+
+    Returns
+    -------
+    t : array-like
+        Sorted scaling factors for v_dir to get the intersection points.
+        Actual intersection points are v_pos + t * v_dir.
+        Shape: [n_intersections] (0 or 2)
+    '''
+    x, y, z = v_pos
+    dx, dy, dz = v_dir
+
+    plane_intersection_min = (-boundary - v_pos) / v_dir
+    plane_intersection_max = (boundary - v_pos) / v_dir
+
+    t_1 = np.max(plane_intersection_min[np.isfinite(plane_intersection_min)])
+    t_2 = np.min(plane_intersection_max[np.isfinite(plane_intersection_max)])
+    ts = [t_1, t_2]
+
+    intersections = []
+    for t in ts:
+        # Check if the point is actually inside before adding it
+        if np.any(np.abs(v_pos + t * v_dir) > boundary):
+            continue
+        else:
+            intersections.append(t)
+    return np.sort(intersections)
+
+
 def point_is_inside(convex_hull,
                     v_pos,
                     default_v_dir=np.array([0., 0., 1.]),

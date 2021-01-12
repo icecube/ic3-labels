@@ -338,3 +338,52 @@ class MCLabelsMuonEnergyLossesInCylinder(MCLabelsBase):
         frame.Put(self._output_key, labels)
 
         self.PushFrame(frame)
+
+
+class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
+    def __init__(self, context):
+        MCLabelsBase.__init__(self, context)
+        self.AddParameter("BinWidth", "Bin width [in meters].", 15)
+        self.AddParameter("Boundary",
+                          "Half edge length of a cube [in meters]. " +
+                          "Will be used as a boundary." +
+                          "Millipede default are 600m.",
+                          600.)
+
+    def Configure(self):
+        MCLabelsBase.Configure(self)
+        self._bin_width = self.GetParameter("BinWidth")
+        self._boundary = self.GetParameter("Boundary")
+
+    def Physics(self, frame):
+
+        # get muon
+        muon = mu_utils.get_muon(
+            frame=frame,
+            primary=frame[self._primary_key],
+            convex_hull=self._convex_hull,
+        )
+
+        labels = dataclasses.I3MapStringDouble()
+
+        binnned_energy_losses = mu_utils.get_binned_energy_losses_in_cube(
+            frame=frame,
+            muon=muon,
+            bin_width=self._bin_width,
+            boundary=self._boundary
+          )
+
+        # write to frame
+        labels['track_anchor_x'] = muon.pos.x
+        labels['track_anchor_y'] = muon.pos.y
+        labels['track_anchor_z'] = muon.pos.z
+        labels['track_anchor_time'] = muon.time
+        labels['azimuth'] = muon.dir.azimuth
+        labels['zenith'] = muon.dir.zenith
+
+        for i, energy_i in enumerate(binnned_energy_losses):
+            labels['EnergyLoss_{:05d}'.format(i)] = energy_i
+
+        frame.Put(self._output_key, labels)
+
+        self.PushFrame(frame)
