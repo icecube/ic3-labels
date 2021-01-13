@@ -213,7 +213,7 @@ def get_axial_cylinder_intersections(
     return np.sort(intersections)
 
 
-def get_cube_intersection(v_pos, v_dir, boundary=600):
+def get_cube_intersections(v_pos, v_dir, boundary=600):
     '''Get intersection of infitite track with a zero-centered cube
     and half edge length of boundary
 
