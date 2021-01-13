@@ -8,6 +8,7 @@ from ic3_labels.labels.modules.modules import (
     MCLabelsMuonScattering,
     MCLabelsMuonEnergyLosses,
     MCLabelsMuonEnergyLossesInCylinder,
+    MCLabelsMuonEnergyLossesMillipede,
 )
 from ic3_labels.labels.modules.event_generator.muon_track_labels import (
     EventGeneratorMuonTrackLabels
@@ -26,6 +27,7 @@ __all__ = [
     'MCLabelsMuonScattering',
     'MCLabelsMuonEnergyLosses',
     'MCLabelsMuonEnergyLossesInCylinder',
+    'MCLabelsMuonEnergyLossesMillipede',
     'EventGeneratorMuonTrackLabels',
     'EventGeneratorMultiCascadeLabels',
 ]
