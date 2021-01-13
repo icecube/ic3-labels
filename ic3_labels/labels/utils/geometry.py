@@ -243,17 +243,18 @@ def get_cube_intersections(v_pos, v_dir, boundary=600):
     x, y, z = v_pos
     dx, dy, dz = v_dir
 
+    v_pos = np.asarray(v_pos)
+    v_dir = np.asarray(v_dir)
+
     plane_intersection_min = (-boundary - v_pos) / v_dir
     plane_intersection_max = (boundary - v_pos) / v_dir
 
-    t_1 = np.max(plane_intersection_min[np.isfinite(plane_intersection_min)])
-    t_2 = np.min(plane_intersection_max[np.isfinite(plane_intersection_max)])
-    ts = [t_1, t_2]
+    ts = np.append(plane_intersection_min, plane_intersection_max)
 
     intersections = []
     for t in ts:
         # Check if the point is actually inside before adding it
-        if np.any(np.abs(v_pos + t * v_dir) > boundary):
+        if np.any(np.abs(v_pos + t * v_dir) > (boundary)):
             continue
         else:
             intersections.append(t)

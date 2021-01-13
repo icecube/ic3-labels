@@ -389,8 +389,8 @@ def get_binned_energy_losses_in_cube(
         # Compute the closest approach distance to the detector center
         dist_closest = I3Calculator.closest_approach_distance(
             muon, dataclasses.I3Position(0., 0., 0.))
-        entry_t = dist_closest - 0.5*(bin_width * max(0, num_bins - 1))
-        exit_t = dist_closest + 0.5*(bin_width * max(0, num_bins - 1))
+        entry_t = dist_closest - 0.5*(bin_width * max(0, boundary//bin_width))
+        exit_t = dist_closest + 0.5*(bin_width * max(0, boundary//bin_width))
 
     # Shift the entry point to be an integer number of the bin width
     # away from v_pos
