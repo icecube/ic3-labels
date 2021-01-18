@@ -394,14 +394,9 @@ def get_binned_energy_losses_in_cube(
 
     # Shift the entry point to be an integer number of the bin width
     # away from v_pos
-    bin_start = np.round(entry_t / np.linalg.norm(v_dir) * bin_width) / \
-        bin_width * np.linalg.norm(v_dir)
+    bin_start = np.round(entry_t / bin_width) * bin_width
     # compute bin edges
-    bin_edges = [bin_start]
-    bin_edge = bin_start
-    while bin_edge <= exit_t:
-        bin_edge = bin_edge + bin_width / np.linalg.norm(v_dir)
-        bin_edges.append(bin_edge)
+    bin_edges = np.arange(bin_start, exit_t, bin_width)
 
     # Now bin energy losses in these bins
     binnned_energy_losses = bin_muon_energy_losses_along_track(

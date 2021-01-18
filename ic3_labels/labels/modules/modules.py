@@ -371,7 +371,7 @@ class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
             muon=muon,
             bin_width=self._bin_width,
             boundary=self._boundary
-          )
+        )
 
         # write to frame
         labels['track_anchor_x'] = muon.pos.x
