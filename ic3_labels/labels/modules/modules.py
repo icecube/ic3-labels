@@ -349,14 +349,19 @@ class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
                           "Will be used as a boundary." +
                           "Millipede default are 600m.",
                           600.)
+        self.AddParameter("WriteParticleVector",
+                          "Also writes the labels in form of " +
+                          "a particle vector to be visualized " +
+                          "via steamshovel",
+                          False)
 
     def Configure(self):
         MCLabelsBase.Configure(self)
         self._bin_width = self.GetParameter("BinWidth")
         self._boundary = self.GetParameter("Boundary")
+        self._write_vector = self.GetParameter("WriteParticleVector")
 
     def Physics(self, frame):
-
         # get muon
         muon = mu_utils.get_muon(
             frame=frame,
@@ -366,12 +371,23 @@ class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
 
         labels = dataclasses.I3MapStringDouble()
 
-        binnned_energy_losses = mu_utils.get_binned_energy_losses_in_cube(
-            frame=frame,
-            muon=muon,
-            bin_width=self._bin_width,
-            boundary=self._boundary
-        )
+        if self._write_vector:
+            binnned_energy_losses, bin_center_pos = \
+                    mu_utils.get_binned_energy_losses_in_cube(
+                frame=frame,
+                muon=muon,
+                bin_width=self._bin_width,
+                boundary=self._boundary,
+                return_bin_centers=self._write_vector
+            )
+        else:
+            binnned_energy_losses = mu_utils.get_binned_energy_losses_in_cube(
+                frame=frame,
+                muon=muon,
+                bin_width=self._bin_width,
+                boundary=self._boundary,
+                return_bin_centers=self._write_vector
+            )
 
         # write to frame
         labels['track_anchor_x'] = muon.pos.x
@@ -385,5 +401,16 @@ class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
             labels['EnergyLoss_{:05d}'.format(i)] = energy_i
 
         frame.Put(self._output_key, labels)
+
+        if self._write_vector:
+            part_vec = dataclasses.I3VectorI3Particle()
+            for energy_i, pos_i in zip(binned_energy_losses, bin_center_pos):
+                part = I3Particle()
+                part.pos = pos_i
+                part.energy = energy_i
+                part.dir.azimuth = muon.dir.azimuth
+                part.dir.zenith = muon.dir.zenith
+                # I dont think we care about "time" here, skipping for now
+                part_vec.append(part)
 
         self.PushFrame(frame)

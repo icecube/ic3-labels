@@ -345,7 +345,8 @@ def get_binned_energy_losses_in_cylinder(
 
 
 def get_binned_energy_losses_in_cube(
-        frame, muon, bin_width=15., boundary=600.):
+        frame, muon, bin_width=15., boundary=600.,
+        return_bin_centers=False):
     """Bin energy losses along inf track in a cube around IceCubes center.
 
     The energy losses along the infite track are binned with a spacing of
@@ -367,11 +368,17 @@ def get_binned_energy_losses_in_cube(
     boundary: float, optional
         Defines half the edge length of a cube positioned at IceCube's
         center.
+    return_bin_centers: bool, optional
+        Switch to also return the bin centers.
 
     Returns
     -------
     array_like
         The binned energy losses.
+        Shape: [num_bins]
+
+    array_like: optional
+        Bin center positions for the binned energy losses.
         Shape: [num_bins]
     """
 
@@ -399,10 +406,16 @@ def get_binned_energy_losses_in_cube(
     bin_edges = np.arange(bin_start, exit_t, bin_width)
 
     # Now bin energy losses in these bins
-    binnned_energy_losses = bin_muon_energy_losses_along_track(
+    binned_energy_losses = bin_muon_energy_losses_along_track(
         frame=frame, muon=muon, bin_edges=bin_edges)
 
-    return binnned_energy_losses
+    if not return_bin_centers:
+        return binned_energy_losses
+    else:
+        bin_centers = (bin_edges[1:] + bin_edges[:-1]) * 0.5
+        bin_center_pos = [np.array(v_pos) + bc * np.array(v_dir)
+                          for bc in bin_centers]
+        return binned_energy_losses, bin_center_pos
 
 
 def get_inf_muon_binned_energy_losses(
