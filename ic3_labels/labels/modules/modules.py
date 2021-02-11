@@ -250,7 +250,7 @@ class MCLabelsMuonEnergyLosses(MCLabelsBase):
 
         labels = dataclasses.I3MapStringDouble()
 
-        binnned_energy_losses = mu_utils.get_inf_muon_binned_energy_losses(
+        binned_energy_losses = mu_utils.get_inf_muon_binned_energy_losses(
                         frame=frame,
                         convex_hull=self._convex_hull,
                         muon=frame[self._muon_key],
@@ -262,22 +262,22 @@ class MCLabelsMuonEnergyLosses(MCLabelsBase):
         # force the number of bins to match ForceNumBins
         if self._force_num_bins is not None:
 
-            num_bins = len(binnned_energy_losses)
+            num_bins = len(binned_energy_losses)
 
             # too many bins: remove last bins
             if num_bins > self._force_num_bins:
-                binnned_energy_losses = \
-                    binnned_energy_losses[:self._force_num_bins]
+                binned_energy_losses = \
+                    binned_energy_losses[:self._force_num_bins]
 
             # too few bins: append zeros
             elif num_bins < self._force_num_bins:
                 num_bins_to_add = self._force_num_bins - num_bins
                 # print('Appending {} zeros'.format(num_bins_to_add))
-                binnned_energy_losses = np.concatenate((
-                            binnned_energy_losses, np.zeros(num_bins_to_add)))
+                binned_energy_losses = np.concatenate((
+                            binned_energy_losses, np.zeros(num_bins_to_add)))
 
         # write to frame
-        for i, energy_i in enumerate(binnned_energy_losses):
+        for i, energy_i in enumerate(binned_energy_losses):
             labels['EnergyLoss_{:04d}'.format(i)] = energy_i
 
         frame.Put(self._output_key, labels)
@@ -315,7 +315,7 @@ class MCLabelsMuonEnergyLossesInCylinder(MCLabelsBase):
 
         labels = dataclasses.I3MapStringDouble()
 
-        binnned_energy_losses = mu_utils.get_binned_energy_losses_in_cylinder(
+        binned_energy_losses = mu_utils.get_binned_energy_losses_in_cylinder(
             frame=frame,
             muon=muon,
             bin_width=self._bin_width,
@@ -332,7 +332,7 @@ class MCLabelsMuonEnergyLossesInCylinder(MCLabelsBase):
         labels['azimuth'] = muon.dir.azimuth
         labels['zenith'] = muon.dir.zenith
 
-        for i, energy_i in enumerate(binnned_energy_losses):
+        for i, energy_i in enumerate(binned_energy_losses):
             labels['EnergyLoss_{:05d}'.format(i)] = energy_i
 
         frame.Put(self._output_key, labels)
@@ -372,16 +372,16 @@ class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
         labels = dataclasses.I3MapStringDouble()
 
         if self._write_vector:
-            binnned_energy_losses, bin_center_pos = \
+            binned_energy_losses, bin_center_pos = \
                     mu_utils.get_binned_energy_losses_in_cube(
-                frame=frame,
-                muon=muon,
-                bin_width=self._bin_width,
-                boundary=self._boundary,
-                return_bin_centers=self._write_vector
-            )
+                        frame=frame,
+                        muon=muon,
+                        bin_width=self._bin_width,
+                        boundary=self._boundary,
+                        return_bin_centers=self._write_vector
+                    )
         else:
-            binnned_energy_losses = mu_utils.get_binned_energy_losses_in_cube(
+            binned_energy_losses = mu_utils.get_binned_energy_losses_in_cube(
                 frame=frame,
                 muon=muon,
                 bin_width=self._bin_width,
@@ -397,7 +397,7 @@ class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
         labels['azimuth'] = muon.dir.azimuth
         labels['zenith'] = muon.dir.zenith
 
-        for i, energy_i in enumerate(binnned_energy_losses):
+        for i, energy_i in enumerate(binned_energy_losses):
             labels['EnergyLoss_{:05d}'.format(i)] = energy_i
 
         frame.Put(self._output_key, labels)
@@ -412,5 +412,6 @@ class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
                 part.dir.zenith = muon.dir.zenith
                 # I dont think we care about "time" here, skipping for now
                 part_vec.append(part)
+            frame.Put(self._output_key + 'ParticleVector', part_vec)
 
         self.PushFrame(frame)
