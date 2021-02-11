@@ -405,7 +405,7 @@ class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
         if self._write_vector:
             part_vec = dataclasses.I3VectorI3Particle()
             for energy_i, pos_i in zip(binned_energy_losses, bin_center_pos):
-                part = I3Particle()
+                part = dataclasses.I3Particle()
                 part.pos = pos_i
                 part.energy = energy_i
                 part.dir.azimuth = muon.dir.azimuth
