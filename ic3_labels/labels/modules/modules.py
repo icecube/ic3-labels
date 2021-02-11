@@ -406,11 +406,12 @@ class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
             part_vec = dataclasses.I3VectorI3Particle()
             for energy_i, pos_i in zip(binned_energy_losses, bin_center_pos):
                 part = dataclasses.I3Particle()
-                part.pos = pos_i
+                part.pos = dataclasses.I3Position(*pos_i)
                 part.energy = energy_i
-                part.dir.azimuth = muon.dir.azimuth
-                part.dir.zenith = muon.dir.zenith
-                # I dont think we care about "time" here, skipping for now
+                part.dir = dataclasses.I3Direction(muon.dir)
+                part.time = (
+                    (muon.pos - part.pos).magnitude / dataclasses.I3Constants.c
+                )
                 part_vec.append(part)
             frame.Put(self._output_key + 'ParticleVector', part_vec)
 
