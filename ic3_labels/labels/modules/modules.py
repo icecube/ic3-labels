@@ -5,6 +5,7 @@
 from __future__ import print_function, division
 import numpy as np
 from icecube import dataclasses, icetray
+from icecube.icetray.i3logging import log_error, log_warn
 
 from ic3_labels.labels.base_module import MCLabelsBase
 from ic3_labels.labels.utils import high_level as hl
@@ -354,12 +355,20 @@ class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
                           "a particle vector to be visualized " +
                           "via steamshovel",
                           False)
+        self.AddParameter("MaxNumBins",
+                          "If provided, exactly this number of bins is " +
+                          "added to the labels. Non existing bins are " +
+                          "padded with NaNs. Additional bins are cut off. " +
+                          "This can be useful when writing tabular data " +
+                          "that requires fixed sizes.",
+                          None)
 
     def Configure(self):
         MCLabelsBase.Configure(self)
         self._bin_width = self.GetParameter("BinWidth")
         self._boundary = self.GetParameter("Boundary")
         self._write_vector = self.GetParameter("WriteParticleVector")
+        self._max_num_bins = self.GetParameter("MaxNumBins")
 
     def Physics(self, frame):
         # get muon
@@ -398,7 +407,22 @@ class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
         labels['zenith'] = muon.dir.zenith
 
         for i, energy_i in enumerate(binned_energy_losses):
+
+            # stop adding energy losses if we reached the maximum
+            if self._max_num_bins is not None:
+                if i >= self._max_num_bins:
+                    msg = 'MaxNumBinsis set to {}. '.format(self._max_num_bins)
+                    msg += 'Cutting off an additional {} losses!'.format(
+                        len(binned_energy_losses) - self._max_num_bins)
+                    log_warn(msg)
+                    break
+
             labels['EnergyLoss_{:05d}'.format(i)] = energy_i
+
+        # pad rest with NaNs
+        if self._max_num_bins is not None:
+            for i in range(len(binned_energy_losses), self._max_num_bins):
+                labels['EnergyLoss_{:05d}'.format(i)] = float('NaN')
 
         frame.Put(self._output_key, labels)
 

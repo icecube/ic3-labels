@@ -213,7 +213,7 @@ def get_axial_cylinder_intersections(
     return np.sort(intersections)
 
 
-def get_cube_intersections(v_pos, v_dir, boundary=600):
+def get_cube_intersections(v_pos, v_dir, boundary=600, eps=1e-5):
     '''Get intersection of infitite track with a zero-centered cube
     and half edge length of boundary
 
@@ -232,6 +232,9 @@ def get_cube_intersections(v_pos, v_dir, boundary=600):
     boundary : float, optional
         Half edge length of the cube.
         The cube is centered at (0, 0, 0).
+    eps : float, optional
+        Tolerance level which is applied to check whether a position is
+        within the cube. This tolerance is necessary due to limited precision.
 
     Returns
     -------
@@ -254,7 +257,7 @@ def get_cube_intersections(v_pos, v_dir, boundary=600):
     intersections = []
     for t in ts:
         # Check if the point is actually inside before adding it
-        if np.any(np.abs(v_pos + t * v_dir) > (boundary)):
+        if np.any(np.abs(v_pos + t * v_dir) > (boundary + eps)):
             continue
         else:
             intersections.append(t)
