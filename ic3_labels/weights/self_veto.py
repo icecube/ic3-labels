@@ -151,7 +151,7 @@ class AtmosphericSelfVetoModule(icetray.I3ConditionalModule):
                         # pick highest energy muon
                         indices = np.argsort([m.energy for m in muons])
                         muon = muons[indices[-1]]
-                        entry = self._get_muon_entry(frame, muon)
+                        entry = self._get_particle_entry(frame, muon)
                         entry_z = entry.z
                     else:
                         entry_z = cascade.pos.z
