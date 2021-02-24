@@ -13,7 +13,7 @@ setup(
     version=about['__version__'],
     packages=find_packages(),
     install_requires=[
-        'numpy', 'click', 'pyyaml', 'scipy',
+        'numpy', 'click', 'pyyaml', 'scipy', 'cashier', 'MCEq[MKL]', 'crflux',
     ],
     include_package_data=True,
     author=about['__author__'],
