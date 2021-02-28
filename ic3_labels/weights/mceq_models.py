@@ -123,12 +123,27 @@ def get_spline(
         {
             # first month provided via `months`
             0: {
-                'spline_dict': dict of RectBivariateSpline
+                'total_spline_dict': dict of RectBivariateSpline
                     A dictionary with the fitted splines for each particle
-                    type. The dictionary keys are the PDG particle encodings.
+                    type for the 'total' flux. The dictionary keys are the
+                    PDG particle encodings.
+                'conv_spline_dict': dict of RectBivariateSpline
+                    A dictionary with the fitted splines for each particle
+                    type for the 'conv' flux. The dictionary keys are the
+                    PDG particle encodings.
+                'pr_spline_dict': dict of RectBivariateSpline
+                    A dictionary with the fitted splines for each particle
+                    type for the 'pr' flux. The dictionary keys are the
+                    PDG particle encodings.
                 'total_flux_dict': dict of array_like
                     A dictionary with the total flux for each grid point.
-                    This is the result obtained from MCEq.
+                    This is the result obtained from MCEq for the 'total' flux.
+                'conv_flux_dict': dict of array_like
+                    A dictionary with the conv flux for each grid point.
+                    This is the result obtained from MCEq for the 'conv' flux.
+                'pr_flux_dict': dict of array_like
+                    A dictionary with the prompt flux for each grid point.
+                    This is the result obtained from MCEq for the 'pr' flux.
                 'config_updates':   dict
                     A dictionary of config updates that were applied to
                     mceq_config prior to solving the equations.
@@ -184,17 +199,25 @@ def get_spline(
 
         Returns
         -------
-        dict of RectBivariateSpline
-            A dictionary with the fitted splines for each particle
+        list of dict of RectBivariateSpline
+            A list of dictionaries with the fitted splines for each particle
             type. The dictionary keys are the PDG particle encodings.
-        dict of array_like
-            A dictionary with the total flux for each grid point.
+            The order of the dictionaries are: 'total', 'conv', 'pr'
+        list of dict of array_like
+            A list of dictionaries with the total flux for each grid point.
             This is the result obtained from MCEq.
+            The order of the dictionaries are: 'total', 'conv', 'pr'
         """
         total_flux_dict = {}
-        spline_dict = {}
+        conv_flux_dict = {}
+        pr_flux_dict = {}
+        total_spline_dict = {}
+        conv_spline_dict = {}
+        pr_spline_dict = {}
         for key, value in ptype_converter.items():
             total_flux_dict[key] = np.ones((len(e_grid), len(theta_grid)))
+            conv_flux_dict[key] = np.ones((len(e_grid), len(theta_grid)))
+            pr_flux_dict[key] = np.ones((len(e_grid), len(theta_grid)))
 
         for i, theta_i in enumerate(theta_grid):
             if theta_grid_cos:
@@ -206,17 +229,41 @@ def get_spline(
             for key, value in ptype_converter.items():
                 total_flux_dict[key][:, i] = mceq_run.get_solution(
                     'total_{}'.format(value))
+                conv_flux_dict[key][:, i] = mceq_run.get_solution(
+                    'conv_{}'.format(value))
+                pr_flux_dict[key][:, i] = mceq_run.get_solution(
+                    'pr_{}'.format(value))
 
         # create splines
         for key, value in ptype_converter.items():
-            spline_dict[key] = RectBivariateSpline(
+            total_spline_dict[key] = RectBivariateSpline(
                 e_grid,
                 theta_grid,
                 np.log10(np.clip(total_flux_dict[key], eps, float('inf'))),
                 s=0,
             )
+            conv_spline_dict[key] = RectBivariateSpline(
+                e_grid,
+                theta_grid,
+                np.log10(np.clip(conv_flux_dict[key], eps, float('inf'))),
+                s=0,
+            )
+            pr_spline_dict[key] = RectBivariateSpline(
+                e_grid,
+                theta_grid,
+                np.log10(np.clip(pr_flux_dict[key], eps, float('inf'))),
+                s=0,
+            )
 
-        return spline_dict, total_flux_dict
+        spline_dicts = [
+            total_spline_dict, conv_spline_dict, pr_spline_dict
+        ]
+
+        flux_dicts = [
+            total_flux_dict, conv_flux_dict, pr_flux_dict
+        ]
+
+        return spline_dicts, flux_dicts
 
     def __get_spline__(
             interaction_model,
@@ -306,15 +353,19 @@ def get_spline(
                 theta_deg=0.0,
                 **config_updates)
             e_grid = np.log10(deepcopy(mceq_run.e_grid))
-            spline_dict, total_flux_dict = __solve_month__(
+            spline_dicts, flux_dicts = __solve_month__(
                 mceq_run,
                 e_grid,
                 theta_grid,
                 theta_grid_cos)
 
             splines[i] = {}
-            splines[i]['spline_dict'] = spline_dict
-            splines[i]['total_flux_dict'] = total_flux_dict
+            splines[i]['total_spline_dict'] = spline_dicts[0]
+            splines[i]['conv_spline_dict'] = spline_dicts[1]
+            splines[i]['pr_spline_dict'] = spline_dicts[2]
+            splines[i]['total_flux_dict'] = flux_dicts[0]
+            splines[i]['conv_flux_dict'] = flux_dicts[1]
+            splines[i]['pr_flux_dict'] = flux_dicts[2]
             splines[i]['config_updates'] = deepcopy(config_updates)
             splines[i]['mceq_version'] = version.__version__
             splines[i]['ic3_labels_version'] = ic3_labels.__version__
@@ -401,6 +452,7 @@ class MCEQFlux(object):
             theta_grid_cos=False,
             theta_steps=181,
             season='full_year',
+            flux_type='total',
             random_state=None,
             **kwargs):
         """Initialize MCEQFlux Instance
@@ -422,6 +474,15 @@ class MCEQFlux(object):
             What season to use. This may either be a single month ,
             for example 'January', or 'full_year' may be used to run MCEq
             for every month of the year.
+        flux_type : str, optional
+            The flux type to compute. This must be one of
+                'total': combined prompt and conv flux
+                'pr': prompt neutrino flux
+                'conv': conventional neutrino flux
+            This will set the default flux type when calling `getFlux()`.
+            You may, however, overwrite this defaul by passing an alternative
+            flux type to `getFlux()`. Setting this default value allows for
+            drop in replacement of other flux implementations in IceCube.
         random_state : np.random.Randomstate or int, optional
             An int or random state to set the seed.
         **kwargs
@@ -447,6 +508,12 @@ class MCEQFlux(object):
             ]
         else:
             self.months = [season]
+
+        if flux_type.lower() not in ['total', 'conv', 'pr']:
+            raise ValueError('Flux type: {} must be on of {}'.format(
+                flux_type.lower(), ['total', 'conv', 'pr']))
+
+        self.flux_type = flux_type
         self.set_month_weights(np.ones_like(self.months, dtype=float))
         self.min_theta = min_theta_deg
         self.max_theta = max_theta_deg
@@ -536,7 +603,15 @@ class MCEQFlux(object):
             )
         self.month_weights = month_weights / np.sum(month_weights)
 
-    def getFlux(self, ptype, energy, costheta, random_state=None):
+    def getFlux(
+            self,
+            ptype,
+            energy,
+            costheta,
+            selected_month=None,
+            random_state=None,
+            flux_type=None,
+            ):
         """Get flux for provided particle
 
         The flux is given in GeV^-1 cm^-2 s^-1 sr^-1 and may be used to
@@ -554,10 +629,24 @@ class MCEQFlux(object):
         costheta : array_like or float
             The cos(zenith) angle of the primary particle.
             For instance: cos(I3MCWeightDict -> PrimaryNeutrinoZenith)
+        selected_month : array_like, optional
+            The month in which each event occurred. This must be given as
+            an array of integer values between [0, 11] if `season` is
+            'full_year'. If the `MCEQFlux` instance is initialized with only
+            one month as the season, then `selected_month` must not be set.
+            If None provided, the corresponding month of each event will be
+            sampled via the defined `month_weights`.
         random_state : np.random.Randomstate or int, optional
             An int or random state to set the seed.
             If None provided, the random state will be used that was
             reated during initialization.
+        flux_type : str, optional
+            The flux type to compute. This must be one of
+                'total': combined prompt and conv flux
+                'pr': prompt neutrino flux
+                'conv': conventional neutrino flux
+            If None is provided, the specified default value at
+            object instantiation time (__init__()) will be used.
 
         Returns
         -------
@@ -568,10 +657,25 @@ class MCEQFlux(object):
         ------
         RuntimeError
             If MCEQFlux has not been initialized yet.
+        ValueError
+            If wrong `flux_type` is provided.
         """
         if self.splines is None:
             raise RuntimeError(
                 'No splines calculated! Run \'initialize\' first')
+
+        if len(self.months) == 1 and selected_month is not None:
+            raise ValueError(
+                'The months may not be set, since the MCEQFlux instance is '
+                + 'intialized with only one month: {}'.format(self.months)
+            )
+
+        if flux_type is None:
+            flux_type = self.flux_type
+        elif flux_type.lower() not in ['total', 'conv', 'pr']:
+            raise ValueError('Flux type: "{}" must be on of {}'.format(
+                flux_type.lower(), ['total', 'conv', 'pr']))
+            flux_type = flux_type.lower()
 
         if random_state is None:
             random_state = self.random_state
@@ -584,13 +688,16 @@ class MCEQFlux(object):
         costheta = np.atleast_1d(costheta)
 
         if len(self.splines) > 1:
-            int_months = np.arange(len(self.splines), dtype=int)
-            selected_month = random_state.choice(
-                int_months,
-                replace=True,
-                size=len(energy),
-                p=self.month_weights,
-            )
+            if selected_month is None:
+                int_months = np.arange(len(self.splines), dtype=int)
+                selected_month = random_state.choice(
+                    int_months,
+                    replace=True,
+                    size=len(energy),
+                    p=self.month_weights,
+                )
+            else:
+                selected_month = np.asarray(selected_month, dtype=int)
         else:
             selected_month = list(self.splines.keys())[0]
         flux = np.ones_like(energy)
@@ -606,7 +713,8 @@ class MCEQFlux(object):
                 else:
                     is_in_month = selected_month == i
                     idx_ptype = np.logical_and(mask_ptype, is_in_month)
-                flux[idx_ptype] = self.splines[i]['spline_dict'][ptype_i](
+                flux[idx_ptype] = self.splines[i][
+                        flux_type + '_spline_dict'][ptype_i](
                     log10_energy[idx_ptype],
                     theta[idx_ptype],
                     grid=False)
