@@ -1,106 +1,207 @@
-"""MCEq Flux Models
+"""nuVeto Atmospheric Self-Veto Models
 
-This script implements the use of MCEq flux models via the IceCube standard
-method of getFlux(ptype, energy, costheta). As such it may be used as a
-drop-in replacement for other fluxes. Weighting in IceCube is performed
-by multiplying the flux by the normalized one weight:
+This file implements a wrapper class around nuVeto
+(https://github.com/tianluyuan/nuVeto) which builds splines in energy and
+zenith.
+These can then be used to calculate the self-veto effect for atmospheric
+neutrinos. See also the paper to nuVeto:
+https://arxiv.org/abs/1805.11003
 
-NuGen:
-    (with generator)
-        weight = p_int * (flux_val / unit) * generator(energy, ptype, costheta)
-    (without generator)
-        weight = flux_val * one_weight / (type_weight * n_events * n_files)
-
-    with flux_val = flux_object.getFlux(ptype, energy, costheta)
-
-It is recommended to cache the results of MCEq because these take a while
+It is recommended to cache the results of nuVeto because these take a while
 to produce. For caching to work, the python package 'cashier' must be
 installed (pip install cashier). By default, the cache file is chosen
 to be located in the 'resources' directory relative to the location of this
-script. You may also set the environment variable 'MCEQ_CACHE_DIR' in order
+file. You may also set the environment variable 'NUVETO_CACHE_DIR' in order
 to choose a different location for the cache file.
 
 Environment Variables:
 
-    'MCEQ_CACHE_DIR':
+    'NUVETO_CACHE_DIR':
         If provided, the MCEq cache file will be written to this directory.
-
-    'MKL_PATH':
-        Path to the MKL libraries. If provided, these are passed on to MCEq.
-        Note: the python package can be installed directly with MKL support
-        via 'pip install MCEq[MKL]'.
-
-Credit for the vast majority of code in this file goes to Mathis Boerner.
 """
 import os
 import logging
+import pkg_resources
 from copy import deepcopy
 import os
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
+from multiprocessing import Pool
 
 import ic3_labels
 
-log = logging.getLogger('MCEqFlux')
+log = logging.getLogger('AtmosphericNuVeto')
 
 
-# If cashier is available, set up directory for caching of MCEq results
+# If cashier is available, set up directory for caching of nuVeto results
 try:
     from cashier import cache
     got_cashier = True
 
-    if 'MCEQ_CACHE_DIR' in os.environ:
-        cache_dir = os.environ['MCEQ_CACHE_DIR']
-        log.info("Found 'MCEQ_CACHE_DIR' in environment variables: {}".format(
-            cache_dir))
+    if 'NUVETO_CACHE_DIR' in os.environ:
+        cache_dir = os.environ['NUVETO_CACHE_DIR']
+        log.info(
+            "Found 'NUVETO_CACHE_DIR' in environment variables: {}".format(
+                cache_dir))
 
         if not os.path.exists(cache_dir):
             log.info('Creating cache directory: {}'.format(cache_dir))
             os.makedirs(cache_dir)
 
-        cache_file = os.path.join(cache_dir, 'mceq.cache')
+        cache_file = os.path.join(cache_dir, 'nuVeto.cache')
 
     else:
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        cache_file = os.path.join(script_dir, 'resources', 'mceq.cache')
+        cache_file = os.path.join(script_dir, 'resources', 'nuVeto.cache')
 
-    log.info('Using MCEq cache file: {}'.format(cache_file))
+    log.info('Using nuVeto cache file: {}'.format(cache_file))
 
 except ImportError:
     got_cashier = False
-    log.info("Could not import 'cashier'. MCEq results will not be cached!")
+    log.info("Could not import 'cashier'. NuVeto results will not be cached!")
 
 
-# Dictionary that converts ptype -> MCEq type string
+# Dictionary that converts ptype -> nuVeto type string
 PTYPE_CONVERTER = {
-    12: 'nue',
-    -12: 'antinue',
-    14: 'numu',
-    -14: 'antinumu',
-    16: 'nutau',
-    -16: 'antinutau',
+    12: 'nu_e',
+    -12: 'nu_ebar',
+    14: 'nu_mu',
+    -14: 'nu_mubar',
+    16: 'nu_tau',
+    -16: 'nu_taubar',
 }
+
+
+def __solve_one_cos_theta__(settings):
+    """Helper Function for Multiprocessing
+
+    Solves for one cos(theta) grid point for the specified `settings`.
+
+    Parameters
+    ----------
+    settings : dict
+        A dictionary with the settings to run nuVeto with.
+
+    Returns
+    -------
+    dict
+        The passing fraction result for the total flux.
+    dict
+        The passing fraction result for the conv flux.
+    dict
+        The passing fraction result for the prompt flux.
+    """
+    from nuVeto import nuveto
+    from nuVeto.utils import Units
+
+    nuveto_obj = nuveto.builder(
+        cos_theta=settings['cos_theta'],
+        pmodel=settings['pmodel'],
+        hadr=settings['hadr'],
+        barr_mods=settings['barr_mods'],
+        depth=settings['depth'],
+        density=settings['density'],
+    )
+
+    total_pf_dict_i = {}
+    conv_pf_dict_i = {}
+    pr_pf_dict_i = {}
+    for key in settings['ptype_converter'].keys():
+        shape = (len(settings['energy_grid']),)
+        total_pf_dict_i[key] = np.ones(shape)
+        conv_pf_dict_i[key] = np.ones(shape)
+        pr_pf_dict_i[key] = np.ones(shape)
+
+    # fill in passing fractions
+    for key, value in settings['ptype_converter'].items():
+        print('At particle type:', value)
+
+        for index_energy, energy_i in enumerate(settings['energy_grid']):
+
+            # total
+            num, den = nuveto_obj.get_fluxes(
+                enu=energy_i*Units.GeV,
+                kind='total {}'.format(value),
+                accuracy=3.5,
+                prpl=settings['prpl'],
+                corr_only=False,
+            )
+            if num == den == 0:
+                # If both are zero, we will just set the passing
+                # fraction to 1. This is the conservative choice,
+                # since it does not change anython. Passing fractions
+                # are uusall muliplied to weights.
+                fraction = 1.
+            else:
+                fraction = num/den
+
+            total_pf_dict_i[key][index_energy] = fraction
+
+            # conv
+            num, den = nuveto_obj.get_fluxes(
+                enu=energy_i*Units.GeV,
+                kind='conv {}'.format(value),
+                accuracy=3.5,
+                prpl=settings['prpl'],
+                corr_only=False,
+            )
+            if num == den == 0:
+                # If both are zero, we will just set the passing
+                # fraction to 1. This is the conservative choice,
+                # since it does not change anython. Passing fractions
+                # are uusall muliplied to weights.
+                fraction = 1.
+            else:
+                fraction = num/den
+            conv_pf_dict_i[key][index_energy] = fraction
+
+            # prompt
+            num, den = nuveto_obj.get_fluxes(
+                enu=energy_i*Units.GeV,
+                kind='pr {}'.format(value),
+                accuracy=3.5,
+                prpl=settings['prpl'],
+                corr_only=False,
+            )
+            if num == den == 0:
+                # If both are zero, we will just set the passing
+                # fraction to 1. This is the conservative choice,
+                # since it does not change anython. Passing fractions
+                # are uusall muliplied to weights.
+                fraction = 1.
+            else:
+                fraction = num/den
+            pr_pf_dict_i[key][index_energy] = fraction
+
+    return total_pf_dict_i, conv_pf_dict_i, pr_pf_dict_i
 
 
 def get_spline(
         interaction_model,
         primary_model,
+        prpl,
         months,
         theta_grid,
         theta_grid_cos,
+        energy_grid,
+        n_jobs=1,
         cached=True):
-    """Get MCEq spline
+    """Get nuVeto spline
 
-    Solves the MCEq cascade equations for the given parameters. The equations
-    are solved on the provided grid and interpolated.
+    Caculates nuVeto results for the given parameters. The results
+    are obtained for the provided grid and interpolated.
 
     Parameters
     ----------
     interaction_model : str
-        The interaction model. This is passed on to `MCEqRun`.
+        The interaction model. This is passed on to `MCEq` (via nuVeto).
     primary_model : str
         The primary model to use. Must be one of:
             GST_3-gen, GST_4-gen, H3a, H4a, poly-gonato, TIG, ZS, ZSP, GH
+    prpl : str
+        The detector veto probability PDF to use. This must be a valid
+        prpl PDF created and available in nuVeto. This option is passed
+        on to nuVeto.
     months : list of str
         The months for which to solve the cascade equations. These must be
         provided as a list of month names, e.g. ['January', 'August']. A list
@@ -111,6 +212,11 @@ def get_spline(
     theta_grid_cos : bool
         If True, `theta_grid` is interpreted as cos(theta), i.e. arccos() is
         applied first.
+    energy_grid : array_like
+        The energy grid points [in GeV] to evaluate on.
+    n_jobs : int, optional
+        Number of jobs to compute the splines. The grid evaluation points
+        along zenith are distributed over the specified `n_jobs`.
     cached : bool, optional
         If True, the result will be cached, or taken from cache if previously
         already computed. This is recommended, as MCEq takes a while to run.
@@ -118,41 +224,41 @@ def get_spline(
     Returns
     -------
     dict
-        The result of MCEq together with the fitted splines. The structure is
+        The result of nuVeto together with the fitted splines. The structure is
         as follows:
         {
             # first month provided via `months`
             0: {
                 'total_spline_dict': dict of RectBivariateSpline
                     A dictionary with the fitted splines for each particle
-                    type for the 'total' flux. The dictionary keys are the
-                    PDG particle encodings.
+                    type for the 'total' passing fraction.
+                    The dictionary keys are the PDG particle encodings.
                 'conv_spline_dict': dict of RectBivariateSpline
                     A dictionary with the fitted splines for each particle
-                    type for the 'conv' flux. The dictionary keys are the
-                    PDG particle encodings.
+                    type for the 'conv' passing fraction.
+                    The dictionary keys are the PDG particle encodings.
                 'pr_spline_dict': dict of RectBivariateSpline
                     A dictionary with the fitted splines for each particle
-                    type for the 'pr' flux. The dictionary keys are the
-                    PDG particle encodings.
-                'total_flux_dict': dict of array_like
-                    A dictionary with the total flux for each grid point.
-                    This is the result obtained from MCEq for the 'total' flux.
-                'conv_flux_dict': dict of array_like
-                    A dictionary with the conv flux for each grid point.
-                    This is the result obtained from MCEq for the 'conv' flux.
-                'pr_flux_dict': dict of array_like
-                    A dictionary with the prompt flux for each grid point.
-                    This is the result obtained from MCEq for the 'pr' flux.
-                'config_updates':   dict
-                    A dictionary of config updates that were applied to
-                    mceq_config prior to solving the equations.
-                'mceq_version' : str
-                    The MCEq version that was used to create the splines.
+                    type for the 'pr' passing fraction.
+                    The dictionary keys are the PDG particle encodings.
+                'total_pf_dict': dict of array_like
+                    A dictionary with the total passing fraction for each
+                    grid point. This is the result obtained from nuVeto
+                    for the 'total' flux.
+                'conv_pf_dict': dict of array_like
+                    A dictionary with the conv passing fraction for each
+                    grid point. This is the result obtained from nuVeto
+                    for the 'conv' flux.
+                'pr_pf_dict': dict of array_like
+                    A dictionary with the prompt passing fraction for each
+                    grid point. This is the result obtained from nuVeto
+                    for the 'pr' flux.
+                'nuveto_version' : str
+                    The nuVeto version that was used to create the splines.
                 'ic3_labels_version' : str
                     The version of the ic3-labels package that was used to
                     create the splines.
-                'e_grid' : array_like
+                'log10_e_grid' : array_like
                     The grid of energy points in log10.
                 'theta_grid' : array_like
                     The grid of thetas.
@@ -172,29 +278,46 @@ def get_spline(
         cached))
 
     def __solve_month__(
-            mceq_run, e_grid, theta_grid, theta_grid_cos,
+            interaction_model,
+            pmodel,
+            density_model,
+            prpl,
+            theta_grid,
+            theta_grid_cos,
+            energy_grid,
+            n_jobs=1,
             ptype_converter=PTYPE_CONVERTER,
             eps=1e-128,
             ):
-        """Solve MCEq equations for the provided mceq_run instance.
+        """Compute passing fractions via nuVeto for the provided parameters
 
         Parameters
         ----------
-        mceq_run : MCEqRun instance
-            The MCEqRun instance. This instance must be configured to use
-            the desired geometry and season.
-        e_grid : array_like
-            The grid of energy points in log10.
+        interaction_model : str
+            The interaction model. This is passed on to `MCEq` (via nuVeto).
+        pmodel : tuple of crf.PrimaryModel, 'str'
+            The primary model to use. This is passed on to `MCEq` (via nuVeto).
+        density_model : (str, (str, str))
+            The density model to use. This is passed on to `MCEq` (via nuVeto).
+        prpl : str
+            The detector veto probability PDF to use. This must be a valid
+            prpl PDF created and available in nuVeto. This option is passed
+            on to nuVeto.
         theta_grid : array_like
             The grid points in theta to evaluate on in degrees.
             If `theta_grid_cos` is True, this is instead cos(theta).
         theta_grid_cos : bool
             If True, `theta_grid` is interpreted as cos(theta),
             i.e. arccos() is applied first.
+        energy_grid : array_like
+            The energy grid points [in GeV] to evaluate on.
+        n_jobs : int, optional
+            Number of jobs to compute the splines. The grid evaluation points
+            along zenith are distributed over the specified `n_jobs`.
         ptype_converter : dict, optional
-            A dictionary that converts PDG encoding to MCEq type string.
+            A dictionary that converts PDG encoding to nuVeto type string.
         eps : float, optional
-            A small float value > 0 that is used to clip the total flux
+            A small float value > 0 that is used to clip the passing fraction
             prior to applying log10 for the spline fitting.
 
         Returns
@@ -207,51 +330,80 @@ def get_spline(
             A list of dictionaries with the total flux for each grid point.
             This is the result obtained from MCEq.
             The order of the dictionaries are: 'total', 'conv', 'pr'
+        array_like
+            The grid of energy points in log10.
         """
-        total_flux_dict = {}
-        conv_flux_dict = {}
-        pr_flux_dict = {}
+        from nuVeto.utils import Units
+
+        total_pf_dict = {}
+        conv_pf_dict = {}
+        pr_pf_dict = {}
         total_spline_dict = {}
         conv_spline_dict = {}
         pr_spline_dict = {}
-        for key, value in ptype_converter.items():
-            total_flux_dict[key] = np.ones((len(e_grid), len(theta_grid)))
-            conv_flux_dict[key] = np.ones((len(e_grid), len(theta_grid)))
-            pr_flux_dict[key] = np.ones((len(e_grid), len(theta_grid)))
+        for key in ptype_converter.keys():
+            shape = (len(energy_grid), len(theta_grid))
+            total_pf_dict[key] = np.ones(shape)
+            conv_pf_dict[key] = np.ones(shape)
+            pr_pf_dict[key] = np.ones(shape)
 
-        for i, theta_i in enumerate(theta_grid):
-            if theta_grid_cos:
-                theta_i = np.rad2deg(np.arccos(theta_i))
-            mceq_run.set_theta_deg(theta_i)
-            mceq_run.solve()
+        # transform theta to cos(theta)
+        if theta_grid_cos:
+            cos_theta_grid = theta_grid
+        else:
+            cos_theta_grid = np.cos(np.deg2rad(theta_grid))
 
-            # fill in flux totals
+        settings_base = {
+            'pmodel': pmodel,
+            'hadr': interaction_model,
+            'barr_mods': (),
+            'depth': 1950*Units.m,
+            'density': density_model,
+            'energy_grid': energy_grid,
+            'prpl': prpl,
+            'ptype_converter': ptype_converter,
+        }
+
+        settings_list = []
+        results = []
+        for i, cos_theta in enumerate(cos_theta_grid):
+            settings = deepcopy(settings_base)
+            settings['cos_theta'] = cos_theta
+            settings_list.append(settings)
+
+        if n_jobs == 1:
+            for settings in settings_list:
+                results.append(__solve_one_cos_theta__(settings))
+        else:
+            p = Pool(n_jobs)
+            results = p.map(__solve_one_cos_theta__, settings_list)
+
+        for i, result_i in enumerate(results):
+            total_pf_dict_i, conv_pf_dict_i, pr_pf_dict_i = result_i
             for key, value in ptype_converter.items():
-                total_flux_dict[key][:, i] = mceq_run.get_solution(
-                    'total_{}'.format(value))
-                conv_flux_dict[key][:, i] = mceq_run.get_solution(
-                    'conv_{}'.format(value))
-                pr_flux_dict[key][:, i] = mceq_run.get_solution(
-                    'pr_{}'.format(value))
+                total_pf_dict[key][:, i] = total_pf_dict_i[key]
+                conv_pf_dict[key][:, i] = conv_pf_dict_i[key]
+                pr_pf_dict[key][:, i] = pr_pf_dict_i[key]
 
         # create splines
+        log10_e_grid = np.log10(energy_grid)
         for key, value in ptype_converter.items():
             total_spline_dict[key] = RectBivariateSpline(
-                e_grid,
+                log10_e_grid,
                 theta_grid,
-                np.log10(np.clip(total_flux_dict[key], eps, float('inf'))),
+                np.log10(np.clip(total_pf_dict[key], eps, float('inf'))),
                 s=0,
             )
             conv_spline_dict[key] = RectBivariateSpline(
-                e_grid,
+                log10_e_grid,
                 theta_grid,
-                np.log10(np.clip(conv_flux_dict[key], eps, float('inf'))),
+                np.log10(np.clip(conv_pf_dict[key], eps, float('inf'))),
                 s=0,
             )
             pr_spline_dict[key] = RectBivariateSpline(
-                e_grid,
+                log10_e_grid,
                 theta_grid,
-                np.log10(np.clip(pr_flux_dict[key], eps, float('inf'))),
+                np.log10(np.clip(pr_pf_dict[key], eps, float('inf'))),
                 s=0,
             )
 
@@ -260,17 +412,19 @@ def get_spline(
         ]
 
         flux_dicts = [
-            total_flux_dict, conv_flux_dict, pr_flux_dict
+            total_pf_dict, conv_pf_dict, pr_pf_dict
         ]
 
-        return spline_dicts, flux_dicts
+        return spline_dicts, flux_dicts, log10_e_grid
 
     def __get_spline__(
             interaction_model,
             primary_model,
+            prpl,
             months,
             theta_grid,
             theta_grid_cos,
+            energy_grid,
             ):
         """Get MCEq spline for the provided settings
 
@@ -281,6 +435,10 @@ def get_spline(
         primary_model : str
             The primary model to use. Must be one of:
                 GST_3-gen, GST_4-gen, H3a, H4a, poly-gonato, TIG, ZS, ZSP, GH
+        prpl : str
+            The detector veto probability PDF to use. This must be a valid
+            prpl PDF created and available in nuVeto. This option is passed
+            on to nuVeto.
         months : list of str
             The months for which to solve the cascade equations. These must be
             provided as a list of month names, e.g. ['January', 'August']. A
@@ -291,6 +449,8 @@ def get_spline(
         theta_grid_cos : bool
             If True, `theta_grid` is interpreted as cos(theta),
             i.e. arccos() is applied first.
+        energy_grid : array_like
+            The energy grid points [in GeV] to evaluate on.
 
         Returns
         -------
@@ -306,17 +466,7 @@ def get_spline(
         log.info('\tCalculating \'{}\' \'{}\''.format(
             interaction_model, primary_model))
 
-        import mceq_config
-        from MCEq import version
-        from MCEq.core import MCEqRun
         import crflux.models as pm
-
-        config_updates = {
-            'h_obs': 1000.,
-            'debug_level': 1,
-        }
-        if 'MKL_PATH' in os.environ:
-            config_updates['MKL_path'] = os.environ['MKL_PATH']
 
         splines = {}
         pmodels = {
@@ -332,14 +482,7 @@ def get_spline(
         }
 
         for i, month in enumerate(months):
-            config_updates['density_model'] = (
-                'MSIS00_IC', ('SouthPole', month))
-
-            # update settings in mceq_config
-            # Previous method mceq_config.config is deprecated and resulted
-            # in pickle errors for deepcopy.
-            for name, value in config_updates.items():
-                setattr(mceq_config, name, value)
+            density_model = ('MSIS00', ('SouthPole', month))
 
             try:
                 pmodel = pmodels[primary_model]
@@ -347,35 +490,36 @@ def get_spline(
                 raise AttributeError(
                     'primary_model {} unknown. options: {}'.format(
                         primary_model, pmodels.keys()))
-            mceq_run = MCEqRun(
+
+            spline_dicts, flux_dicts, log10_e_grid = __solve_month__(
                 interaction_model=interaction_model,
-                primary_model=pmodel,
-                theta_deg=0.0,
-                **config_updates)
-            e_grid = np.log10(deepcopy(mceq_run.e_grid))
-            spline_dicts, flux_dicts = __solve_month__(
-                mceq_run,
-                e_grid,
-                theta_grid,
-                theta_grid_cos)
+                pmodel=pmodel,
+                density_model=density_model,
+                prpl=prpl,
+                theta_grid=theta_grid,
+                theta_grid_cos=theta_grid_cos,
+                energy_grid=energy_grid,
+                n_jobs=n_jobs,
+            )
+
+            nuveto_version = pkg_resources.get_distribution('nuVeto').version
 
             splines[i] = {}
             splines[i]['total_spline_dict'] = spline_dicts[0]
             splines[i]['conv_spline_dict'] = spline_dicts[1]
             splines[i]['pr_spline_dict'] = spline_dicts[2]
-            splines[i]['total_flux_dict'] = flux_dicts[0]
-            splines[i]['conv_flux_dict'] = flux_dicts[1]
-            splines[i]['pr_flux_dict'] = flux_dicts[2]
-            splines[i]['config_updates'] = deepcopy(config_updates)
-            splines[i]['mceq_version'] = version.__version__
+            splines[i]['total_pf_dict'] = flux_dicts[0]
+            splines[i]['conv_pf_dict'] = flux_dicts[1]
+            splines[i]['pr_pf_dict'] = flux_dicts[2]
+            splines[i]['nuveto_version'] = nuveto_version
             splines[i]['ic3_labels_version'] = ic3_labels.__version__
-            splines[i]['e_grid'] = e_grid
+            splines[i]['log10_e_grid'] = log10_e_grid
             splines[i]['theta_grid'] = theta_grid
         return splines
 
     if got_cashier and cached:
         if cache_file is None:
-            cache_f = 'mceq.cache'
+            cache_f = 'nuVeto.cache'
         else:
             cache_f = cache_file
         log.info('\tUsing cache \'{}\''.format(cache_f))
@@ -384,38 +528,46 @@ def get_spline(
         def wrapped_get_spline(
                 interaction_model,
                 primary_model,
+                prpl,
                 months,
                 theta_grid,
                 theta_grid_cos,
+                energy_grid,
                 ):
             return __get_spline__(
                 interaction_model=interaction_model,
                 primary_model=primary_model,
+                prpl=prpl,
                 months=months,
                 theta_grid=theta_grid,
                 theta_grid_cos=theta_grid_cos,
+                energy_grid=energy_grid,
             )
 
         return wrapped_get_spline(
-            interaction_model,
-            primary_model,
-            months,
-            theta_grid,
-            theta_grid_cos,
+            interaction_model=interaction_model,
+            primary_model=primary_model,
+            prpl=prpl,
+            months=months,
+            theta_grid=theta_grid,
+            theta_grid_cos=theta_grid_cos,
+            energy_grid=energy_grid,
         )
     else:
         return __get_spline__(
             interaction_model=interaction_model,
             primary_model=primary_model,
+            prpl=prpl,
             months=months,
             theta_grid=theta_grid,
             theta_grid_cos=theta_grid_cos,
+            energy_grid=energy_grid,
         )
 
 
-class MCEQFlux(object):
+class AtmosphericNuVeto(object):
 
-    """MCQe Flux Wrapper
+    """Atmospheric nuVeto Wrapper
 
     Attributes
     ----------
@@ -450,12 +602,15 @@ class MCEQFlux(object):
             min_theta_deg=0.,
             max_theta_deg=180.,
             theta_grid_cos=False,
-            theta_steps=181,
+            theta_steps=91,
+            min_energy_gev=1e1,
+            max_energy_gev=1e8,
+            energy_steps=71,
             season='full_year',
             flux_type='total',
             random_state=None,
             **kwargs):
-        """Initialize MCEQFlux Instance
+        """Initialize AtmosphericNuVeto Instance
 
         Parameters
         ----------
@@ -469,6 +624,12 @@ class MCEQFlux(object):
             If True, `min_theta_deg` and `max_theta_deg` are interpreted as
             cos(theta), i.e. arccos() is applied first.
         theta_steps : int, optional
+            The number of grid points between the specified min and max values.
+        min_energy_gev : float, optional
+            The minimum value of the energy grid in GeV.
+        max_energy_gev : float, optional
+            The maximum value of the energy grid in GeV.
+        energy_steps : int, optional
             The number of grid points between the specified min and max values.
         season : str, optional
             What season to use. This may either be a single month ,
@@ -487,6 +648,11 @@ class MCEQFlux(object):
             An int or random state to set the seed.
         **kwargs
             Additional keyword arguments. (Not used!)
+
+        Raises
+        ------
+        ValueError
+            Description
         """
         if not isinstance(random_state, np.random.RandomState):
             random_state = np.random.RandomState(random_state)
@@ -513,6 +679,10 @@ class MCEQFlux(object):
             raise ValueError('Flux type: {} must be on of {}'.format(
                 flux_type.lower(), ['total', 'conv', 'pr']))
 
+        if theta_steps < 4 or energy_steps < 4:
+            raise ValueError('Steps must be >= 4, but are {} and {}'.format(
+                theta_steps, energy_steps))
+
         self.flux_type = flux_type
         self.set_month_weights(np.ones_like(self.months, dtype=float))
         self.min_theta = min_theta_deg
@@ -523,16 +693,22 @@ class MCEQFlux(object):
         self.theta_grid_cos = theta_grid_cos
         self.theta_grid = np.linspace(
             self.min_theta, self.max_theta, theta_steps)
+        self.min_energy = min_energy_gev
+        self.max_energy = max_energy_gev
+        self.energy_grid = np.logspace(
+            np.log10(self.min_energy), np.log10(self.max_energy), energy_steps)
 
         self.splines = None
 
     def initialize(
             self,
+            prpl,
             interaction_model='SIBYLL2.3c',
             primary_model='H3a',
+            n_jobs=1,
             cached=True,
             ):
-        """Initialize MCEQFlux instance
+        """Initialize AtmosphericNuVeto instance
 
         This will compute the splines or retrieve these from the cache
         if `cached` is True and if these have been previously computed.
@@ -540,26 +716,36 @@ class MCEQFlux(object):
 
         Parameters
         ----------
+        prpl : str
+            The detector veto probability PDF to use. This must be a valid
+            prpl PDF created and available in nuVeto. This option is passed
+            on to nuVeto.
         interaction_model : str
             The interaction model. This is passed on to `MCEqRun`.
         primary_model : str
             The primary model to use. Must be one of:
                 GST_3-gen, GST_4-gen, H3a, H4a, poly-gonato, TIG, ZS, ZSP, GH
+        n_jobs : int, optional
+            Number of jobs to compute the splines. The grid evaluation points
+            along zenith are distributed over the specified `n_jobs`.
         cached : bool, optional
             If True, the result will be cached and if already computed, it will
             be retrieved from cache. This avoids recomputation of MCEq, which
             is recommended in order to reduce computation time.
         """
         self.splines = get_spline(
-            interaction_model,
-            primary_model,
-            self.months,
-            self.theta_grid,
-            self.theta_grid_cos,
+            interaction_model=interaction_model,
+            primary_model=primary_model,
+            prpl=prpl,
+            months=self.months,
+            theta_grid=self.theta_grid,
+            theta_grid_cos=self.theta_grid_cos,
+            energy_grid=self.energy_grid,
+            n_jobs=n_jobs,
             cached=cached,
         )
 
-        from MCEq import version
+        nuveto_version = pkg_resources.get_distribution('nuVeto').version
 
         # throw warning if there is a version mis-match.
         for key, spline in self.splines.items():
@@ -567,9 +753,9 @@ class MCEQFlux(object):
                 'Cached file was created with {} version {}, '
                 'but this is version {}!'
             )
-            if version.__version__ != spline['mceq_version']:
+            if nuveto_version != spline['nuveto_version']:
                 log.warning(msg.format(
-                    'MCEq', spline['mceq_version'], version.__version__))
+                    'nuVeto', spline['nuveto_version'], nuveto_version))
 
             if ic3_labels.__version__ != spline['ic3_labels_version']:
                 log.warning(msg.format(
@@ -603,7 +789,7 @@ class MCEQFlux(object):
             )
         self.month_weights = month_weights / np.sum(month_weights)
 
-    def getFlux(
+    def get_passing_fraction(
             self,
             ptype,
             energy,
@@ -612,11 +798,7 @@ class MCEQFlux(object):
             random_state=None,
             flux_type=None,
             ):
-        """Get flux for provided particle
-
-        The flux is given in GeV^-1 cm^-2 s^-1 sr^-1 and may be used to
-        weight NuGen events via the normalized `one_weight`:
-            weight = flux * one_weight / (type_weight * n_events * n_files)
+        """Get atmospheric neutrino passing fraction for provided particle
 
         Parameters
         ----------
@@ -651,12 +833,12 @@ class MCEQFlux(object):
         Returns
         -------
         array_like
-            The flux for the given particle in GeV^-1 cm^-2 s^-1 sr^-1.
+            The atmospheric neutrino passing fraction for the given particle.
 
         Raises
         ------
         RuntimeError
-            If MCEQFlux has not been initialized yet.
+            If AtmosphericNuVeto has not been initialized yet.
         ValueError
             If wrong `flux_type` is provided.
         """
@@ -666,14 +848,15 @@ class MCEQFlux(object):
 
         if len(self.months) == 1 and selected_month is not None:
             raise ValueError(
-                'The months may not be set, since the MCEQFlux instance is '
-                + 'initialized with only one month: {}'.format(self.months)
+                'The months may not be set, since the AtmosphericNuVeto '
+                + 'instance is initialized with only one month: {}'.format(
+                    self.months)
             )
 
         if flux_type is None:
             flux_type = self.flux_type
         elif flux_type.lower() not in ['total', 'conv', 'pr']:
-            raise ValueError('Flux type: "{}" must be on of {}'.format(
+            raise ValueError('Flux type: {} must be on of {}'.format(
                 flux_type.lower(), ['total', 'conv', 'pr']))
             flux_type = flux_type.lower()
 
@@ -700,8 +883,8 @@ class MCEQFlux(object):
                 selected_month = np.asarray(selected_month, dtype=int)
         else:
             selected_month = list(self.splines.keys())[0]
-        flux = np.ones_like(energy)
-        flux[:] = float('NaN')
+        passing_fraction = np.ones_like(energy)
+        passing_fraction[:] = float('NaN')
         log10_energy = np.log10(energy)
         theta = np.rad2deg(np.arccos(costheta))
 
@@ -713,9 +896,9 @@ class MCEQFlux(object):
                 else:
                     is_in_month = selected_month == i
                     idx_ptype = np.logical_and(mask_ptype, is_in_month)
-                flux[idx_ptype] = self.splines[i][
+                passing_fraction[idx_ptype] = self.splines[i][
                         flux_type + '_spline_dict'][ptype_i](
                     log10_energy[idx_ptype],
                     theta[idx_ptype],
                     grid=False)
-        return np.power(10., flux)
+        return np.power(10., passing_fraction)
