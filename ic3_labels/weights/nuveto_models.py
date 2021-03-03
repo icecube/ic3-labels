@@ -377,6 +377,8 @@ def get_spline(
         else:
             p = Pool(n_jobs)
             results = p.map(__solve_one_cos_theta__, settings_list)
+            p.close()
+            p.join()
 
         for i, result_i in enumerate(results):
             total_pf_dict_i, conv_pf_dict_i, pr_pf_dict_i = result_i
