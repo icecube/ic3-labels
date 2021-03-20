@@ -14,6 +14,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'numpy', 'click', 'pyyaml', 'scipy', 'cashier', 'MCEq[MKL]', 'crflux',
+        'nuVeto',
     ],
     include_package_data=True,
     author=about['__author__'],
