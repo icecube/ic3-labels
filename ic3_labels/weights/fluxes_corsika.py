@@ -25,23 +25,32 @@ class MIMIC_NEUTRINOFLUX():
         return self.name
 
 
-def get_fluxes_and_names(use_fallback_fluxes=False):
+def get_fluxes_and_names(fallback_to_ic3_labels_flux=False):
     flux_models = []
     for obj in dir(fluxes):
         cls = getattr(fluxes, obj)
         if isclass(cls):
             if issubclass(cls, fluxes.CompiledFlux) and \
                cls != fluxes.CompiledFlux:
+
+                # Try to use flux from icecube.weighting.fluxes
                 try:
                     flux_model = MIMIC_NEUTRINOFLUX(cls(), obj)
-                    flux_model(1e4, 14)
+                    flux_model.getFlux(1e4, 14)
+
+                # Fall back to ic3_labels version
+                # (currently necessary for python >=3.8)
                 except Exception as e:
-                    if use_fallback_fluxes:
+
+                    # try to obtain flux from ic3_labels
+                    if fallback_to_ic3_labels_flux:
                         log_warn(e)
                         log_warn('Falling back to ic3_labels flux {}'.format(
                             obj))
                         cls = getattr(_fluxes, obj)
                         flux_model = MIMIC_NEUTRINOFLUX(cls(), obj)
+
+                    # if not falling back on ic3_labels fluxed: raise error
                     else:
                         raise e
 
