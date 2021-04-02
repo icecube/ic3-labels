@@ -35,7 +35,7 @@ log = logging.getLogger('AtmosphericNuVeto')
 
 # If cashier is available, set up directory for caching of nuVeto results
 try:
-    from cashier import cache
+    from ic3_labels.weights.resources.cashier import cache
     got_cashier = True
 
     if 'NUVETO_CACHE_DIR' in os.environ:

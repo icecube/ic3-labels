@@ -46,7 +46,7 @@ log = logging.getLogger('MCEqFlux')
 
 # If cashier is available, set up directory for caching of MCEq results
 try:
-    from cashier import cache
+    from ic3_labels.weights.resources.cashier import cache
     got_cashier = True
 
     if 'MCEQ_CACHE_DIR' in os.environ:
