@@ -44,7 +44,7 @@ def get_fluxes_and_names(fallback_to_ic3_labels_flux=False):
 
                     # try to obtain flux from ic3_labels
                     if fallback_to_ic3_labels_flux:
-                        log_warn(e)
+                        log_warn('Caught error:' + str(e))
                         log_warn('Falling back to ic3_labels flux {}'.format(
                             obj))
                         cls = getattr(_fluxes, obj)
