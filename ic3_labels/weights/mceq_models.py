@@ -787,7 +787,7 @@ def add_mceq_weights(
             flux_name = 'weights_MCEq_{}_{}_{}'.format(
                 primary_model, interaction_model.lower(), flux_type,
             ).replace('.', '_')
-            weights[flux_name] = weight
+            weights[flux_name] = float(weight)
 
     del frame[weight_key]
     frame[weight_key] = weights
