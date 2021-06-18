@@ -93,7 +93,7 @@ else:
 try:
     from icecube import NewNuFlux as nn
 except ImportError:
-    NNFLUX_MODELS = None
+    NNFLUX_MODELS = []
 else:
     NNFLUX_MODELS = [
         ['BERSS_H3a_central', ['none'], 'prompt'],
