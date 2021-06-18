@@ -14,11 +14,11 @@ NuGen:
     with flux_val = flux_object.getFlux(ptype, energy, costheta)
 
 It is recommended to cache the results of MCEq because these take a while
-to produce. For caching to work, the python package 'cashier' must be
-installed (pip install cashier). By default, the cache file is chosen
+to produce. By default, the cache file is chosen
 to be located in the 'resources' directory relative to the location of this
 script. You may also set the environment variable 'MCEQ_CACHE_DIR' in order
-to choose a different location for the cache file.
+to choose a different location for the cache file, or pass in an explicit
+cache file when creating the MCEQFlux object.
 
 Environment Variables:
 
@@ -58,16 +58,17 @@ try:
             log.info('Creating cache directory: {}'.format(cache_dir))
             os.makedirs(cache_dir)
 
-        cache_file = os.path.join(cache_dir, 'mceq.cache')
+        CACHE_FILE = os.path.join(cache_dir, 'mceq.cache')
 
     else:
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        cache_file = os.path.join(script_dir, 'resources', 'mceq.cache')
+        CACHE_FILE = os.path.join(script_dir, 'resources', 'mceq.cache')
 
-    log.info('Using MCEq cache file: {}'.format(cache_file))
+    log.info('Using MCEq cache file: {}'.format(CACHE_FILE))
 
 except ImportError:
     got_cashier = False
+    CACHE_FILE = None
     log.info("Could not import 'cashier'. MCEq results will not be cached!")
 
 
@@ -88,7 +89,8 @@ def get_spline(
         months,
         theta_grid,
         theta_grid_cos,
-        cached=True):
+        cached=True,
+        cache_file=CACHE_FILE):
     """Get MCEq spline
 
     Solves the MCEq cascade equations for the given parameters. The equations
@@ -114,6 +116,8 @@ def get_spline(
     cached : bool, optional
         If True, the result will be cached, or taken from cache if previously
         already computed. This is recommended, as MCEq takes a while to run.
+    cache_file : str, optional
+        The path to the cache file to use.
 
     Returns
     -------
@@ -531,6 +535,7 @@ class MCEQFlux(object):
             interaction_model='SIBYLL2.3c',
             primary_model='H3a',
             cached=True,
+            cache_file=CACHE_FILE,
             ):
         """Initialize MCEQFlux instance
 
@@ -549,6 +554,8 @@ class MCEQFlux(object):
             If True, the result will be cached and if already computed, it will
             be retrieved from cache. This avoids recomputation of MCEq, which
             is recommended in order to reduce computation time.
+        cache_file : str, optional
+            The cache file to use.
         """
         self.splines = get_spline(
             interaction_model,
@@ -557,6 +564,7 @@ class MCEQFlux(object):
             self.theta_grid,
             self.theta_grid_cos,
             cached=cached,
+            cache_file=cache_file,
         )
 
         from MCEq import version

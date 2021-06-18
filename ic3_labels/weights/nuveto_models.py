@@ -8,11 +8,11 @@ neutrinos. See also the paper to nuVeto:
 https://arxiv.org/abs/1805.11003
 
 It is recommended to cache the results of nuVeto because these take a while
-to produce. For caching to work, the python package 'cashier' must be
-installed (pip install cashier). By default, the cache file is chosen
+to produce. By default, the cache file is chosen
 to be located in the 'resources' directory relative to the location of this
 file. You may also set the environment variable 'NUVETO_CACHE_DIR' in order
-to choose a different location for the cache file.
+to choose a different location for the cache file, or pass in an explicit
+cache file when initializing the AtmosphericNuVeto object.
 
 Environment Variables:
 
@@ -48,16 +48,17 @@ try:
             log.info('Creating cache directory: {}'.format(cache_dir))
             os.makedirs(cache_dir)
 
-        cache_file = os.path.join(cache_dir, 'nuVeto.cache')
+        CACHE_FILE = os.path.join(cache_dir, 'nuVeto.cache')
 
     else:
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        cache_file = os.path.join(script_dir, 'resources', 'nuVeto.cache')
+        CACHE_FILE = os.path.join(script_dir, 'resources', 'nuVeto.cache')
 
-    log.info('Using nuVeto cache file: {}'.format(cache_file))
+    log.info('Using nuVeto cache file: {}'.format(CACHE_FILE))
 
 except ImportError:
     got_cashier = False
+    CACHE_FILE = None
     log.info("Could not import 'cashier'. NuVeto results will not be cached!")
 
 
@@ -185,7 +186,8 @@ def get_spline(
         theta_grid_cos,
         energy_grid,
         n_jobs=1,
-        cached=True):
+        cached=True,
+        cache_file=CACHE_FILE):
     """Get nuVeto spline
 
     Caculates nuVeto results for the given parameters. The results
@@ -220,6 +222,8 @@ def get_spline(
     cached : bool, optional
         If True, the result will be cached, or taken from cache if previously
         already computed. This is recommended, as MCEq takes a while to run.
+    cache_file : str, optional
+        The path to the cache file to use.
 
     Returns
     -------
@@ -709,6 +713,7 @@ class AtmosphericNuVeto(object):
             primary_model='H3a',
             n_jobs=1,
             cached=True,
+            cache_file=CACHE_FILE,
             ):
         """Initialize AtmosphericNuVeto instance
 
@@ -734,6 +739,8 @@ class AtmosphericNuVeto(object):
             If True, the result will be cached and if already computed, it will
             be retrieved from cache. This avoids recomputation of MCEq, which
             is recommended in order to reduce computation time.
+        cache_file : str, optional
+            The path to the cache file to use.
         """
         self.splines = get_spline(
             interaction_model=interaction_model,
@@ -745,6 +752,7 @@ class AtmosphericNuVeto(object):
             energy_grid=self.energy_grid,
             n_jobs=n_jobs,
             cached=cached,
+            cache_file=cache_file,
         )
 
         nuveto_version = pkg_resources.get_distribution('nuVeto').version
