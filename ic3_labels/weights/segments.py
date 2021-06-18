@@ -273,6 +273,10 @@ def WeightEvents(tray, name,
                  muongun_equal_generator=False,
                  key='weights',
                  use_from_simprod=False,
+                 add_mceq_weights=False,
+                 mceq_kwargs={},
+                 add_nuveto_pf=False,
+                 nuveto_kwargs={},
                  add_mese_weights=False,
                  add_atmospheric_self_veto=False,
                  check_n_files=True):
@@ -306,6 +310,16 @@ def WeightEvents(tray, name,
         If True, weights will be calculated by obtaining a generator via
         from_simprod. If False, weights will be calculated based on the
         I3MCWeightDict for NuGen or CorsikaWeightMap (Corsika).
+    add_mceq_weights : bool, optional
+        If True, MCEq weights will be added. Make sure to add an existing
+        cache file, otherwise this may take very long!
+    mceq_kwargs : dict, optional
+        Keyword arguments passed on to MCEq.
+    add_nuveto_pf : bool, optional
+        If True, nuVeto passing fractions will be added. Make sure to add
+        an existing cache file, otherwise this may take very long!
+    nuveto_kwargs : dict, optional
+        Keyword arguments passed on to nuVeto.
     add_mese_weights : bool, optional
         If true, weights used for MESE 7yr cascade paper will be added.
         (As well as an additional filtering step)
@@ -384,6 +398,25 @@ def WeightEvents(tray, name,
                     generator=generator,
                     key=key,
                     )
+
+    if add_mceq_weights and dataset_type in ['nugen']:
+        from ic3_labels.weights import mceq_models
+
+        tray.AddModule(
+            mceq_models.add_mceq_weights, 'add_mceq_weights',
+            n_files=dataset_n_files,
+            **mceq_kwargs
+        )
+
+    if add_nuveto_pf and dataset_type in ['nugen']:
+        from ic3_labels.weights import nuveto_models
+
+        tray.AddModule(
+            nuveto_models.add_nuveto_passing_fractions,
+            'add_nuveto_passing_fractions',
+            n_files=dataset_n_files,
+            **nuveto_kwargs
+        )
 
     if add_mese_weights and dataset_type in ['muongun', 'nugen', 'genie']:
         from ic3_labels.weights.mese_weights import MESEWeights

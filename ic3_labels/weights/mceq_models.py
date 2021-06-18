@@ -18,7 +18,7 @@ to produce. By default, the cache file is chosen
 to be located in the 'resources' directory relative to the location of this
 script. You may also set the environment variable 'MCEQ_CACHE_DIR' in order
 to choose a different location for the cache file, or pass in an explicit
-cache file when creating the MCEQFlux object.
+cache file when initializing the MCEQFlux object.
 
 Environment Variables:
 
@@ -555,8 +555,11 @@ class MCEQFlux(object):
             be retrieved from cache. This avoids recomputation of MCEq, which
             is recommended in order to reduce computation time.
         cache_file : str, optional
-            The cache file to use.
+            The path to the cache file to use.
         """
+        if cache_file is None:
+            cache_file = CACHE_FILE
+
         self.splines = get_spline(
             interaction_model,
             primary_model,
@@ -727,3 +730,62 @@ class MCEQFlux(object):
                     theta[idx_ptype],
                     grid=False)
         return np.power(10., flux)
+
+
+def add_mceq_weights(
+        frame, n_files,
+        primary_models=['H3a'],
+        interaction_model='SIBYLL2.3c',
+        cache_file=None,
+        weight_key='weights'):
+    """Add MCEq weights to existing weights key in frame
+
+    Parameters
+    ----------
+    frame : I3Frame
+        The current I3Frame.
+    n_files : int
+        The number of runs.
+    primary_models : list of str, optional
+        The list of primary models for which to compute weights.
+    interaction_model : str, optional
+        The interaction model for MCEq to use.
+    cache_file : str, optional
+        The path to the cache file.
+    weight_key : str, optional
+        The name of the weight key in the I3Frame.
+    """
+    weights = dataclasses.I3MapStringDouble(frame[weight_key])
+
+    ow = frame['I3MCWeightDict']['OneWeight']
+    type_weight = frame['I3MCWeightDict']['TypeWeight']
+    ptype = frame['I3MCWeightDict']['PrimaryNeutrinoType']
+    energy = frame['I3MCWeightDict']['PrimaryNeutrinoEnergy']
+    cos_zen = np.cos(frame['I3MCWeightDict']['PrimaryNeutrinoZenith'])
+    n_events = frame['I3MCWeightDict']['NEvents']
+
+    for primary_model in primary_models:
+
+        flux = MCEQFlux()
+        flux.initialize(
+            interaction_model=interaction_model,
+            primary_model=primary_model,
+            cache_file=cache_file,
+        )
+
+        for flux_type in ['total', 'pr', 'conv']:
+            flux_val = flux.getFlux(
+                ptype=ptype,
+                energy=energy,
+                costheta=cos_zen,
+                flux_type=flux_type,
+            )
+
+            weight = flux_val * ow / (type_weight * n_events * n_files)
+            flux_name = 'weights_MCEq_{}_{}_{}'.format(
+                primary_model, interaction_model.lower(), flux_type,
+            ).replace('.', '_')
+            weights[flux_name] = weight
+
+    del frame[weight_key]
+    frame[weight_key] = weights
