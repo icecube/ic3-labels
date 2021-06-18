@@ -36,7 +36,7 @@ def get_fluxes_and_names(fallback_to_ic3_labels_flux=False):
                 # Try to use flux from icecube.weighting.fluxes
                 try:
                     flux_model = MIMIC_NEUTRINOFLUX(cls(), obj)
-                    flux_model.getFlux(1e4, 14)
+                    flux_model.getFlux(1e4, 14, 0.)
 
                 # Fall back to ic3_labels version
                 # (currently necessary for python >=3.8)
