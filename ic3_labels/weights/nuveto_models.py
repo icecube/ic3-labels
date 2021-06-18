@@ -975,4 +975,4 @@ def add_nuveto_passing_fractions(
             ).replace('.', '_')
             veto_pf[flux_name] = float(pf)
 
-    frame[output_key] = weights
+    frame[output_key] = veto_pf
