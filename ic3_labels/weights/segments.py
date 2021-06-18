@@ -19,7 +19,6 @@ import pickle
 
 
 from ic3_labels.weights import fluxes_corsika, fluxes_muongun, fluxes_neutrino
-from ic3_labels.weights.mese_weights import MESEWeights
 
 
 def generate_generator(dataset_number, n_files, outpath=None):
@@ -387,6 +386,8 @@ def WeightEvents(tray, name,
                     )
 
     if add_mese_weights and dataset_type in ['muongun', 'nugen', 'genie']:
+        from ic3_labels.weights.mese_weights import MESEWeights
+
         tray.AddModule(MESEWeights, 'MESEWeights',
                        DatasetType=dataset_type,
                        DatasetNFiles=dataset_n_files,
