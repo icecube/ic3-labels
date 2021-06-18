@@ -941,6 +941,8 @@ def add_nuveto_passing_fractions(
     output_key : str, optional
         The name of the key to which the results will be written to.
     """
+    from icecube import dataclasses
+
     veto_pf = dataclasses.I3MapStringDouble()
 
     ow = frame['I3MCWeightDict']['OneWeight']

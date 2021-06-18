@@ -755,6 +755,8 @@ def add_mceq_weights(
     weight_key : str, optional
         The name of the weight key in the I3Frame.
     """
+    from icecube import dataclasses
+
     weights = dataclasses.I3MapStringDouble(frame[weight_key])
 
     ow = frame['I3MCWeightDict']['OneWeight']
