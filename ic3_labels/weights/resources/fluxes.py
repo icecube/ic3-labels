@@ -109,7 +109,7 @@ class CosmicRayFlux:
 
 class Hoerandel(CosmicRayFlux):
     r"""
-    All-particle spectrum (up to iron) after Hörandel\ [#Hoerandel]_, as implemented
+    All-particle spectrum (up to iron) after Hoerandel\ [#Hoerandel]_, as implemented
     in dCORSIKA.
     """
 
@@ -422,7 +422,7 @@ class FixedFractionFlux(CosmicRayFlux):
 
 class _references:
     """
-    .. [#Hoerandel] J. R. Hörandel, "On the knee in the energy spectrum of cosmic rays,"
+    .. [#Hoerandel] J. R. Hoerandel, "On the knee in the energy spectrum of cosmic rays,"
        `Astropart. Phys. 19, 193 (2003)
        <http://dx.doi.org/10.1016/S0927-6505(02)00198-6>`_.
        `astro-ph/0210453 <https://arxiv.org/abs/astro-ph/0210453>`_.
