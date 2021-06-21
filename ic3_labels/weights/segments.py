@@ -456,6 +456,7 @@ class UpdateMergedWeights(icetray.I3Module):
         self._frame_key = '{}_meta_info'.format(self._key)
         self._last_n_files = None
         self._last_n_events_per_run = None
+        self._already_pushed_w_frame = False
 
     def Process(self):
         frame = self.PopFrame()
@@ -499,4 +500,13 @@ class UpdateMergedWeights(icetray.I3Module):
             del frame[self._key]
             frame[self._key] = updated_weights
 
-        self.PushFrame(frame)
+        # only write one W-frame per file
+        if (frame.Stop.id == 'W' and self._frame_key in frame and
+                frame.get_stop(self._frame_key) == frame.Stop):
+            if self._already_pushed_w_frame:
+                return
+            else:
+                self.PushFrame(frame)
+                self._already_pushed_w_frame = True
+        else:
+            self.PushFrame(frame)
