@@ -784,7 +784,7 @@ def add_mceq_weights(
             )
 
             weight = flux_val * ow / (type_weight * n_events * n_files)
-            flux_name = 'weights_MCEq_{}_{}_{}'.format(
+            flux_name = 'MCEq_{}_{}_{}'.format(
                 primary_model, interaction_model.lower(), flux_type,
             ).replace('.', '_')
             weights[flux_name] = float(weight)

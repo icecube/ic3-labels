@@ -970,7 +970,7 @@ def add_nuveto_passing_fractions(
                 flux_type=flux_type,
             )
 
-            flux_name = 'nuVeto_pf_{}_{}_{}_{}'.format(
+            flux_name = 'pf_{}_{}_{}_{}'.format(
                 prpl, primary_model, interaction_model, flux_type,
             ).replace('.', '_')
             veto_pf[flux_name] = float(pf)
