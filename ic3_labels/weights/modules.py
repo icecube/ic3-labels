@@ -71,10 +71,7 @@ class AddNuVetoPassingFraction(icetray.I3ConditionalModule):
         cos_zen = np.cos(frame['I3MCWeightDict']['PrimaryNeutrinoZenith'])
         n_events = frame['I3MCWeightDict']['NEvents']
 
-        for primary_model in self.primary_models:
-
-            veto_obj = self.veto_objects[primary_model]
-
+        for primary_model, veto_obj in self.veto_objects.items():
             for flux_type in ['total', 'pr', 'conv']:
                 pf = veto_obj.get_passing_fraction(
                     ptype=ptype,
@@ -157,10 +154,7 @@ class AddMCEqWeights(icetray.I3ConditionalModule):
         cos_zen = np.cos(frame['I3MCWeightDict']['PrimaryNeutrinoZenith'])
         n_events = frame['I3MCWeightDict']['NEvents']
 
-        for primary_model, flux in self.primary_models.items():
-
-            flux = self.fluxes[primary_model]
-
+        for primary_model, flux in self.fluxes.items():
             for flux_type in ['total', 'pr', 'conv']:
                 flux_val = flux.getFlux(
                     ptype=ptype,
