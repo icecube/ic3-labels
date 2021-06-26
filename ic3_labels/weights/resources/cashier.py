@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 import os
+import numpy as np
 import pickle
-from pickle import dumps
-from hashlib import md5
+
+from ._hash_utils import get_hash
 
 
 class Cashier(object):
 
-    def __init__(self, file_name=".cache", pickle_protocol=2, read_only=False):
+    def __init__(self, file_name=".cache", pickle_protocol=3, read_only=False):
         """
         Parameters
         ----------
@@ -89,7 +90,7 @@ class Cashier(object):
         self._write_cache()
 
 
-def cache(cache_file=".cache", pickle_protocol=2, read_only=True):
+def cache(cache_file=".cache", pickle_protocol=3, read_only=True):
     """
     Cache function results into a pickled dictionary
 
@@ -108,13 +109,18 @@ def cache(cache_file=".cache", pickle_protocol=2, read_only=True):
     """
     def decorator(fn):
         def wrapped(*args, **kwargs):
-            sorted_kwargs = [kwargs[k] for k in sorted(kwargs.keys())]
-            key = (
-                fn.__name__
-                + str(dumps(args, protocol=pickle_protocol))
-                + str(dumps(sorted_kwargs, protocol=pickle_protocol))
+            objects = (
+                [fn.__name__]
+                + list(args) +
+                [kwargs[k] for k in sorted(kwargs.keys())]
             )
-            md5_key = md5(key.encode('utf8')).hexdigest()
+            objects_tr = []
+            for o in objects_tr:
+                if isinstance(o, np.ndarray):
+                    objects_tr.append(o.tolist())
+                else:
+                    objects_tr.append(o)
+            md5_key = get_hash(objects_tr)
             c = Cashier(
                 file_name=cache_file,
                 pickle_protocol=pickle_protocol,
