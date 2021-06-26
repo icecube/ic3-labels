@@ -90,7 +90,8 @@ def get_spline(
         theta_grid,
         theta_grid_cos,
         cached=True,
-        cache_file=CACHE_FILE):
+        cache_file=CACHE_FILE,
+        cache_read_only=False):
     """Get MCEq spline
 
     Solves the MCEq cascade equations for the given parameters. The equations
@@ -118,6 +119,8 @@ def get_spline(
         already computed. This is recommended, as MCEq takes a while to run.
     cache_file : str, optional
         The path to the cache file to use.
+    cache_read_only : bool, optional
+        If True, the cache is read only.
 
     Returns
     -------
@@ -384,7 +387,7 @@ def get_spline(
             cache_f = cache_file
         log.info('\tUsing cache \'{}\''.format(cache_f))
 
-        @cache(cache_file=cache_f)
+        @cache(cache_file=cache_f, read_only=cache_read_only)
         def wrapped_get_spline(
                 interaction_model,
                 primary_model,
@@ -536,6 +539,7 @@ class MCEQFlux(object):
             primary_model='H3a',
             cached=True,
             cache_file=CACHE_FILE,
+            cache_read_only=False,
             ):
         """Initialize MCEQFlux instance
 
@@ -556,6 +560,8 @@ class MCEQFlux(object):
             is recommended in order to reduce computation time.
         cache_file : str, optional
             The path to the cache file to use.
+        cache_read_only : bool, optional
+            If True, the cache is read only.
         """
         if cache_file is None:
             cache_file = CACHE_FILE
@@ -568,6 +574,7 @@ class MCEQFlux(object):
             self.theta_grid_cos,
             cached=cached,
             cache_file=cache_file,
+            cache_read_only=cache_read_only,
         )
 
         from MCEq import version
@@ -773,6 +780,7 @@ def add_mceq_weights(
             interaction_model=interaction_model,
             primary_model=primary_model,
             cache_file=cache_file,
+            cache_read_only=True,
         )
 
         for flux_type in ['total', 'pr', 'conv']:

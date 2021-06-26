@@ -187,7 +187,8 @@ def get_spline(
         energy_grid,
         n_jobs=1,
         cached=True,
-        cache_file=CACHE_FILE):
+        cache_file=CACHE_FILE,
+        cache_read_only=False):
     """Get nuVeto spline
 
     Caculates nuVeto results for the given parameters. The results
@@ -224,6 +225,8 @@ def get_spline(
         already computed. This is recommended, as MCEq takes a while to run.
     cache_file : str, optional
         The path to the cache file to use.
+    cache_read_only : bool, optional
+        If True, the cache is read only.
 
     Returns
     -------
@@ -530,7 +533,7 @@ def get_spline(
             cache_f = cache_file
         log.info('\tUsing cache \'{}\''.format(cache_f))
 
-        @cache(cache_file=cache_f)
+        @cache(cache_file=cache_f, read_only=cache_read_only)
         def wrapped_get_spline(
                 interaction_model,
                 primary_model,
@@ -714,6 +717,7 @@ class AtmosphericNuVeto(object):
             n_jobs=1,
             cached=True,
             cache_file=CACHE_FILE,
+            cache_read_only=False,
             ):
         """Initialize AtmosphericNuVeto instance
 
@@ -741,6 +745,8 @@ class AtmosphericNuVeto(object):
             is recommended in order to reduce computation time.
         cache_file : str, optional
             The path to the cache file to use.
+        cache_read_only : bool, optional
+            If True, the cache is read only.
         """
         if cache_file is None:
             cache_file = CACHE_FILE
@@ -756,6 +762,7 @@ class AtmosphericNuVeto(object):
             n_jobs=n_jobs,
             cached=cached,
             cache_file=cache_file,
+            cache_read_only=cache_read_only,
         )
 
         nuveto_version = pkg_resources.get_distribution('nuVeto').version
@@ -960,6 +967,7 @@ def add_nuveto_passing_fractions(
             interaction_model=interaction_model,
             primary_model=primary_model,
             cache_file=cache_file,
+            cache_read_only=True,
         )
 
         for flux_type in ['total', 'pr', 'conv']:
