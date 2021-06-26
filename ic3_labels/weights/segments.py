@@ -400,21 +400,19 @@ def WeightEvents(tray, name,
                     )
 
     if add_mceq_weights and dataset_type in ['nugen']:
-        from ic3_labels.weights import mceq_models
+        from ic3_labels.weights.modules import AddMCEqWeights
 
         tray.AddModule(
-            mceq_models.add_mceq_weights, 'add_mceq_weights',
+            AddMCEqWeights, 'AddMCEqWeights',
             n_files=dataset_n_files,
             **mceq_kwargs
         )
 
     if add_nuveto_pf and dataset_type in ['nugen']:
-        from ic3_labels.weights import nuveto_models
+        from ic3_labels.weights.modules import AddNuVetoPassingFraction
 
         tray.AddModule(
-            nuveto_models.add_nuveto_passing_fractions,
-            'add_nuveto_passing_fractions',
-            n_files=dataset_n_files,
+            AddNuVetoPassingFraction, 'AddNuVetoPassingFraction',
             **nuveto_kwargs
         )
 
