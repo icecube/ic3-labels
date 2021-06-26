@@ -3,6 +3,9 @@
 from icecube import dataclasses, icetray
 import numpy as np
 
+from ic3_labels.weights.mceq_models import MCEQFlux
+from ic3_labels.weights.nuveto_models import AtmosphericNuVeto
+
 
 class AddNuVetoPassingFraction(icetray.I3ConditionalModule):
     '''Module to add MCEq weights via provided cache file.
