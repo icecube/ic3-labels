@@ -384,7 +384,7 @@ def get_spline(
             cache_f = cache_file
         log.info('\tUsing cache \'{}\''.format(cache_f))
 
-        @cache(cache_file=cache_f, cache_time=np.inf)
+        @cache(cache_file=cache_f)
         def wrapped_get_spline(
                 interaction_model,
                 primary_model,
