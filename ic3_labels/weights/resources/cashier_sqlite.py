@@ -153,24 +153,25 @@ def cache(
                 except:
                     info = loads(bytearray(datum.encode('ascii')))
 
-                # # ---------------------------------------
-                # # HACK to transform sqlite to pickle dict
-                # # ---------------------------------------
-                # print('Appyling hack')
-                # key = (
-                #     fn.__name__
-                #     + str(dumps(args, protocol=2))
-                #     + str(dumps(kwargs, protocol=2))
-                # )
-                # md5_key2 = md5(key.encode('utf8')).hexdigest()
-                # from .cashier2 import Cashier as CashierPickle
-                # c2 = CashierPickle(
-                #     file_name='/home/mirco/Downloads/nuVeto.cache',
-                #     pickle_protocol=2,
-                #     read_only=False,
-                # )
-                # c2.set(md5_key2, info)
-                # # -------------
+                # ---------------------------------------
+                # HACK to transform sqlite to pickle dict
+                # ---------------------------------------
+                print('Appyling hack')
+                sorted_kwargs = [kwargs[k] for k in sorted(kwargs.keys())]
+                key = (
+                    fn.__name__
+                    + str(dumps(args, protocol=2))
+                    + str(dumps(sorted_kwargs, protocol=2))
+                )
+                md5_key2 = md5(key.encode('utf8')).hexdigest()
+                from .cashier2 import Cashier as CashierPickle
+                c2 = CashierPickle(
+                    file_name='/home/mirco/Downloads/sqlite2pickled.cache',
+                    pickle_protocol=2,
+                    read_only=False,
+                )
+                c2.set(md5_key2, info)
+                # -------------
                 if not retry_if_blank:
                     return info
                 elif info:

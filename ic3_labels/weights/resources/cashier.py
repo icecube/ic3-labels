@@ -108,10 +108,11 @@ def cache(cache_file=".cache", pickle_protocol=2, read_only=True):
     """
     def decorator(fn):
         def wrapped(*args, **kwargs):
+            sorted_kwargs = [kwargs[k] for k in sorted(kwargs.keys())]
             key = (
                 fn.__name__
                 + str(dumps(args, protocol=pickle_protocol))
-                + str(dumps(kwargs, protocol=pickle_protocol))
+                + str(dumps(sorted_kwargs, protocol=pickle_protocol))
             )
             md5_key = md5(key.encode('utf8')).hexdigest()
             c = Cashier(
