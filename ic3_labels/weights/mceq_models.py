@@ -80,6 +80,8 @@ PTYPE_CONVERTER = {
     -14: 'antinumu',
     16: 'nutau',
     -16: 'antinutau',
+    13: 'mu+',
+    -13: 'mu-',
 }
 
 
