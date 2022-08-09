@@ -1542,6 +1542,51 @@ def get_next_muon_daughter_of_nu(frame, particle,
         return None
 
 
+def get_parent_muons(frame, particle=None, mctree_name='I3MCTree'):
+    """Get "parent" muons
+
+    Definition of "parent" muon in this context:
+
+    Any muon in the I3MCTree that does not have another muon
+    as a parent.
+
+    Parameters
+    ----------
+    frame : I3Frame
+        The current I3Frame. Must contain the specified I3MCTree.
+    particle : I3Particle
+        The primary particle. If None, the primary particle of the
+        I3MCTree will be chose. Will throw an error if more than
+        one primary particle is present.
+    mctree_name : str, optional
+        The name of the I3MCTree.
+
+    Returns
+    -------
+    list of I3Particle
+        A list of "parent" muons.
+    """
+
+    # get the primary particle of the I3MCTree if none provided
+    if particle is None:
+        primaries = frame[mctree_name].get_primaries()
+        if len(primaries) != 1:
+            raise ValueError('Expected exactly 1 primary, got:', primaries)
+        particle = primaries[0]
+
+    muons = []
+    # Now walk through each daughter particle recursively
+    for daughter in frame[mctree_name].get_daughters(particle):
+        if is_muon(daughter):
+            muons.append(daughter)
+        else:
+            muons += get_parent_muons(
+                frame=frame, particle=daughter, mctree_name=mctree_name,
+            )
+
+    return muons
+
+
 def get_muon_track_length_inside(muon, convex_hull):
     ''' Get the track length of the muon
         inside the convex hull.
