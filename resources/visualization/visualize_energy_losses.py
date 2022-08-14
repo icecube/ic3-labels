@@ -1,5 +1,5 @@
 #!/bin/sh /cvmfs/icecube.opensciencegrid.org/py2-v3.0.1/icetray-start
-#METAPROJECT /mnt/lfs7/user/mhuennefeld/software/icecube/py2-v3.0.1/combo_trunk/build
+#METAPROJECT /data/user/mhuennefeld/software/icecube/py2-v3.0.1/combo_trunk/build
 # -*- coding: utf-8 -*-
 import os
 import click
