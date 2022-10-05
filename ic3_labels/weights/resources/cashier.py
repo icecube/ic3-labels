@@ -115,7 +115,7 @@ def cache(cache_file=".cache", pickle_protocol=3, read_only=True):
                 [kwargs[k] for k in sorted(kwargs.keys())]
             )
             objects_tr = []
-            for o in objects_tr:
+            for o in objects:
                 if isinstance(o, np.ndarray):
                     objects_tr.append(o.tolist())
                 else:
