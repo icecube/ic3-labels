@@ -278,6 +278,23 @@ def get_muon_bundle_information(frame, convex_hull, energy_threshold=20):
     energies_at_entry = []
     energies_at_cyl = []
 
+    # GENIE files don't always have an MMCTrackList
+    # But the events that don't are almost certainly
+    # fully contained cascades.
+    if not 'MMCTrackList' in frame:
+        bundle_info['num_muons_in_mctree'] = 0
+        bundle_info['num_muons_at_entry'] = 0
+        bundle_info['num_muons_at_entry_above_threshold'] = 0
+        bundle_info['num_muons_at_cyl'] = 0
+        bundle_info['num_muons_at_cyl_above_threshold'] = 0
+        bundle_info['leading_energy_rel_2nd_mctree'] = 0
+        bundle_info['leading_energy_rel_2nd_cyl'] = 0
+        bundle_info['leading_energy_rel_2nd_entry'] = 0
+        bundle_info['leading_energy_rel_entry'] = 0
+        bundle_info['num_muons_at_entry'] = 0
+        bundle_info['num_muons_at_entry_above_threshold'] = 0
+        return bundle_info
+        
     for particle in frame['MMCTrackList']:
         muon = particle.particle
         # Check if particle is a muon
