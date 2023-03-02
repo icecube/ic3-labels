@@ -1484,11 +1484,21 @@ def get_muon_of_inice_neutrino(frame, muongun_primary_neutrino_id=None):
 
     daughters = frame['I3MCTree'].get_daughters(nu_in_ice)
     muons = [p for p in daughters if p.pdg_encoding in (13, -13)]
-
+    
     if muons:
-        assert len(muons) == 1, \
-            'Found more or less than one expected muon.'
+        if len(muons) > 1:
+            # We can have additional muons from the hadronic interactions.
+            # These are simulated in MMC for NuGen, but those are typically
+            # dropped from the MCTrees that are kept for later processing.
+            # That's not true in GENIE simulation, however, since there's
+            # a different code path (ie, via GEANT instead of MMC+PROPOSAL).
+            # For now, let's just pick the muon with the highest energy
+            highest = muons[0]
+            for mu in muons: 
+                if mu.energy >= highest.energy: highest = mu
+            return highest
         return muons[0]
+
     else:
         return None
 
