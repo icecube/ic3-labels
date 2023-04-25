@@ -289,7 +289,7 @@ def get_spline(
             The interaction model. This is passed on to `MCEqRun`.
         primary_model : str
             The primary model to use. Must be one of:
-                GST_3-gen, GST_4-gen, H3a, H4a, poly-gonato, TIG, ZS, ZSP, GH
+                GST_3-gen, GST_4-gen, H3a, H4a, poly-gonato, TIG, ZS, ZSP, GH, GSF
         months : list of str
             The months for which to solve the cascade equations. These must be
             provided as a list of month names, e.g. ['January', 'August']. A
@@ -338,6 +338,7 @@ def get_spline(
             "ZS": (pm.ZatsepinSokolskaya, 'default'),
             "ZSP": (pm.ZatsepinSokolskaya, 'pamela'),
             "GH": (pm.GaisserHonda, None),
+            "GSF": (pm.GlobalSplineFitBeta, None)
         }
 
         for i, month in enumerate(months):
