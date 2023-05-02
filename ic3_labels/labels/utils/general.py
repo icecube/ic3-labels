@@ -360,3 +360,139 @@ def get_noise_pulse_map(frame,
             if noise_in_ice_pulses:
                 noise_pulse_series_map[key] = noise_in_ice_pulses
     return type(in_ice_pulses)(noise_pulse_series_map)
+
+
+def get_pulse_primary_mapping(
+        frame, primaries,
+        pulse_map_string='InIcePulses',
+        mcpe_series_map_name='I3MCPESeriesMap',
+        max_time_dif=10):
+    '''Get mapping of pulses to primary particles
+
+       Pulses to be used can be specified through
+       pulse_map_string.
+        [This is only a guess on which reco Pulses
+         could be originated from the particle.
+         Naively calculated by looking at time diffs.]
+
+    Parameters
+    ----------
+    frame : I3Frame
+        The I3Frame to work on.
+    primaries : list of I3Particle
+        The particles for which the mapping will be generated.
+        Mapping will have the following format:
+            -1: pulses without a matching MC photon.
+            0: pulses with matching MC photon, but not associated to any of
+                the defined particles in the `primaries` parameter.
+            1: pulses associated to the first particle in `primaries`.
+            ...
+            n: pulses associated to the n-th particle in `primaries`.
+    pulse_map_string : str
+        The pulse series (or MCPESeries) to generate the mapping for.
+    mcpe_series_map_name : str, optional
+        The name of the MCPESeriesMap, which will be used to generate
+        the mapping.
+    max_time_dif : int, optional
+        The maximal time difference for which to still match a
+        reconstructed pulse to the underlying MC photon.
+        Note: the first MC photon in the corresponding time window
+        will be selected to perform the mapping. Ideally, the `max_time_dif`
+        is chosen as small as possible to assure a proper matching.
+
+    Returns
+    -------
+    I3MapKeyVectorInt
+        An I3MapKeyVectorInt object with a vector of int for each hit DOM.
+        The ordering of the values in the vector corresponds to the same
+        ordering of the pulse series map `pulse_map_string`.
+        The integer values utilized in the mapping are defined as:
+            -1: pulses without a matching MC photon.
+            0: pulses with matching MC photon, but not associated to any of
+                the defined particles in the `primaries` parameter.
+            1: pulses associated to the first particle in `primaries`.
+            ...
+            n: pulses associated to the n-th particle in `primaries`.
+    '''
+    mapping = dataclasses.I3MapKeyVectorInt()
+    if pulse_map_string in frame:
+
+        # collect the particle IDs of all daughters from the defined
+        # primary particles to which we will perform the pulse mapping
+        mapping_ids = {}
+        for i, particle in enumerate(primaries):
+
+            # make a list of all ids
+            ids = get_ids_of_particle_and_daughters(frame, particle, [])
+            # older versions of icecube dont have correct hash for I3ParticleID
+            # Therefore need tuple of major and minor ID
+            # [works directly with I3ParticleID  > combo.trunk r152630]
+            ids = {(i.majorID, i.minorID) for i in ids}
+
+            assert (0, 0) not in ids, \
+                'Daughter particle with id (0,0) should not exist'
+
+            assert (0, -1) not in ids, \
+                'Daughter particle with id (0,-1) should not exist'
+
+            mapping_ids[i + 1] = ids
+
+        # get pulses defined by pulse_map_string
+        in_ice_pulses = frame[pulse_map_string]
+        if isinstance(in_ice_pulses, dataclasses.I3RecoPulseSeriesMapMask):
+            in_ice_pulses = in_ice_pulses.apply(frame)
+
+        # now walk through all pulses
+        for key, pulses in in_ice_pulses.items():
+            mapping[key] = []
+
+            # get MC pulses for this OMKey
+            mc_pulses = frame[mcpe_series_map_name][key]
+            mc_pulse_times = [p.time for p in mc_pulses]
+
+            # speed things up:
+            # pulses are sorted in time. Therefore we
+            # can start from the last match
+            last_index = 0
+
+            # go through the pulses and create mapping
+            for pulse in pulses:
+
+                # find the corresponding MC pulse (if it exists)
+                mc_pulse = None
+                if mc_pulse_times:
+
+                    # accept a pulse if it's within a
+                    # max_time_dif-Window of an actual MCPE
+                    for i, t in enumerate(mc_pulse_times[last_index:]):
+                        if abs(pulse.time - t) < max_time_dif:
+                            last_index = last_index + i
+                            mc_pulse = mc_pulses[last_index]
+                            break
+
+                if mc_pulse is None:
+
+                    # we did not find a matching photon
+                    mapping[key].append(-1)
+
+                else:
+
+                    # get id of the MC photon
+                    mc_id = (mc_pulse.ID.majorID, mc_pulse.ID.minorID)
+
+                    # check if it belongs to any of the specified primaries
+                    found_mapping = False
+                    for value, ids in mapping_ids.items():
+                        if mc_id in ids:
+                            mapping[key].append(value)
+                            found_mapping = True
+
+                    if not found_mapping:
+                        # the corresponding MC photon is not one of the
+                        # specified primaries
+                        mapping[key].append(0)
+
+            # make sure that we have only mapped existing pulses
+            assert len(mapping[key]) == len(pulses), (mapping[key], pulses)
+
+        return mapping
