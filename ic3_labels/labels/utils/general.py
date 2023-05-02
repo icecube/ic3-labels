@@ -206,7 +206,7 @@ def get_ids_of_particle_and_daughters(frame, particle, ids):
 def get_pulse_map(frame, particle,
                   pulse_map_string='InIcePulses',
                   mcpe_series_map_name='I3MCPESeriesMap',
-                  max_time_dif=100):
+                  max_time_dif=10):
     '''Get map of pulses induced by a specific particle.
        Pulses to be used can be specified through
        pulse_map_string.
@@ -218,21 +218,27 @@ def get_pulse_map(frame, particle,
     ----------
     frame : current frame
         needed to retrieve MMCTrackList, I3MCTree, I3MCPE...
-
     particle : I3Particle
         Any particle type.
-
-    pulse_map_string : key of pulse map in frame,
-        of which the pulses should be computed for
-
-    mcpe_series_map_name : key of mcpe series map in frame
+    pulse_map_string : str
+        The name of the pulse series map in the frame that should
+        be used.
+    mcpe_series_map_name : str
+        The key of the mcpe series map in the frame.
+    max_time_dif : int, optional
+        The maximal time difference for which to still match a
+        reconstructed pulse to the underlying MC photon.
 
     Returns
     -------
     pulse_map : I3RecoPulseSeriesMap or I3MCPulseSeriesMap
         Map of pulses.
+        ----- Better if done over I3RecoPulseSeriesMapMask ... ----
 
-    ----- Better if done over I3RecoPulseSeriesMapMask ----
+    Raises
+    ------
+    ValueError
+        Description
 
     '''
     if particle.id.majorID == 0 and particle.id.minorID == 0:
@@ -281,40 +287,47 @@ def get_pulse_map(frame, particle,
                             break
             if particle_in_ice_pulses:
                 particle_pulse_series_map[key] = particle_in_ice_pulses
-    return dataclasses.I3RecoPulseSeriesMap(particle_pulse_series_map)
+    return type(in_ice_pulses)(particle_pulse_series_map)
 
 
 def get_noise_pulse_map(frame,
                         pulse_map_string='InIcePulses',
                         mcpe_series_map_name='I3MCPESeriesMap',
-                        max_time_dif=100):
+                        empty_id=dataclasses.I3ParticleID(),
+                        max_time_dif=10):
     '''Get map of pulses induced by noise.
         [This is only a guess on which reco Pulses
          could be originated from noise.]
 
     Parameters
     ----------
-    frame : current frame
-        needed to retrieve MMCTrackList, I3MCTree, I3MCPE...
-
-    pulse_map_string : key of pulse map in frame,
-        of which the mask should be computed for
-
-    mcpe_series_map_name : key of mcpe series map in frame
+    frame : I3Frame
+        The current I3Frame to work on.
+    pulse_map_string : str
+        The name of the pulse series map in the frame that should
+        be used.
+    mcpe_series_map_name : str, optional
+        Description
+    empty_id : I3ParticleID, optional
+        The particle ID used for noise pulses.
+        Note, it is assumed here that an empty particle ID
+        is used for noise in the simulation, but this is not
+        verified.
+    max_time_dif : int, optional
+        The maximal time difference for which to still match a
+        reconstructed pulse to the underlying MC photon.
+    mcpe_series_map_name : str
+        The key of the mcpe series map in the frame.
 
     Returns
     -------
     pulse_map : I3RecoPulseSeriesMap
         Map of pulses.
-
-    ----- Better if done over I3RecoPulseSeriesMapMask ----
-
+        ----- Better if done over I3RecoPulseSeriesMapMask ... ----
     '''
 
     noise_pulse_series_map = {}
     if pulse_map_string in frame:
-        # pulses with no particle ID are likely from noise
-        empty_id = dataclasses.I3ParticleID()
 
         # get candidate keys
         valid_keys = set(frame[mcpe_series_map_name].keys())
@@ -346,4 +359,4 @@ def get_noise_pulse_map(frame,
                             break
             if noise_in_ice_pulses:
                 noise_pulse_series_map[key] = noise_in_ice_pulses
-    return dataclasses.I3RecoPulseSeriesMap(noise_pulse_series_map)
+    return type(in_ice_pulses)(noise_pulse_series_map)
