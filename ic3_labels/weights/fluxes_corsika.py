@@ -62,7 +62,7 @@ def get_fluxes_and_names(fallback_to_ic3_labels_flux=False):
                     # skip over FixedFractionFlux, which requires
                     # additional fractions set
                     if isinstance(cls, fluxes.FixedFractionFlux):
-                        continue
+                        flux_model = None
 
                 # Fall back to ic3_labels version
                 # (currently necessary for python >=3.8)
@@ -81,7 +81,8 @@ def get_fluxes_and_names(fallback_to_ic3_labels_flux=False):
                     else:
                         raise e
 
-                flux_models.append(flux_model)
+                if flux_model is not None:
+                    flux_models.append(flux_model)
 
     return flux_models, \
         [str(flux_model_i) + 'Weight' for flux_model_i in flux_models]
