@@ -17,6 +17,7 @@ class MIMIC_NEUTRINOFLUX():
             allowed_base_classes.append(fluxes.CompiledFlux)
         if hasattr(fluxes, 'CosmicRayFlux'):
             allowed_base_classes.append(fluxes.CosmicRayFlux)
+        allowed_base_classes = tuple(allowed_base_classes)
 
         if not isinstance(weighting_flux, allowed_base_classes):
             raise TypeError('Weighting Flux has to be an instance '
