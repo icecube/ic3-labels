@@ -21,7 +21,8 @@ class MIMIC_NEUTRINOFLUX():
 
         if not isinstance(weighting_flux, allowed_base_classes):
             raise TypeError('Weighting Flux has to be an instance '
-                            'of CompiledFlux or CosmicRayFlux!')
+                            'of CompiledFlux or CosmicRayFlux!',
+                            weighting_flux)
         else:
             self.weighting_flux = weighting_flux
             self.name = name
