@@ -496,3 +496,15 @@ def get_pulse_primary_mapping(
             assert len(mapping[key]) == len(pulses), (mapping[key], pulses)
 
         return mapping
+
+def get_charge(frame, pulse_key='InIceDSTPulses'):
+
+    series_mask = frame[pulse_key].apply(frame)
+    n_dom_hits = 0
+    for omkey, pulses in series_mask.items():
+        n_dom_hits += 1
+        total_charge = 0
+        for pulse in pulses:
+            total_charge += pulse.charge
+
+    return n_dom_hits, total_charge
