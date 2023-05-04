@@ -63,8 +63,8 @@ def get_fluxes_and_names(fallback_to_ic3_labels_flux=False):
                     # additional fractions set
                     if issubclass(cls, fluxes.FixedFractionFlux):
                         flux_model = None
-
-                    raise e
+                    else:
+                        raise e
 
                 # Fall back to ic3_labels version
                 # (currently necessary for python >=3.8)
