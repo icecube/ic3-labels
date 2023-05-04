@@ -37,7 +37,7 @@ def get_fluxes_and_names(fallback_to_ic3_labels_flux=False):
         ParentClass = fluxes.CompiledFlux
         unit_conversion = 1.
     except Exception as e:
-        ParentClass = CosmicRayFlux
+        ParentClass = fluxes.CosmicRayFlux
         unit_conversion = 0.0001  # cm^2 to m^2
 
     # cross-check if used fluxes have correct units
