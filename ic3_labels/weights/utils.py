@@ -1,5 +1,7 @@
 import numpy as np
 
+from icecube import dataclasses
+
 
 # some enums for CORSIKA->PDG compatibility
 ParticleType = {

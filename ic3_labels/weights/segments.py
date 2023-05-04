@@ -103,11 +103,18 @@ def calc_weights(frame, fluxes, flux_names, n_files, generator, key):
             n_events = cwm['NEvents']
             type_weight = 1.0
 
-            energy_integral = (
-                cwm['EnergyPrimaryMax']**(cwm["PrimarySpectralIndex"] + 1)
-                - cwm['EnergyPrimaryMin']**(cwm["PrimarySpectralIndex"] + 1)
-                ) / (cwm["PrimarySpectralIndex"] + 1)
-            energy_weight = cwm['PrimaryEnergy']**cwm["PrimarySpectralIndex"]
+            spectral_index = cwm["PrimarySpectralIndex"]
+            if spectral_index == 0:
+                energy_integral = (
+                    np.log(cwm['EnergyPrimaryMax'])
+                    - np.log(cwm['EnergyPrimaryMin'])
+                )
+            else:
+                energy_integral = (
+                    cwm['EnergyPrimaryMax']**(spectral_index + 1)
+                    - cwm['EnergyPrimaryMin']**(spectral_index + 1)
+                    ) / (spectral_index + 1)
+            energy_weight = cwm['PrimaryEnergy']**spectral_index
             one_weight = energy_integral / energy_weight * cwm["AreaSum"]
 
         elif frame.Has('I3MCWeightDict'):
