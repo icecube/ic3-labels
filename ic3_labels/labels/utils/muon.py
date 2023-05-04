@@ -11,6 +11,7 @@ from icecube.icetray.i3logging import log_error, log_warn
 from ic3_labels.labels.utils import geometry
 from ic3_labels.labels.utils.general import get_ids_of_particle_and_daughters
 from ic3_labels.labels.utils.general import particle_is_inside
+from ic3_labels.labels.utils.general import get_weighted_primary
 
 
 def is_muon(particle):
@@ -1569,8 +1570,7 @@ def get_parent_muons(frame, particle=None, mctree_name='I3MCTree'):
 
     # get the primary particle of the I3MCTree if none provided
     if particle is None:
-        particle = general.get_weighted_primary(
-            frame=frame, mctree_name=mctree_name)
+        particle = get_weighted_primary(frame=frame, mctree_name=mctree_name)
 
     muons = []
     # Now walk through each daughter particle recursively
