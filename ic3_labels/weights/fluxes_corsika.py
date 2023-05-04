@@ -12,7 +12,12 @@ from ic3_labels.weights.resources import fluxes as _fluxes
 
 class MIMIC_NEUTRINOFLUX():
     def __init__(self, weighting_flux, name, unit_conversion=1.):
-        allowed_base_classes = (fluxes.CompiledFlux, _fluxes.CosmicRayFlux)
+        allowed_base_classes = []
+        if hasattr(fluxes, 'CompiledFlux'):
+            allowed_base_classes.append(fluxes.CompiledFlux)
+        if hasattr(fluxes, 'CosmicRayFlux'):
+            allowed_base_classes.append(fluxes.CosmicRayFlux)
+
         if not isinstance(weighting_flux, allowed_base_classes):
             raise TypeError('Weighting Flux has to be an instance '
                             'of CompiledFlux or CosmicRayFlux!')
