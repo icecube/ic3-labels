@@ -2,8 +2,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import division, print_function
 
-from icecube.weighting.weighting import from_simprod
-from icecube.weighting import get_weighted_primary
+
+try:
+    from icecube.weighting.weighting import from_simprod
+    from icecube.weighting import get_weighted_primary
+except ModuleNotFoundError as e:
+    from ic3_labels.weights.utils import get_weighted_primary
+
 from icecube import icetray, dataclasses
 from icecube import MuonGun
 from icecube.icetray import I3Units
