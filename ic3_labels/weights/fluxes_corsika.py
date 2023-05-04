@@ -57,6 +57,13 @@ def get_fluxes_and_names(fallback_to_ic3_labels_flux=False):
                         cls(), obj, unit_conversion=unit_conversion)
                     flux_model.getFlux(1e4, 14, 0.)
 
+                except TypeError as e:
+
+                    # skip over FixedFractionFlux, which requires
+                    # additional fractions set
+                    if isinstance(cls, fluxes.FixedFractionFlux):
+                        continue
+
                 # Fall back to ic3_labels version
                 # (currently necessary for python >=3.8)
                 except Exception as e:
