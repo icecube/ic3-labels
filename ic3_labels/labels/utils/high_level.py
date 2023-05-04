@@ -1199,14 +1199,16 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
         elif bundle_info['num_muons_at_cyl'] > 0:
             bundle_key = 'num_muons_at_cyl'
         else:
-            raise ValueError('Expected at least one muon!', frame['I3MCTree'])
+            bundle_key = None
+            print('Expected at least one muon!', frame['I3MCTree'])
 
-        if bundle_info[bundle_key] == 1:
-            labels['p_entering_muon_single'] = 1
-            labels['p_entering_muon_single_stopping'] = \
-                mu_utils.is_stopping_muon(muon, convex_hull)
-        else:
-            labels['p_entering_muon_bundle'] = 1
+        if bundle_key is not None:
+            if bundle_info[bundle_key] == 1:
+                labels['p_entering_muon_single'] = 1
+                labels['p_entering_muon_single_stopping'] = \
+                    mu_utils.is_stopping_muon(muon, convex_hull)
+            else:
+                labels['p_entering_muon_bundle'] = 1
 
     # Check if event is track. Definition used here:
     #   Event is track if at least one muon exists in cylinder and the length
