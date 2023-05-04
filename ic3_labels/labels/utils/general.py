@@ -127,6 +127,71 @@ def get_num_coincident_events(frame):
     return len(frame['I3MCTree'].get_primaries())
 
 
+def get_weighted_primary(frame, mctree_name=None):
+    """Add weighted primary to frame
+
+    Weighted CORSIKA simulation (as well as some NuGen simulation) can have
+    coincidences mixed in that should not be used to calculate weights, as they
+    were chosen at "natural" frequency. Find the primary that was chosen from a
+    biased spectrum, and put it in the frame.
+
+    Parameters
+    ----------
+    frame : TYPE
+        Description
+    mctree_name : str, optional
+        The name of the I3MCTree to use.
+        If None is provided, one of 'I3MCTree_preMuonProp', 'I3MCTree'
+        will be used.
+
+    Returns
+    -------
+    I3Particle
+        The primary particle
+    """
+
+    if mctree_name is None:
+        for mctree in ['I3MCTree_preMuonProp', 'I3MCTree']:
+            if (mctree in frame) and (len(frame[mctree].primaries) != 0):
+                mctree_name = mctree
+                break
+
+    primaries = frame[mctree_name].primaries
+
+    if len(primaries) == 0:
+        return None
+
+    if len(primaries) == 1:
+        idx = 0
+
+    elif 'I3MCWeightDict' in frame:
+        idx = [i for i in range(len(primaries)) if primaries[i].is_neutrino]
+        assert len(idx) == 0, (idx, primaries)
+        idx = idx[0]
+
+    elif 'CorsikaWeightMap' in frame:
+        wmap = frame['CorsikaWeightMap']
+
+        if len(primaries) == 0:
+            return None
+
+        elif len(primaries) == 1:
+            idx = 0
+
+        elif 'PrimaryEnergy' in wmap:
+            prim_e = wmap['PrimaryEnergy']
+            idx = int(np.nanargmin([abs(p.energy-prim_e) for p in primaries]))
+
+        elif 'PrimarySpectralIndex' in wmap:
+            prim_e = wmap['Weight']**(-1./wmap['PrimarySpectralIndex'])
+            idx = int(np.nanargmin([abs(p.energy-prim_e) for p in primaries]))
+
+        else:
+            idx = 0
+
+    return primaries[idx]
+
+
 def particle_is_inside(particle, convex_hull):
     '''Checks if a particle is inside the convex hull.
     The particle is considered inside if any part of its track is inside

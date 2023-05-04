@@ -1569,10 +1569,8 @@ def get_parent_muons(frame, particle=None, mctree_name='I3MCTree'):
 
     # get the primary particle of the I3MCTree if none provided
     if particle is None:
-        primaries = frame[mctree_name].get_primaries()
-        if len(primaries) != 1:
-            raise ValueError('Expected exactly 1 primary, got:', primaries)
-        particle = primaries[0]
+        particle = general.get_weighted_primary(
+            frame=frame, mctree_name=mctree_name)
 
     muons = []
     # Now walk through each daughter particle recursively
