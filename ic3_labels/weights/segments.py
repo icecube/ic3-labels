@@ -104,7 +104,7 @@ def calc_weights(frame, fluxes, flux_names, n_files, generator, key):
             type_weight = 1.0
 
             spectral_index = cwm["PrimarySpectralIndex"]
-            if spectral_index == 0:
+            if spectral_index == -1:
                 energy_integral = (
                     np.log(cwm['EnergyPrimaryMax'])
                     - np.log(cwm['EnergyPrimaryMin'])
