@@ -35,6 +35,11 @@ def get_weighted_primary(frame, MCPrimary='MCPrimary'):
         Description
     MCPrimary : str, optional
         Name of the primary particle to put into the frame.
+
+    Returns
+    -------
+    I3Particle
+        The weighted primary.
     """
 
     MCTreeName = None
@@ -44,12 +49,12 @@ def get_weighted_primary(frame, MCPrimary='MCPrimary'):
             break
 
     if MCTreeName is None:
-        return
+        return None
 
     primaries = frame[MCTreeName].primaries
 
     if len(primaries) == 0:
-        return
+        return None
 
     if len(primaries) == 1:
         idx = 0
@@ -74,7 +79,7 @@ def get_weighted_primary(frame, MCPrimary='MCPrimary'):
                     p for p in primaries if p.type == wmap['ParticleType']]
 
         if len(primaries) == 0:
-            return
+            return None
 
         elif len(primaries) == 1:
             idx = 0
@@ -91,3 +96,4 @@ def get_weighted_primary(frame, MCPrimary='MCPrimary'):
             idx = 0
 
     frame[MCPrimary] = primaries[idx]
+    return primaries[idx]
