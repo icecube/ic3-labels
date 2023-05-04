@@ -13,7 +13,12 @@ from icecube import icetray, dataclasses
 from icecube import MuonGun
 from icecube.icetray import I3Units
 
-from collections import Iterable
+try:
+    from collections import Iterable
+except ImportError:
+    # >= python 3.10
+    from collections.abc import Iterable
+
 from copy import deepcopy
 
 import math
