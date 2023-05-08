@@ -149,6 +149,7 @@ def get_energy_deposited_including_daughters(frame,
                                              convex_hull,
                                              particle,
                                              muongun_primary_neutrino_id=None,
+                                             mctree_name='I3MCTree',
                                              ):
     '''Function to get the total energy a particle or any of its
     daughters deposited in the volume defined by the convex hull.
@@ -174,12 +175,19 @@ def get_energy_deposited_including_daughters(frame,
         an unknown type and a pdg_encoding of 0.
         Therefore, the I3ParticleID of the primary needs to
         be passed along.
+    mctree_name : str, optional
+        The name of the I3MCTree to use.
 
     Returns
     -------
     energy : float
         Accumulated deposited Energy of the mother particle and
         all of the daughters.
+
+    Raises
+    ------
+    ValueError
+        Description
     '''
     energy_loss = 0
     # Calculate EnergyLoss of current particle
@@ -190,7 +198,7 @@ def get_energy_deposited_including_daughters(frame,
     elif particle.is_neutrino \
             or particle.id == muongun_primary_neutrino_id:  # MuonGunFix
         # neutrinos
-        for daughter in frame['I3MCTree'].get_daughters(particle):
+        for daughter in frame[mctree_name].get_daughters(particle):
             energy_loss += get_energy_deposited_including_daughters(
                                                 frame, convex_hull, daughter)
     elif particle.pdg_encoding in (13, -13):  # CC [Muon +/-]
@@ -208,7 +216,7 @@ def get_energy_deposited_including_daughters(frame,
     return energy_loss
 
 
-def get_tau_entry_info(frame, tau, convex_hull):
+def get_tau_entry_info(frame, tau, convex_hull, mctree_name='I3MCTree'):
     """Helper function for 'get_cascade_labels'.
 
     Get tau information for point of entry, or closest approach point,
@@ -222,6 +230,8 @@ def get_tau_entry_info(frame, tau, convex_hull):
         Tau I3Particle for which to get the entry information.
     convex_hull : scipy.spatial.ConvexHull, optional
         Defines the desired convex volume.
+    mctree_name : str, optional
+        The name of the I3MCTree to use.
 
     Returns
     -------
@@ -241,7 +251,7 @@ def get_tau_entry_info(frame, tau, convex_hull):
 
     # Todo: calculate energy at point of entry for tau as it is done for muon
     # For now, just provide the total tau energy
-    if 'I3MCTree' not in frame:
+    if mctree_name not in frame:
         energy = tau.energy
     else:
         energy = tau.energy
@@ -551,7 +561,9 @@ def get_primary_information(frame, primary,
                             dom_pos_dict, convex_hull,
                             pulse_map_string='InIcePulses',
                             mcpe_series_map_name='I3MCPESeriesMap',
-                            muongun_primary_neutrino_id=None):
+                            muongun_primary_neutrino_id=None,
+                            mctree_name='I3MCTree',
+                            ):
     '''Function to get labels for the primary
 
     Parameters
@@ -579,6 +591,8 @@ def get_primary_information(frame, primary,
         an unknown type and a pdg_encoding of 0.
         Therefore, the I3ParticleID of the primary needs to
         be passed along.
+    mctree_name : str, optional
+        The name of the I3MCTree to use.
 
     Returns
     -------
@@ -611,7 +625,7 @@ def get_primary_information(frame, primary,
     COGDistanceToDeepCore = geometry.distance_to_deepcore_hull(COG)
 
     # other labels
-    daughters = frame['I3MCTree'].get_daughters(primary)
+    daughters = frame[mctree_name].get_daughters(primary)
     codes = [p.pdg_encoding for p in daughters]
     if -13 in codes or 13 in codes:
         # CC Interaction: nu + N -> mu + hadrons
@@ -654,27 +668,27 @@ def get_primary_information(frame, primary,
 def get_misc_information(frame,
                          dom_pos_dict, convex_hull,
                          pulse_map_string='InIcePulses',
-                         mcpe_series_map_name='I3MCPESeriesMap'):
+                         mcpe_series_map_name='I3MCPESeriesMap',
+                         mctree_name='I3MCTree',
+                         ):
     '''Function to misc labels
 
     Parameters
     ----------
-    frame : frame
-
-    pulse_map_string : key of pulse map in frame,
-        of which the mask should be computed for
-
+    frame : I3Frame
+        The I3Frame to work on
     dom_pos_dict : dict
         Dictionary of form (string,key) : (x,y,z)
         for all DOMs.
         string and key are of type int
-
     convex_hull : scipy.spatial.ConvexHull
         defining the desired convex volume
-
     pulse_map_string : key of pulse map in frame,
         of which the pulses should be computed for
-
+    mcpe_series_map_name : str, optional
+        Description
+    mctree_name : str, optional
+        The name of the I3MCTree to use.
     mcpe_series_map_name : key of mcpe series map in frame
 
     Returns
@@ -723,7 +737,7 @@ def get_misc_information(frame,
     info_dict['NoiseNoOfPulses'] = NoiseNoOfPulses
     info_dict['NoiseTotalCharge'] = NoiseTotalCharge
 
-    info_dict['NoOfPrimaries'] = len(frame['I3MCTree'].primaries)
+    info_dict['NoOfPrimaries'] = len(frame[mctree_name].primaries)
 
     return info_dict
 
@@ -880,7 +894,7 @@ def get_labels(frame, convex_hull,
 
 
 def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
-                       track_length_threshold=30):
+                       track_length_threshold=30, mctree_name='I3MCTree'):
     """Get general cascade labels.
 
     Parameters
@@ -954,7 +968,7 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
         # --------------------
         # NuGen dataset
         # --------------------
-        mctree = frame['I3MCTree']
+        mctree = frame[mctree_name]
         cascade = get_cascade_of_primary_nu(frame, primary,
                                             convex_hull=None,
                                             extend_boundary=extend_boundary)[0]
@@ -1110,8 +1124,8 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
             # -----------------------------
             # muon primary: MuonGun dataset
             # -----------------------------
-            if len(frame['I3MCTree']) > 1:
-                daughter = frame['I3MCTree'][1]
+            if len(frame[mctree_name]) > 1:
+                daughter = frame[mctree_name][1]
                 if mu_utils.is_muon(daughter) and \
                     ((daughter.id == primary.id) and
                      (daughter.dir == primary.dir) and
@@ -1120,7 +1134,7 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
                         muon = daughter
 
         else:
-            daughters = frame['I3MCTree'].get_daughters(primary)
+            daughters = frame[mctree_name].get_daughters(primary)
             muon = daughters[0]
 
             # Perform some safety checks to make sure that this is MuonGun
@@ -1200,7 +1214,7 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
             bundle_key = 'num_muons_at_cyl'
         else:
             bundle_key = None
-            print('Expected at least one muon!', frame['I3MCTree'])
+            print('Expected at least one muon!', frame[mctree_name])
 
         if bundle_key is not None:
             if bundle_info[bundle_key] == 1:
