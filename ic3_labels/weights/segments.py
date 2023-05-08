@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-from __future__ import division, print_function
-
 
 try:
     from icecube.weighting.weighting import from_simprod
