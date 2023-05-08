@@ -135,7 +135,7 @@ def get_interaction_neutrino_rec(frame, primary,
     daughters = mctree.get_daughters(primary)
 
     # No daughters found, so no interaction
-    if len(daughters) is 0:
+    if len(daughters) == 0:
         return None
 
     # check if interaction point is inside
@@ -169,7 +169,7 @@ def get_interaction_neutrino_rec(frame, primary,
             if neutrino is not None:
                 interaction_neutrinos.append(neutrino)
 
-        if len(interaction_neutrinos) is 0:
+        if len(interaction_neutrinos) == 0:
             # No neutrinos interacting in the convex hull could be found.
             return None
 

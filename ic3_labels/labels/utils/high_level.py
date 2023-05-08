@@ -1173,14 +1173,22 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
                     muon = m
 
         labels['p_entering'] = 1
-        labels['VertexX'] = entry_max.x
-        labels['VertexY'] = entry_max.y
-        labels['VertexZ'] = entry_max.z
-        labels['VertexTime'] = time_max
+        if entry_max is None:
+            labels['VertexX'] = float('nan')
+            labels['VertexY'] = float('nan')
+            labels['VertexZ'] = float('nan')
+            labels['VertexTime'] = float('nan')
+            labels['Length'] = float('nan')
+            labels['LengthInDetector'] = float('nan')
+        else:
+            labels['VertexX'] = entry_max.x
+            labels['VertexY'] = entry_max.y
+            labels['VertexZ'] = entry_max.z
+            labels['VertexTime'] = time_max
+            labels['Length'] = muon.length
+            labels['LengthInDetector'] = \
+                mu_utils.get_muon_track_length_inside(muon, convex_hull)
         labels['EnergyVisible'] = bundle_info['bundle_energy_at_entry']
-        labels['Length'] = muon.length
-        labels['LengthInDetector'] = \
-            mu_utils.get_muon_track_length_inside(muon, convex_hull)
 
         if bundle_info['num_muons_at_entry_above_threshold'] > 0:
             bundle_key = 'num_muons_at_entry_above_threshold'
@@ -1191,14 +1199,16 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
         elif bundle_info['num_muons_at_cyl'] > 0:
             bundle_key = 'num_muons_at_cyl'
         else:
-            raise ValueError('Expected at least one muon!', frame['I3MCTree'])
+            bundle_key = None
+            print('Expected at least one muon!', frame['I3MCTree'])
 
-        if bundle_info[bundle_key] == 1:
-            labels['p_entering_muon_single'] = 1
-            labels['p_entering_muon_single_stopping'] = \
-                mu_utils.is_stopping_muon(muon, convex_hull)
-        else:
-            labels['p_entering_muon_bundle'] = 1
+        if bundle_key is not None:
+            if bundle_info[bundle_key] == 1:
+                labels['p_entering_muon_single'] = 1
+                labels['p_entering_muon_single_stopping'] = \
+                    mu_utils.is_stopping_muon(muon, convex_hull)
+            else:
+                labels['p_entering_muon_bundle'] = 1
 
     # Check if event is track. Definition used here:
     #   Event is track if at least one muon exists in cylinder and the length
