@@ -128,17 +128,19 @@ def get_num_coincident_events(frame):
 
 
 def get_weighted_primary(frame, mctree_name=None):
-    """Add weighted primary to frame
+    """Return weighted primary from I3MCTree
 
     Weighted CORSIKA simulation (as well as some NuGen simulation) can have
     coincidences mixed in that should not be used to calculate weights, as they
     were chosen at "natural" frequency. Find the primary that was chosen from a
     biased spectrum, and put it in the frame.
 
+    Note: This code is adopted from old icecube.simweights project
+
     Parameters
     ----------
-    frame : TYPE
-        Description
+    frame : I3Frame
+        The I3Frame from which to retrieve the weighted primary particle.
     mctree_name : str, optional
         The name of the I3MCTree to use.
         If None is provided, one of 'I3MCTree_preMuonProp', 'I3MCTree'
