@@ -115,7 +115,7 @@ def get_significant_energy_loss(
     return energy_loss
 
 
-def get_num_coincident_events(frame, mctree_name):
+def get_num_coincident_events(frame, mctree_name='I3MCTree'):
     '''Get Number of coincident events (= number of primaries in I3MCTree).
 
     Parameters

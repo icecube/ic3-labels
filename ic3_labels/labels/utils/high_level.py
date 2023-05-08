@@ -675,7 +675,8 @@ def get_misc_information(frame,
 
     Parameters
     ----------
-    frame : frame
+    frame : I3Frame
+        The I3Frame to work on
     dom_pos_dict : dict
         Dictionary of form (string,key) : (x,y,z)
         for all DOMs.
