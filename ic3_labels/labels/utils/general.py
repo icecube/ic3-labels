@@ -10,7 +10,8 @@ from icecube.phys_services import I3Calculator
 from ic3_labels.labels.utils import geometry
 
 
-def get_significant_energy_loss(frame, pulse_key='InIceDSTPulses'):
+def get_significant_energy_loss(
+        frame, pulse_key='InIceDSTPulses', mctree_name='I3MCTree'):
     """Get the most significant energy loss from the I3MCTree that may have
     caused the hits given by the pulses 'pulse_key'.
 
@@ -25,6 +26,8 @@ def get_significant_energy_loss(frame, pulse_key='InIceDSTPulses'):
         specified pulses.
     pulse_key : str, optional
         The pulses to use.
+    mctree_name : str, optional
+        The name of the I3MCTree to use.
 
     Returns
     -------
@@ -66,7 +69,7 @@ def get_significant_energy_loss(frame, pulse_key='InIceDSTPulses'):
                 factor += charge * get_angle_factor(angle) / (distance**3)
         return factor * particle.energy
 
-    mctree = frame['I3MCTree']
+    mctree = frame[mctree_name]
 
     def get_relevant_children(parent):
 
@@ -112,19 +115,21 @@ def get_significant_energy_loss(frame, pulse_key='InIceDSTPulses'):
     return energy_loss
 
 
-def get_num_coincident_events(frame):
+def get_num_coincident_events(frame, mctree_name):
     '''Get Number of coincident events (= number of primaries in I3MCTree).
 
     Parameters
     ----------
     frame : current frame
         needed to retrieve MMCTrackList, I3MCTree, I3MCPE...
+    mctree_name : str, optional
+        The name of the I3MCTree to use.
 
     Returns
     -------
     int
     '''
-    return len(frame['I3MCTree'].get_primaries())
+    return len(frame[mctree_name].get_primaries())
 
 
 def get_weighted_primary(frame, mctree_name=None):
@@ -256,10 +261,12 @@ def get_ids_of_particle_and_daughters(
 
     ids : list,
         List in which to save all ids.
+    mctree_name : str, optional
+        The name of the I3MCTree to use.
 
     Returns
     -------
-    ids: list
+    ids : list
         List of all particle ids
     '''
     if particle is None:
