@@ -242,7 +242,8 @@ def particle_is_inside(particle, convex_hull):
     return True
 
 
-def get_ids_of_particle_and_daughters(frame, particle, ids):
+def get_ids_of_particle_and_daughters(
+        frame, particle, ids, mctree_name='I3MCTree'):
     '''Get particle ids of particle and all its daughters.
 
     Parameters
@@ -264,7 +265,7 @@ def get_ids_of_particle_and_daughters(frame, particle, ids):
     if particle is None:
         return ids
     ids.append(particle.id)
-    daughters = frame['I3MCTree'].get_daughters(particle)
+    daughters = frame[mctree_name].get_daughters(particle)
     for daughter in daughters:
         get_ids_of_particle_and_daughters(frame, daughter, ids)
     return ids
