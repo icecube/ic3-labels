@@ -278,6 +278,38 @@ def get_ids_of_particle_and_daughters(
     return ids
 
 
+def get_all_parents(
+        frame, particle, mctree_name='I3MCTree', reorder=True):
+    '''Get all parents of the specified particle
+
+    Parameters
+    ----------
+    frame : I3Frame
+        The I3Frame to use.
+    particle : I3Particle
+        The particle for which all parents will be collected.
+    mctree_name : str, optional
+        The name of the I3MCTree to use.
+    reorder : bool, optional
+        If True, reorder list to go from primary -> particle.
+
+    Returns
+    -------
+    list of I3Particle
+        List of all parent particles
+    '''
+
+    parents = []
+    while frame[mctree_name].has_parent(particle):
+        parent = frame[mctree_name].parent(particle)
+        parents.append(parent)
+        particle = parent
+
+    if reorder:
+        parents = parents[::-1]
+    return parents
+
+
 def get_pulse_map(frame, particle,
                   pulse_map_string='InIcePulses',
                   mcpe_series_map_name='I3MCPESeriesMap',
