@@ -8,6 +8,9 @@ from scipy.spatial import ConvexHull
 
 from ic3_labels.labels.utils import detector
 
+import re
+
+EXTENDED_HULL_RE = re.compile("icecube_hull_ext_([+-]?\d+)")
 
 class MCLabelsBase(icetray.I3ConditionalModule):
 
@@ -26,7 +29,9 @@ class MCLabelsBase(icetray.I3ConditionalModule):
             "ConvexHull",
             "The the convex hull to use. Must either be an instance of "
             "scipy.spatial.ConvexHull or a string defining a convex hull "
-            "in ic3_labels.labels.utils.detector. If None is provided, a "
+            "in ic3_labels.labels.utils.detector."
+            "Or a string named icecube_hull_ext_{extensin in meters}."
+            "If None is provided, a "
             "convex hull around the outer IceCube strings will be constructed "
             "based on the given Geometry file.",
             None,
@@ -63,7 +68,11 @@ class MCLabelsBase(icetray.I3ConditionalModule):
             self._convex_hull = ConvexHull(points)
 
         elif isinstance(self._convex_hull, str):
-            self._convex_hull = getattr(detector, self._convex_hull)
+            if (match := EXTENDED_HULL_RE.matches(self._convex_hull)) is not None:
+                extension = int(match.group(1))
+                self._conex_hull = detector.get_extended_convex_hull(extension)
+            else:
+                self._convex_hull = getattr(detector, self._convex_hull)
 
         self._dom_pos_dict = domPosDict
         self.PushFrame(frame)

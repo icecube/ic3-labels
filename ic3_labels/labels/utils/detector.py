@@ -26,7 +26,11 @@ icecube_hull_points = [
 icecube_hull = ConvexHull(icecube_hull_points)
 
 # add extensions around IceCube
-for extension in [60, 150, 200, 300]:
+def get_extended_convex_hull(extension: float) -> ConvexHull:
+    """
+    Returns the ConvexHull (scipy.spacial.ConvexHull) 
+    of the detector extended by `extension` meters
+    """ 
     icecube_hull_points_i = []
     for x, y, z in icecube_hull_points:
 
@@ -43,8 +47,7 @@ for extension in [60, 150, 200, 300]:
 
         icecube_hull_points_i.append([pos_vec_ext[0], pos_vec_ext[1], z_ext])
 
-    globals()['icecube_hull_ext_{:03}'.format(extension)] = ConvexHull(
-        icecube_hull_points_i)
+    return ConvexHull(icecube_hull_points_i)
 
 # Assuming dust layer to be at -150m to -50m
 icecube_hull_upper = ConvexHull([
