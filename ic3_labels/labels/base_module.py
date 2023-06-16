@@ -27,7 +27,7 @@ class MCLabelsBase(icetray.I3ConditionalModule):
             "The the convex hull to use. Must either be an instance of "
             "scipy.spatial.ConvexHull or a string defining a convex hull "
             "in ic3_labels.labels.utils.detector."
-            "Or a string named icecube_hull_ext_{extensin in meters}."
+            "Or a string named icecube_hull_ext_{extension in meters}."
             "If None is provided, a "
             "convex hull around the outer IceCube strings will be constructed "
             "based on the given Geometry file.",
