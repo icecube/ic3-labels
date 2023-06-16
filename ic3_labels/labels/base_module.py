@@ -8,9 +8,6 @@ from scipy.spatial import ConvexHull
 
 from ic3_labels.labels.utils import detector
 
-import re
-
-EXTENDED_HULL_RE = re.compile("icecube_hull_ext_([+-]?\d+)")
 
 class MCLabelsBase(icetray.I3ConditionalModule):
 
@@ -68,8 +65,8 @@ class MCLabelsBase(icetray.I3ConditionalModule):
             self._convex_hull = ConvexHull(points)
 
         elif isinstance(self._convex_hull, str):
-            if (match := EXTENDED_HULL_RE.match(self._convex_hull)) is not None:
-                extension = int(match.group(1))
+            if self._convex_hull.startswith("icecube_hull_ext_"):
+                extension = float(self._convex_hull.split("_")[-1])
                 self._convex_hull = detector.get_extended_convex_hull(extension)
             else:
                 self._convex_hull = getattr(detector, self._convex_hull)
