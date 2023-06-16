@@ -68,9 +68,9 @@ class MCLabelsBase(icetray.I3ConditionalModule):
             self._convex_hull = ConvexHull(points)
 
         elif isinstance(self._convex_hull, str):
-            if (match := EXTENDED_HULL_RE.matches(self._convex_hull)) is not None:
+            if (match := EXTENDED_HULL_RE.match(self._convex_hull)) is not None:
                 extension = int(match.group(1))
-                self._conex_hull = detector.get_extended_convex_hull(extension)
+                self._convex_hull = detector.get_extended_convex_hull(extension)
             else:
                 self._convex_hull = getattr(detector, self._convex_hull)
 
