@@ -85,8 +85,9 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
         track_updates : List of I3Particle
             List of track updates.
         relative_energy_losses : array_like
-            The relative energy loss (momentum transfer q) of each cascade
-            energy deposition. Same length as `cascades`
+            The relative energy loss of each cascade energy deposition with
+            respect to the total track energy at that point.
+            Same length as `cascades`.
     """
 
     # sanity check
@@ -464,6 +465,140 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
         'cascades': cascades,
         'track_updates': track_updates,
         'relative_energy_losses': relative_energy_losses,
+    }
+
+
+def get_bundle_energy_depositions(
+            mc_tree, tracks, primary,
+            correct_for_em_loss=True,
+            energy_threshold=1.,
+            extend_boundary=None,
+            atol_time=1e-2,
+            atol_pos=0.5,
+            fix_muon_pair_production_bug=False,
+        ):
+    """Get a list of track energy updates for a list of tracks
+
+    Combines track updates from the provided list of tracks.
+    Note: no checks are performed to ensure that the tracks are all part of
+    the same bundle! This has to be ensured by the user!
+
+    Parameters
+    ----------
+    mc_tree : I3MCTree
+        The I3MCTree.
+    tracks : list of I3Particle
+        The list of tracks for which to compute combined energy depositions.
+        Note: these must be coming from tracks of the same bundle. No checks
+        are made to ensure this. This must be ensured by the user!
+    primary : I3Particle
+        The primary particle. Energy deposition distances will be relative
+        to the vertex of the primary particle.
+    correct_for_em_loss : bool, optional
+        If True, energy depositions will be in terms of EM equivalent deposited
+        energy.
+        If False, the actual (but possibly invisible) energy depositions is
+        used..
+    energy_threshold : float, optional
+        The energy threshold under which an energy loss is considered to be
+        removed from the track.
+    extend_boundary : float, optional
+        If provided only energy losses within convex hull + extend boundary
+        are accepted and considered.
+    atol_time : float, optional
+        Tolerance for absolute delta of interaction and track segment times.
+        These should technically be identical, but precision loss can result
+        in deviations.
+    atol_pos : float, optional
+        Tolerance for absolute delta of interaction and track segment vertex
+        positions, provided in meters. These should technically be identical,
+        but precision loss can result in deviations.
+    fix_muon_pair_production_bug : bool, optional
+        Older IceTray versions incorrectly double-counted energy losses of
+        muon-pair production. This results in bare muon track segments in the
+        I3MCTree to have less energy than they should.
+        If set to True, the collected energies of the track segments are
+        updated to account for these muon-pair productions. Note: this only
+        works if the muon track segments don't reach down to zero energy, as
+        the energy is capped at this value and does not turn negative.
+
+    Returns
+    -------
+    dict
+        update_distances : array_like
+            The distances for the energy updates wrt the primary vertex.
+        update_energies : array_like
+            The energies for at the energy update positions.
+        update_delta_energies : array_like
+            The energy loss at each corresponding distance.
+            The first energy loss is zero by default.
+            Same shape as `update_distances` and `update_energies`.
+    """
+
+    dep_distances = []
+    dep_energies = []
+
+    bundle_energy_start = 0
+    bundle_dist_start = np.inf
+
+    for track in tracks:
+        e_dep_dict = get_track_energy_depositions(
+                mc_tree=mc_tree,
+                track=track,
+                num_to_remove=0,
+                correct_for_em_loss=correct_for_em_loss,
+                energy_threshold=energy_threshold,
+                extend_boundary=extend_boundary,
+                atol_time=atol_time,
+                atol_pos=atol_pos,
+                fix_muon_pair_production_bug=fix_muon_pair_production_bug,
+            )
+
+        if len(e_dep_dict["update_distances"]) > 0:
+
+            # correct distances to be relative to primary vertex
+            dist_offset = (primary.pos - track.pos).magnitude
+            update_distances = np.array(
+                e_dep_dict["update_distances"]) + dist_offset
+
+            # take first point among all tracks to be the initial bundle start
+            if bundle_dist_start > update_distances[0]:
+                bundle_dist_start = update_distances[0]
+
+            # accumulate energy of all tracks to be the bundle energy
+            bundle_energy_start += e_dep_dict["update_energies"][0]
+
+            # compute energy losses
+            energy_losses = np.diff(e_dep_dict["update_energies"])
+
+            dep_distances.append(update_distances[1:])
+            dep_energies.append(energy_losses)
+
+    dep_distances = np.concatenate(dep_distances, axis=0)
+    dep_energies = np.concatenate(dep_energies, axis=0)
+
+    # sort losses along distance
+    # Note: this assumes that all tracks are traveling on same trajectory!
+    sorted_idx = np.argsort(dep_distances)
+    dep_distances = dep_distances[sorted_idx]
+    dep_energies = dep_energies[sorted_idx]
+
+    dep_energies_cum = bundle_energy_start + np.cumsum(dep_energies)
+
+    # create energy deposition updates for bundle
+    update_distances = np.insert(dep_distances, 0, bundle_dist_start)
+    update_energies = np.insert(dep_energies_cum, 0, bundle_energy_start)
+    update_delta_energies = np.insert(dep_energies, 0, 0.)
+
+    # some basic sanity checks
+    assert np.all(update_energies >= 0), update_energies
+    assert np.all(np.diff(update_energies) <= 0), np.diff(update_energies)
+    assert np.all(update_delta_energies <= 0), update_delta_energies
+
+    return {
+        'update_distances': update_distances,
+        'update_energies': update_energies,
+        'update_delta_energies': update_delta_energies,
     }
 
 
