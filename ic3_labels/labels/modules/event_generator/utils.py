@@ -10,7 +10,11 @@ from ic3_labels.labels.utils.cascade import convert_to_em_equivalent
 def get_track_energy_depositions(mc_tree, track, num_to_remove,
                                  correct_for_em_loss=True,
                                  energy_threshold=1.,
-                                 extend_boundary=None):
+                                 extend_boundary=None,
+                                 atol_time=1e-2,
+                                 atol_pos=0.5,
+                                 fix_muon_pair_production_bug=False,
+                                 ):
     """Get a list of track energy updates and a number of highest energy
     cascades that were removed from the track.
 
@@ -44,6 +48,22 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
     extend_boundary : float, optional
         If provided only energy losses within convex hull + extend boundary
         are accepted and considered.
+    atol_time : float, optional
+        Tolerance for absolute delta of interaction and track segment times.
+        These should technically be identical, but precision loss can result
+        in deviations.
+    atol_pos : float, optional
+        Tolerance for absolute delta of interaction and track segment vertex
+        positions, provided in meters. These should technically be identical,
+        but precision loss can result in deviations.
+    fix_muon_pair_production_bug : bool, optional
+        Older IceTray versions incorrectly double-counted energy losses of
+        muon-pair production. This results in bare muon track segments in the
+        I3MCTree to have less energy than they should.
+        If set to True, the collected energies of the track segments are
+        updated to account for these muon-pair productions. Note: this only
+        works if the muon track segments don't reach down to zero energy, as
+        the energy is capped at this value and does not turn negative.
 
     Raises
     ------
@@ -93,7 +113,36 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
     stoch_energies = []
     last_update_outside = None
     track_entered_volume = False
+
+    # these variables are required for fix of muon-pair production bug fix
+    muon_pair_prod_energy = 0
+
     for index, daughter in enumerate(daughters):
+
+        # check if the current daughter is part of a muon-pair production.
+        # We'll do this check by checking if a second muon exists in the
+        # I3MCTree with the same vertex and by checking that it's a
+        # muon and anti-muon
+        is_pair_production = False
+        if daughter.pdg_encoding in (-13, 13):
+            muon_pair = None
+
+            # check if a muon + anti-muon exists
+            if (index > 0 and
+                    daughters[index-1].pdg_encoding == -daughter.pdg_encoding):
+                muon_pair = daughters[index - 1]
+            elif (index < len(daughters) - 1 and
+                    daughters[index+1].pdg_encoding == -daughter.pdg_encoding):
+                muon_pair = daughters[index + 1]
+
+            # if so, check if these are at the same vertex
+            if muon_pair is not None:
+                if (muon_pair.pos - daughter.pos).magnitude < 1e-1:
+                    is_pair_production = True
+
+                    # keep track of energy lost in muon pair production:
+                    if fix_muon_pair_production_bug:
+                        muon_pair_prod_energy += daughter.energy
 
         # check if these points are inside defined volume
         if extend_boundary is not None:
@@ -117,18 +166,47 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
                 if daughter.type == track.type:
                     if not track_entered_volume:
                         last_update_outside = daughter
+
+                        if fix_muon_pair_production_bug:
+                            last_update_outside = dataclasses.I3Particle(
+                                last_update_outside)
+                            last_update_outside.energy += muon_pair_prod_energy
                 continue
 
         track_entered_volume = True
 
-        if daughter.type == track.type:
+        if daughter.type == track.type and not is_pair_production:
 
             # this is probably a track segment updated
             update_distances.append((daughter.pos - track.pos).magnitude)
-            update_energies.append(daughter.energy)
             update_times.append(daughter.time)
             update_ids.append(daughter.id.minorID)
             track_updates.append(daughter)
+
+            if fix_muon_pair_production_bug:
+
+                # once an energy of 0 is reached, a simple addition of
+                # double-counted energy loss will not fix things
+                # We will fudge the energy of the subsequent track updates
+                # to have a delta energy of at least the stochastic energy
+                # losses in between.
+                if daughter.energy <= 0. + 1e-2:
+                    # find corresponding stochastic loss by checking
+                    # if times of vertices match in neighboring daughters
+                    delta_energy = 0.
+                    if index > 0 and (np.abs(daughters[index - 1].time -
+                                             daughter.time) < atol_time):
+                        delta_energy = daughters[index - 1].energy
+                    elif index < len(daughters) - 1 and (np.abs(daughters[
+                            index + 1].time - daughter.time) < atol_time):
+                        delta_energy = daughters[index + 1].energy
+
+                    muon_pair_prod_energy -= delta_energy + 1e-2
+
+                update_energies.append(daughter.energy + muon_pair_prod_energy)
+            else:
+                update_energies.append(daughter.energy)
+
         else:
             stoch_daughters.append(daughter)
             stoch_energies.append(daughter.energy)
@@ -180,12 +258,14 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
 
             # find the track update at the point of the stochastic loss
             index = get_update_index(
-                update_times, update_energies, update_ids, cascade)
+                update_times, update_energies, update_ids, cascade,
+                atol=atol_time,
+            )
 
             # the index should only be None if this cascade is part of the
             # decay products, e.g. at the end of the track
             if index is None and np.allclose(
-                    cascade.time, daughters[-1].time, atol=1e-2):
+                    cascade.time, daughters[-1].time, atol=atol_time):
                 unaccounted_daughters.append((cascade, True))
 
                 # we would need to consider the continous losses to estimate
@@ -195,10 +275,10 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
             else:
                 assert index is not None
                 assert np.allclose(
-                    update_times[index], cascade.time, atol=1e-2)
+                    update_times[index], cascade.time, atol=atol_time)
                 assert np.allclose(
                     update_distances[index],
-                    (cascade.pos - track.pos).magnitude, atol=1e-1)
+                    (cascade.pos - track.pos).magnitude, atol=atol_pos)
 
                 # the energy of the muon update is already reduced by the loss.
                 # To obtain the muon energy prior to the loss, we need to add
@@ -242,15 +322,18 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
 
         # find the track update at the point of the stochastic loss
         index = get_update_index(
-            update_times, update_energies, update_ids, daughter)
+            update_times, update_energies, update_ids, daughter,
+            atol=atol_time,
+        )
         if index is not None:
 
             # perform some sanity checks
-            assert np.allclose(update_times[index], daughter.time, atol=1e-2)
+            assert np.allclose(
+                update_times[index], daughter.time, atol=atol_time)
             assert np.allclose(
                 update_distances[index],
                 (daughter.pos - track.pos).magnitude,
-                atol=0.1,
+                atol=atol_pos,
             )
 
             # sanity check to see if energy loss is included
@@ -288,7 +371,8 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
             # to get cut away, while the stochastic energy is still inside.
             # However, we account for the latter case by increasing the
             # convex hull when checking for contained track updates.
-            assert np.allclose(daughter.time, daughters[-1].time, atol=1e-2)
+            assert np.allclose(
+                daughter.time, daughters[-1].time, atol=atol_time)
             unaccounted_daughters.append((daughter, False))
 
     # If there are unnaccounted stochastic energy losses, make sure these
@@ -398,7 +482,7 @@ def get_update_index(update_times, update_energies, update_ids, cascade,
     cascade : I3Particle
         The cascade for which to find the equivalent track update.
     atol : float, optional
-        The maximum allowed difference in distance in order to accept a match.
+        The maximum allowed difference in time in order to accept a match.
 
     Returns
     -------
