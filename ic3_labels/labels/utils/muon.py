@@ -1621,3 +1621,146 @@ def get_muon_track_length_inside(muon, convex_hull):
         # muon stops before convex hull
         return 0
     return min(max_ts, muon.length) - min_ts
+
+
+def get_bundle_radius(
+            frame, primary=None,
+            quantiles=[0.1, 0.5, 0.68, 0.9],
+            ref_point=dataclasses.I3Position(0., 0., 0.),
+            mctree_name='I3MCTree',
+            mmctracklist_name='MMCTrackList',
+        ):
+    """Computes the bundle radius for given tracks
+
+    The bundle radius is defined here as the distribution in distances
+    to the most energetic muon at the closest approach point of the
+    defined reference point `ref_point`. Note that this definition may be
+    mis-leading in case muons distribute all along the same direction of
+    the leading muon.
+
+    Parameters
+    ----------
+    frame : I3Frame
+        The current I3Frame.
+    primary : I3Particle, optional
+        The primary particle for which to collect the bundle.
+        If None is provided, the head of the I3MCTree is utilized.
+    quantiles : list of float, optional
+        The quantiles for which to compute the bundle radius.
+    ref_point : I3Position, optional
+        The radius of the bundle is compute based on the energy-weighted
+        profile at the closest approach position of this reference point.
+    mctree_name : str, optional
+        The name of the propagated I3MCTree.
+    mmctracklist_name : str, optional
+        The name of the MMCTrackList.
+
+    Returns
+    -------
+    array_like
+        The quantiles (fraction of total energy at the reference point) for
+        which the bundle radii are calculated.
+    array_like
+        An array of distances [meters] that describe the energy-weighted
+        radius of the bundle. Each entry corresponds to the distance from
+        the leading muon at which a fraction of q of the total charge is
+        included. The fraction q corresponds to the quantiles provided.
+    """
+
+    # get the primary if none is provided
+    if primary is None:
+        primary = frame[mctree_name].get_head()
+
+    # get all tracks in active volume
+    tracks = [
+        m.particle for m in frame[mmctracklist_name]
+        if frame[mctree_name].get_primary(m.particle) == primary
+    ]
+
+    return get_bundle_radius_from_tracks(
+        tracks=tracks, frame=frame, quantiles=quantiles, ref_point=ref_point)
+
+
+def get_bundle_radius_from_tracks(
+            tracks,
+            frame,
+            quantiles=[0.1, 0.5, 0.68, 0.9],
+            ref_point=dataclasses.I3Position(0., 0., 0.),
+            mctree_name='I3MCTree',
+            mmctracklist_name='MMCTrackList',
+        ):
+    """Computes the bundle radius for given tracks
+
+    The bundle radius is defined here as the distribution in distances
+    to the most energetic muon at the closest approach point of the
+    defined reference point `ref_point`. Note that this definition may be
+    mis-leading in case muons distribute all along the same direction of
+    the leading muon.
+
+    Parameters
+    ----------
+    tracks : List of I3Particle
+        A list of tracks belonging to the bundle.
+    frame : I3Frame
+        The current I3Frame.
+    quantiles : list of float, optional
+        The quantiles for which to compute the bundle radius.
+    ref_point : I3Position, optional
+        The radius of the bundle is compute based on the energy-weighted
+        profile at the closest approach position of this reference point.
+    mctree_name : str, optional
+        The name of the propagated I3MCTree.
+    mmctracklist_name : str, optional
+        The name of the MMCTrackList.
+
+    Returns
+    -------
+    array_like
+        The quantiles (fraction of total energy at the reference point) for
+        which the bundle radii are calculated.
+    array_like
+        An array of distances [meters] that describe the energy-weighted
+        radius of the bundle. Each entry corresponds to the distance from
+        the leading muon at which a fraction of q of the total charge is
+        included. The fraction q corresponds to the quantiles provided.
+    """
+    max_energy = -np.inf
+    closest_points = []
+    energies = []
+    for track in tracks:
+
+        # compute closest approach position of infinite long track
+        closest_pos = I3Calculator.closest_approach_position(track, ref_point)
+
+        energy = get_muon_energy_at_position(
+            frame=frame, muon=track, position=closest_pos)
+
+        if np.isfinite(energy) and energy > 0:
+            energies.append(energy)
+            closest_points.append(closest_pos)
+
+            if energy > max_energy:
+                center_point = closest_pos
+                max_energy = energy
+
+    if len(energies) == 0:
+        return quantiles, np.ones(len(quantiles)) * np.nan
+
+    # now compute distances to point of maximum energy shower
+    distances = [(pos - center_point).magnitude for pos in closest_points]
+
+    # sort along distance
+    sorted_idx = np.argsort(distances)
+    distances = np.array(distances)[sorted_idx]
+    energies = np.array(energies)[sorted_idx]
+    cum_energy_fraction = np.cumsum(energies) / np.sum(energies)
+
+    # account for numerical issues
+    assert np.allclose(cum_energy_fraction[-1], 1.), cum_energy_fraction
+    cum_energy_fraction = np.clip(cum_energy_fraction, 0., 1.)
+    cum_energy_fraction[-1] = 1.
+
+    # compute bundle radii for each of the quantiles
+    radii = distances[np.searchsorted(cum_energy_fraction, quantiles)]
+
+    return quantiles, radii
