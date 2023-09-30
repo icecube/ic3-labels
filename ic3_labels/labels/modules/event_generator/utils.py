@@ -77,6 +77,8 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
             The distances for the energy updates wrt the muon vertex.
         update_energies : array_like
             The energies for at the energy update positions.
+        pair_production_muons : list of I3Particle
+            List of muons created in muon-pair production losses.
         cascades : list of I3Particle
             List of removed cascades. This list is sorted from highest to lowest
             energies.
@@ -103,6 +105,12 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
     # get all daughters of track
     daughters = mc_tree.get_daughters(track)
 
+    # sort daughters according to minor PID
+    sorted_idx = np.argsort([d.id.minorID for d in daughters])
+    daughters = [daughters[i] for i in sorted_idx]
+
+    n_daughters = len(daughters)
+
     # gather all track updates
     # (these define rest track energy at a certain point)
     update_distances = []
@@ -114,9 +122,12 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
     stoch_energies = []
     last_update_outside = None
     track_entered_volume = False
+    pair_production_muons = []
 
     # these variables are required for fix of muon-pair production bug fix
     muon_pair_prod_energy = 0
+    has_hit_floor = False
+    last_positive_track_update = None
 
     for index, daughter in enumerate(daughters):
 
@@ -126,24 +137,118 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
         # muon and anti-muon
         is_pair_production = False
         if daughter.pdg_encoding in (-13, 13):
-            muon_pair = None
 
-            # check if a muon + anti-muon exists
-            if (index > 0 and
-                    daughters[index-1].pdg_encoding == -daughter.pdg_encoding):
-                muon_pair = daughters[index - 1]
-            elif (index < len(daughters) - 1 and
-                    daughters[index+1].pdg_encoding == -daughter.pdg_encoding):
-                muon_pair = daughters[index + 1]
+            # collect neighbouring muons in I3MCTree,
+            # stop when something else found
+            check_indices = []
+            for i in range(index, index - 3, -1):
+                if i >= 0 and daughters[i].pdg_encoding in (-13, 13):
+                    check_indices.append(i)
+                else:
+                    break
+            for i in range(index + 1, index + 3):
+                if i < n_daughters and daughters[i].pdg_encoding in (-13, 13):
+                    check_indices.append(i)
+                else:
+                    break
 
-            # if so, check if these are at the same vertex
-            if muon_pair is not None:
-                if (muon_pair.pos - daughter.pos).magnitude < 1e-1:
+            # collect all potential pair-production pairs by selecting
+            # muons at the same vertex time
+            mu_pairs = []
+            for i in check_indices:
+                if np.abs(daughters[i].time - daughter.time) < atol_time:
+                    mu_pairs.append(daughters[i])
+
+            # this cannot be a pair production
+            if len(mu_pairs) == 1:
+                pass
+
+            # two muons should only be found by random chance of two losses
+            # overlapping. In this case the two muons should have the
+            # same pdg_encoding. A proper muon and anti-muon pair should
+            # only happen outside of the active volume.
+            elif len(mu_pairs) == 2:
+                if mu_pairs[0].pdg_encoding == -mu_pairs[1].pdg_encoding:
+
+                    # make sure this case only happens outside
+                    assert (daughter.pos.rho >= 800 or
+                            np.abs(daughter.pos.z) >= 800), daughter
+
                     is_pair_production = True
+                else:
+                    is_pair_production = False
 
-                    # keep track of energy lost in muon pair production:
-                    if fix_muon_pair_production_bug:
-                        muon_pair_prod_energy += daughter.energy
+            # this should only happen if there is a muon pair production
+            elif len(mu_pairs) == 3:
+                # sort based on minor ID
+                # Assumption: muon track segment is included after
+                # muons generated in pair-production!!
+                sorted_idx = np.argsort([p.id.minorID for p in mu_pairs])
+                mu_pairs = [mu_pairs[i] for i in sorted_idx]
+
+                assert mu_pairs[0].pdg_encoding == -mu_pairs[1].pdg_encoding
+
+                if daughter == mu_pairs[0] or daughter == mu_pairs[1]:
+                    is_pair_production = True
+            else:
+                raise ValueError('Unexpected number of muons: ', mu_pairs)
+
+            # if we want to fix for the potential muon-pair-production but
+            # we need to account for when the track hits the floor of 0 GeV
+            if fix_muon_pair_production_bug and not is_pair_production:
+
+                # once an energy of 0 is reached, a simple addition of
+                # double-counted energy loss will not fix things
+                # We will fudge the energy of the subsequent track updates
+                # to have a delta energy of at least the stochastic energy
+                # losses in between.
+                if daughter.energy <= 1e-5:
+                    # find corresponding stochastic loss by checking
+                    # if times of vertices match in neighboring daughters
+                    delta_energy = 0.
+                    if index > 0 and (np.abs(daughters[index - 1].time -
+                                             daughter.time) < atol_time):
+                        delta_energy = daughters[index - 1].energy
+                    elif index < n_daughters - 1 and (np.abs(daughters[
+                            index + 1].time - daughter.time) < atol_time):
+                        delta_energy = daughters[index + 1].energy
+
+                    # correct for remaining energy of track before it hit
+                    # the floor of 0 GeV
+                    # This is only possible if we have one update before that
+                    if not has_hit_floor:
+                        has_hit_floor = True
+
+                        if last_positive_track_update is not None:
+                            assert (last_positive_track_update.pdg_encoding
+                                    == daughter.pdg_encoding)
+                            assert last_positive_track_update.energy > 0
+                            delta_energy -= last_positive_track_update.energy
+
+                    muon_pair_prod_energy -= delta_energy + 1e-4
+
+                # keep track of the last track update with positive energy
+                if daughter.energy > 0:
+                    last_positive_track_update = daughter
+
+        # if desired, fix potential muon-pair-productino bug
+        if is_pair_production and fix_muon_pair_production_bug:
+            # keep track of double-counted energy losses due to
+            # faulty tracking of muon pair production.
+            # Note that the double-counting of muon-pair production
+            # losses only occurs if these happen outside of the active
+            # volume. This is usually set as a cylinder with 800m
+            # radius + 1600m height
+            if daughter.pos.rho >= 800 or np.abs(daughter.pos.z) >= 800:
+                muon_pair_prod_energy += daughter.energy
+
+                # this bug should only happen when outside and only when
+                # the two muons are included, but not a track update
+                assert len(mu_pairs) == 2, mu_pairs
+            else:
+                # correctly handled pair production should have 3
+                # consecutive muons in I3MCTree
+                assert len(mu_pairs) == 3, mu_pairs
 
         # check if these points are inside defined volume
         if extend_boundary is not None:
@@ -156,7 +261,7 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
             # is always inside (it does not hurt much if only the
             # stochastic loss falls outside)
             if daughter.type == track.type:
-                eps_boundary = 0.1
+                eps_boundary = 1.0
             else:
                 eps_boundary = 0.
 
@@ -185,32 +290,19 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
             track_updates.append(daughter)
 
             if fix_muon_pair_production_bug:
-
-                # once an energy of 0 is reached, a simple addition of
-                # double-counted energy loss will not fix things
-                # We will fudge the energy of the subsequent track updates
-                # to have a delta energy of at least the stochastic energy
-                # losses in between.
-                if daughter.energy <= 0. + 1e-2:
-                    # find corresponding stochastic loss by checking
-                    # if times of vertices match in neighboring daughters
-                    delta_energy = 0.
-                    if index > 0 and (np.abs(daughters[index - 1].time -
-                                             daughter.time) < atol_time):
-                        delta_energy = daughters[index - 1].energy
-                    elif index < len(daughters) - 1 and (np.abs(daughters[
-                            index + 1].time - daughter.time) < atol_time):
-                        delta_energy = daughters[index + 1].energy
-
-                    muon_pair_prod_energy -= delta_energy + 1e-2
-
                 update_energies.append(daughter.energy + muon_pair_prod_energy)
             else:
                 update_energies.append(daughter.energy)
 
-        else:
+        elif not is_pair_production:
             stoch_daughters.append(daughter)
             stoch_energies.append(daughter.energy)
+
+        # muon pair-production
+        else:
+            # we do not consider these as stochastic losses in the sense
+            # that the entire energy is deposited in a short-ranged shower.
+            pair_production_muons.append(daughter)
 
     update_distances = np.array(update_distances)
     update_energies = np.array(update_energies)
@@ -300,7 +392,7 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
         # sanity checks
         assert np.allclose(
             update_energies[-1] - returned_energy, previous_energy)
-        assert (np.diff(update_energies) <= 1e-4).all()
+        assert (np.diff(update_energies) <= 1e-4).all(), update_energies
 
     else:
 
@@ -355,7 +447,7 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
                 em_energy = convert_to_em_equivalent(daughter)
                 delta_energy = daughter.energy - em_energy
 
-                assert delta_energy > -1e-7
+                assert delta_energy > -1e-5, delta_energy
                 delta_energy = np.clip(delta_energy, 0., np.inf)
 
                 # need to update additional delta_energy form
@@ -456,12 +548,13 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
     update_energies[1:] -= energy_corrections
 
     assert (np.diff(update_energies) <= 0).all()
-    assert (np.all(update_energies) >= 0)
+    assert np.all(update_energies >= 0), update_energies
     assert (np.diff([c.energy for c in cascades]) < 0).all()
 
     return {
         'update_distances': update_distances,
         'update_energies': update_energies,
+        'pair_production_muons': pair_production_muons,
         'cascades': cascades,
         'track_updates': track_updates,
         'relative_energy_losses': relative_energy_losses,
@@ -574,26 +667,33 @@ def get_bundle_energy_depositions(
             dep_distances.append(update_distances[1:])
             dep_energies.append(energy_losses)
 
-    dep_distances = np.concatenate(dep_distances, axis=0)
-    dep_energies = np.concatenate(dep_energies, axis=0)
+    if len(dep_distances) > 0:
 
-    # sort losses along distance
-    # Note: this assumes that all tracks are traveling on same trajectory!
-    sorted_idx = np.argsort(dep_distances)
-    dep_distances = dep_distances[sorted_idx]
-    dep_energies = dep_energies[sorted_idx]
+        dep_distances = np.concatenate(dep_distances, axis=0)
+        dep_energies = np.concatenate(dep_energies, axis=0)
 
-    dep_energies_cum = bundle_energy_start + np.cumsum(dep_energies)
+        # sort losses along distance
+        # Note: this assumes that all tracks are traveling on same trajectory!
+        sorted_idx = np.argsort(dep_distances)
+        dep_distances = dep_distances[sorted_idx]
+        dep_energies = dep_energies[sorted_idx]
 
-    # create energy deposition updates for bundle
-    update_distances = np.insert(dep_distances, 0, bundle_dist_start)
-    update_energies = np.insert(dep_energies_cum, 0, bundle_energy_start)
-    update_delta_energies = np.insert(dep_energies, 0, 0.)
+        dep_energies_cum = bundle_energy_start + np.cumsum(dep_energies)
 
-    # some basic sanity checks
-    assert np.all(update_energies >= 0), update_energies
-    assert np.all(np.diff(update_energies) <= 0), np.diff(update_energies)
-    assert np.all(update_delta_energies <= 0), update_delta_energies
+        # create energy deposition updates for bundle
+        update_distances = np.insert(dep_distances, 0, bundle_dist_start)
+        update_energies = np.insert(dep_energies_cum, 0, bundle_energy_start)
+        update_delta_energies = np.insert(dep_energies, 0, 0.)
+
+        # some basic sanity checks
+        assert np.all(update_energies >= 0), update_energies
+        assert np.all(np.diff(update_energies) <= 0), np.diff(update_energies)
+        assert np.all(update_delta_energies <= 0), update_delta_energies
+
+    else:
+        update_distances = np.atleast_1d([])
+        update_energies = np.atleast_1d([])
+        update_delta_energies = np.atleast_1d([])
 
     return {
         'update_distances': update_distances,
