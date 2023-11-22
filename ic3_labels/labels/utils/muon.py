@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*
 '''Helper functions for icecube specific labels.
 '''
@@ -86,7 +85,35 @@ def get_muon_time_at_position(muon, position):
     return get_muon_time_at_distance(muon, distance)
 
 
-def get_muongun_track(frame, particle_id):
+def get_muongun_track_cache(
+        frame, mctree_name="I3MCTree", mmctracklist_name="MMCTrackList"):
+    """Get a cache of MuonGun tracks from the I3MCTree and MMCTrackList
+
+    Parameters
+    ----------
+    frame : I3Frame
+        The current I3Frame which is utilized to retreive the MMCTrackList
+        and I3MCTree.
+    mctree_name : str, optional
+        The frame key of the I3MCTree.
+    mmctracklist_name : str, optional
+        The frame key of the MMCTrackList.
+
+    Returns
+    -------
+    dict
+        A dictionary with items {particle_id: MuonGun.Track}
+    MuonGun.TrackList
+        The list of MuonGun.Tracks
+    """
+    track_list = MuonGun.Track.harvest(
+        frame[mctree_name], frame[mmctracklist_name],
+    )
+    track_cache = {track.id: track for track in track_list}
+    return track_cache, track_list
+
+
+def get_muongun_track(frame, particle_id, track_cache=None):
     '''Function to get the MuonGun track corresponding
         to the particle with the id particle_id
 
@@ -98,6 +125,9 @@ def get_muongun_track(frame, particle_id):
     particle_id : I3ParticleID
         Id of the particle of which the MuonGun
         track should be retrieved from
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -105,11 +135,17 @@ def get_muongun_track(frame, particle_id):
             Returns None if no corresponding track
             exists
     '''
-    for track in MuonGun.Track.harvest(frame['I3MCTree'],
-                                       frame['MMCTrackList']):
-        if track.id == particle_id:
-            return track
-    return None
+    if track_cache is None:
+        for track in MuonGun.Track.harvest(frame['I3MCTree'],
+                                           frame['MMCTrackList']):
+            if track.id == particle_id:
+                return track
+        return None
+    else:
+        if particle_id in track_cache:
+            return track_cache[particle_id]
+        else:
+            return None
 
 
 def get_track_energy_wrapper(frame, track, distance):
@@ -150,7 +186,7 @@ def get_track_energy_wrapper(frame, track, distance):
     return energy
 
 
-def get_muon_energy_at_position(frame, muon, position):
+def get_muon_energy_at_position(frame, muon, position, track_cache=None):
     '''Function to get the energy of a muon at a certain position.
 
     Parameters
@@ -159,9 +195,11 @@ def get_muon_energy_at_position(frame, muon, position):
         Current frame.
     muon : I3Particle
         Muon.
-
     position : I3Position
         Position.
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -175,7 +213,7 @@ def get_muon_energy_at_position(frame, muon, position):
         If position is along the track, but after the end
         point of the muon, this will return 0
     '''
-    track = get_muongun_track(frame, muon.id)
+    track = get_muongun_track(frame, muon.id, track_cache=track_cache)
     if track is None:
         # no track exists [BUG?]
         # That means that muon is not in the frame['MMCTrackList']
@@ -202,7 +240,7 @@ def get_muon_energy_at_position(frame, muon, position):
     # return track.get_energy(distance)
 
 
-def get_muon_energy_at_distance(frame, muon, distance):
+def get_muon_energy_at_distance(frame, muon, distance, track_cache=None):
     '''Function to get the energy of a muon at a certain
         distance from the muon vertex
 
@@ -214,13 +252,16 @@ def get_muon_energy_at_distance(frame, muon, distance):
         Muon.
     distance : float
         Distance.
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
     energy : float
         Energy.
     '''
-    track = get_muongun_track(frame, muon.id)
+    track = get_muongun_track(frame, muon.id, track_cache=track_cache)
     if track is None:
         # no track exists [BUG?]
         # That means that muon is not in the frame['MMCTrackList']
@@ -243,7 +284,8 @@ def get_muon_energy_at_distance(frame, muon, distance):
     # return track.get_energy(distance)
 
 
-def bin_muon_energy_losses_along_track(frame, muon, bin_edges):
+def bin_muon_energy_losses_along_track(
+        frame, muon, bin_edges, track_cache=None):
     """Bin energy losses of Muon along the track
 
     Parameters
@@ -257,6 +299,9 @@ def bin_muon_energy_losses_along_track(frame, muon, bin_edges):
         These are defined as distances along the track relative to the
         particle vertex.
         The binned energy losses will have a length of len(bin_edges) - 1.
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -267,7 +312,10 @@ def bin_muon_energy_losses_along_track(frame, muon, bin_edges):
     energies_at_edges = []
     for bin_edge in bin_edges:
         energies_at_edges.append(
-            get_muon_energy_at_distance(frame, muon, bin_edge))
+            get_muon_energy_at_distance(
+                frame, muon, bin_edge, track_cache=track_cache
+            )
+        )
 
     energy_lost = np.diff(energies_at_edges) * -1
 
@@ -279,8 +327,12 @@ def bin_muon_energy_losses_along_track(frame, muon, bin_edges):
 
 
 def get_binned_energy_losses_in_cylinder(
-            frame, muon, bin_width=15., num_bins=100,
-            cylinder_height=1000., cylinder_radius=600.
+            frame, muon,
+            bin_width=15.,
+            num_bins=100,
+            cylinder_height=1000.,
+            cylinder_radius=600.,
+            track_cache=None,
         ):
     """Bin energy losses along inf track in axial cylinder
 
@@ -309,6 +361,9 @@ def get_binned_energy_losses_in_cylinder(
     cylinder_radius : float, optional
         Radius of the cylinder.
         The cylinder is aligned to the z-axis and centered at (0, 0, 0).
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -340,14 +395,18 @@ def get_binned_energy_losses_in_cylinder(
 
     # Now bin energy losses in these bins
     binnned_energy_losses = bin_muon_energy_losses_along_track(
-        frame=frame, muon=muon, bin_edges=bin_edges)
+        frame=frame, muon=muon, bin_edges=bin_edges, track_cache=track_cache)
 
     return binnned_energy_losses
 
 
 def get_binned_energy_losses_in_cube(
-        frame, muon, bin_width=15., boundary=600.,
-        return_bin_centers=False):
+        frame, muon,
+        bin_width=15.,
+        boundary=600.,
+        return_bin_centers=False,
+        track_cache=None,
+):
     """Bin energy losses along inf track in a cube around IceCubes center.
 
     The energy losses along the infite track are binned with a spacing of
@@ -408,7 +467,7 @@ def get_binned_energy_losses_in_cube(
 
     # Now bin energy losses in these bins
     binned_energy_losses = bin_muon_energy_losses_along_track(
-        frame=frame, muon=muon, bin_edges=bin_edges)
+        frame=frame, muon=muon, bin_edges=bin_edges, track_cache=track_cache)
 
     if not return_bin_centers:
         return binned_energy_losses
@@ -517,7 +576,7 @@ def get_inf_muon_binned_energy_losses(
     return binnned_energy_losses
 
 
-def get_muon_entry_info(frame, muon, convex_hull):
+def get_muon_entry_info(frame, muon, convex_hull, track_cache=None):
     """Get muon information for point of entry, or closest approach point,
     if muon does not enter the volume defined by the convex_hull.
 
@@ -529,6 +588,9 @@ def get_muon_entry_info(frame, muon, convex_hull):
         Muon I3Particle for which to get the entry information.
     convex_hull : scipy.spatial.ConvexHull, optional
         Defines the desired convex volume.
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -554,7 +616,8 @@ def get_muon_entry_info(frame, muon, convex_hull):
                  'Setting muon entry energy to muon vertex energy!')
         energy = muon.energy
     else:
-        energy = get_muon_energy_at_position(frame, muon, entry)
+        energy = get_muon_energy_at_position(
+            frame, muon, entry, track_cache=track_cache)
 
         if not np.isfinite(energy):
             log_warn(
@@ -564,7 +627,9 @@ def get_muon_entry_info(frame, muon, convex_hull):
     return entry, time, energy
 
 
-def get_muon(frame, primary, convex_hull, mctree_name='I3MCTree'):
+def get_muon(
+        frame, primary, convex_hull, mctree_name='I3MCTree', track_cache=None,
+):
     """Get muon from MCPrimary.
 
     Parameters
@@ -577,6 +642,9 @@ def get_muon(frame, primary, convex_hull, mctree_name='I3MCTree'):
         Defines the desired convex volume.
     mctree_name : str, optional
         The name of the I3MCTree.
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -588,8 +656,8 @@ def get_muon(frame, primary, convex_hull, mctree_name='I3MCTree'):
         muon = get_muon_of_inice_neutrino(frame)
 
     # MuonGun dataset
-    elif (primary.type_string == 'unknown' and primary.pdg_encoding == 0) or \
-            is_muon(primary):
+    elif ((primary.type_string == 'unknown' and primary.pdg_encoding == 0) or
+            is_muon(primary)):
 
         if is_muon(primary):
             muon = primary
@@ -622,8 +690,8 @@ def get_muon(frame, primary, convex_hull, mctree_name='I3MCTree'):
         energy_max = float('-inf')
         for m in muons:
             if is_muon(m):
-                entry, time, energy = get_muon_entry_info(frame, m,
-                                                          convex_hull)
+                entry, time, energy = get_muon_entry_info(
+                    frame, m, convex_hull, track_cache=track_cache)
                 if energy > energy_max:
                     energy_max = energy
                     muon = m
@@ -639,6 +707,7 @@ def get_muon_scattering_info(frame,
                              min_length_after=400,
                              min_muon_entry_energy=10000,
                              min_rel_loss_energy=0.5,
+                             track_cache=None,
                              ):
     '''Function to get labels that can be used to detect muon scattering.
 
@@ -665,8 +734,21 @@ def get_muon_scattering_info(frame,
         needed to retrieve I3MCTree
     convex_hull : scipy.spatial.ConvexHull
         defining the desired convex volume
-    muon : I3Particle
-        Muon
+    primary : TYPE
+        Description
+    min_length : int, optional
+        Description
+    min_length_before : int, optional
+        Description
+    min_length_after : int, optional
+        Description
+    min_muon_entry_energy : int, optional
+        Description
+    min_rel_loss_energy : float, optional
+        Description
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -677,6 +759,11 @@ def get_muon_scattering_info(frame,
     ------
     ValueError
         Description
+
+    Deleted Parameters
+    ------------------
+    muon : I3Particle
+        Muon
     '''
 
     # fill in default values
@@ -705,7 +792,7 @@ def get_muon_scattering_info(frame,
     labels['rel_muon_loss_energy'] = 0.
     labels['p_scattering_candidate'] = 0.
 
-    muon = get_muon(frame, primary, convex_hull)
+    muon = get_muon(frame, primary, convex_hull, track_cache=track_cache)
     if muon is None:
         return labels
 
@@ -723,8 +810,10 @@ def get_muon_scattering_info(frame,
 
     exit = get_muon_exit_point(muon, convex_hull)
     total_length = (exit - entry).magnitude
-    entry_energy = get_muon_energy_at_position(frame, muon, entry)
-    exit_energy = get_muon_energy_at_position(frame, muon, exit)
+    entry_energy = get_muon_energy_at_position(
+        frame, muon, entry, track_cache=track_cache)
+    exit_energy = get_muon_energy_at_position(
+        frame, muon, exit, track_cache=track_cache)
     entry_time = get_muon_time_at_position(muon, entry)
     exit_time = get_muon_time_at_position(muon, exit)
 
@@ -790,7 +879,7 @@ def get_muon_scattering_info(frame,
     return labels
 
 
-def get_muon_energy_deposited(frame, convex_hull, muon):
+def get_muon_energy_deposited(frame, convex_hull, muon, track_cache=None):
     '''Function to get the total energy a muon deposited in the
     volume defined by the convex hull.
 
@@ -798,12 +887,13 @@ def get_muon_energy_deposited(frame, convex_hull, muon):
     ----------
     frame : current frame
         needed to retrieve MMCTrackList and I3MCTree
-
     convex_hull : scipy.spatial.ConvexHull
         defining the desired convex volume
-
     muon : I3Particle
         muon.
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -820,12 +910,19 @@ def get_muon_energy_deposited(frame, convex_hull, muon):
     max_ts = max(intersection_ts)
     if min_ts <= 0 and max_ts >= 0:
         # starting track
-        return muon.energy - get_muon_energy_at_distance(frame, muon, max_ts)
+        return muon.energy - get_muon_energy_at_distance(
+            frame, muon, max_ts, track_cache=track_cache)
     if max_ts < 0:
         # muon created after the convex hull
         return 0.0
-    return get_muon_energy_at_distance(frame, muon, min_ts) - \
-        get_muon_energy_at_distance(frame, muon, max_ts)
+
+    energy_min_ts = get_muon_energy_at_distance(
+        frame, muon, min_ts, track_cache=track_cache,
+    )
+    energy_max_ts = get_muon_energy_at_distance(
+        frame, muon, max_ts, track_cache=track_cache,
+    )
+    return energy_min_ts - energy_max_ts
 
 
 def get_muon_initial_point_inside(muon, convex_hull):
@@ -1254,8 +1351,8 @@ def get_muons_inside(frame, convex_hull):
     return muons_inside
 
 
-def get_most_energetic_muon_inside(frame, convex_hull,
-                                   muons_inside=None):
+def get_most_energetic_muon_inside(
+        frame, convex_hull, muons_inside=None, track_cache=None):
     '''Get most energetic Muon that is within
     the convex hull. To decide which muon is
     the most energetic, the energy at the initial
@@ -1272,6 +1369,9 @@ def get_most_energetic_muon_inside(frame, convex_hull,
 
     muons_inside : list of I3Particle
         Muons inside the convex hull
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -1287,7 +1387,8 @@ def get_most_energetic_muon_inside(frame, convex_hull,
 
     for m in muons_inside:
         initial_point = get_muon_initial_point_inside(m, convex_hull)
-        intial_energy = get_muon_energy_at_position(frame, m, initial_point)
+        intial_energy = get_muon_energy_at_position(
+            frame, m, initial_point, track_cache=track_cache)
         if intial_energy > most_energetic_muon_energy:
             most_energetic_muon = m
             most_energetic_muon_energy = intial_energy
@@ -1295,8 +1396,8 @@ def get_most_energetic_muon_inside(frame, convex_hull,
     return most_energetic_muon
 
 
-def get_highest_deposit_muon_inside(frame, convex_hull,
-                                    muons_inside=None):
+def get_highest_deposit_muon_inside(
+        frame, convex_hull, muons_inside=None, track_cache=None):
     '''Get Muon with the most deposited energy
         that is inside or hits the convex_hull
 
@@ -1304,12 +1405,13 @@ def get_highest_deposit_muon_inside(frame, convex_hull,
     ----------
     frame : current frame
         needed to retrieve MMCTrackList, I3MCTree
-
     convex_hull : scipy.spatial.ConvexHull
         defining the desired convex volume
-
     muons_inside : list of I3Particle
         Muons inside the convex hull
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -1323,7 +1425,8 @@ def get_highest_deposit_muon_inside(frame, convex_hull,
     highest_deposit = 0
 
     for m in muons_inside:
-        deposit = get_muon_energy_deposited(frame, convex_hull, m)
+        deposit = get_muon_energy_deposited(
+            frame, convex_hull, m, track_cache=track_cache)
         if deposit > highest_deposit:
             highest_deposit_muon = m
             highest_deposit = deposit
@@ -1629,6 +1732,7 @@ def get_bundle_radius(
             ref_point=dataclasses.I3Position(0., 0., 0.),
             mctree_name='I3MCTree',
             mmctracklist_name='MMCTrackList',
+            track_cache=None,
         ):
     """Computes the bundle radius for given tracks
 
@@ -1654,6 +1758,9 @@ def get_bundle_radius(
         The name of the propagated I3MCTree.
     mmctracklist_name : str, optional
         The name of the MMCTrackList.
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -1678,7 +1785,12 @@ def get_bundle_radius(
     ]
 
     return get_bundle_radius_from_tracks(
-        tracks=tracks, frame=frame, quantiles=quantiles, ref_point=ref_point)
+        tracks=tracks,
+        frame=frame,
+        quantiles=quantiles,
+        ref_point=ref_point,
+        track_cache=track_cache,
+    )
 
 
 def get_bundle_radius_from_tracks(
@@ -1688,6 +1800,7 @@ def get_bundle_radius_from_tracks(
             ref_point=dataclasses.I3Position(0., 0., 0.),
             mctree_name='I3MCTree',
             mmctracklist_name='MMCTrackList',
+            track_cache=None,
         ):
     """Computes the bundle radius for given tracks
 
@@ -1712,6 +1825,9 @@ def get_bundle_radius_from_tracks(
         The name of the propagated I3MCTree.
     mmctracklist_name : str, optional
         The name of the MMCTrackList.
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -1733,7 +1849,11 @@ def get_bundle_radius_from_tracks(
         closest_pos = I3Calculator.closest_approach_position(track, ref_point)
 
         energy = get_muon_energy_at_position(
-            frame=frame, muon=track, position=closest_pos)
+            frame=frame,
+            muon=track,
+            position=closest_pos,
+            track_cache=track_cache,
+        )
 
         if np.isfinite(energy) and energy > 0:
             energies.append(energy)

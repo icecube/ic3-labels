@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*
 '''Helper functions for icecube specific labels.
 '''
@@ -42,8 +41,10 @@ def get_tau_of_inice_neutrino(frame):
         return None
 
 
-def get_tau_energy_deposited(frame, convex_hull,
-                             tau, first_cascade, second_cascade):
+def get_tau_energy_deposited(
+        frame, convex_hull, tau, first_cascade, second_cascade,
+        track_cache=None,
+):
     '''Function to get the total energy a tau deposited in the
     volume defined by the convex hull.
 
@@ -51,18 +52,17 @@ def get_tau_energy_deposited(frame, convex_hull,
     ----------
     frame : current frame
         needed to retrieve MMCTrackList and I3MCTree
-
     convex_hull : scipy.spatial.ConvexHull
         defining the desired convex volume
-
     tau : I3Particle
         tau.
-
     first_cascade : I3Particle
         hadrons from the first tau interaction
-
     second_cascade : I3Particle
         hadrons from the second tau interaction
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -96,14 +96,14 @@ def get_tau_energy_deposited(frame, convex_hull,
         #   and the energy lost by the tau in the detector
         if max_ts >= tau.length:
             dep_en += tau.energy - get_muon_energy_at_distance(
-                frame, tau, tau.length - 1e-6)
+                frame, tau, tau.length - 1e-6, track_cache=track_cache)
             dep_en += second_cascade.energy
 
         # If the tau exits the detector before decaying:
         # - Add the energy lost in the detector
         else:
             dep_en += tau.energy - get_muon_energy_at_distance(
-                frame, tau, max_ts)
+                frame, tau, max_ts, track_cache=track_cache)
 
     if max_ts < 0:
         # tau created after the convex hull
@@ -116,13 +116,21 @@ def get_tau_energy_deposited(frame, convex_hull,
         # If the tau decays before exiting
         # Add the second cascade energy
         if max_ts >= tau.length:
-            dep_en = get_muon_energy_at_distance(frame, tau, min_ts) - \
-                get_muon_energy_at_distance(frame, tau, tau.length - 1e-6)
+            dep_en = (
+                get_muon_energy_at_distance(
+                    frame, tau, min_ts, track_cache=track_cache) -
+                get_muon_energy_at_distance(
+                    frame, tau, tau.length - 1e-6, track_cache=track_cache)
+            )
             dep_en += second_cascade.energy
         # Otherwise just take the energy lost from the tau
         else:
-            return get_muon_energy_at_distance(frame, tau, min_ts) - \
-                get_muon_energy_at_distance(frame, tau, max_ts)
+            return (
+                get_muon_energy_at_distance(
+                    frame, tau, min_ts, track_cache=track_cache) -
+                get_muon_energy_at_distance(
+                    frame, tau, max_ts, track_cache=track_cache)
+            )
 
 
 def get_nutau_interactions(frame):
@@ -158,13 +166,32 @@ def get_nutau_interactions(frame):
         return primary_nu, tau, first_cascade, second_cascade
 
 
-def get_tau_labels(frame, convex_hull):
+def get_tau_labels(frame, convex_hull, track_cache=None):
+    """Get labels for tau
+
+    Parameters
+    ----------
+    frame : I3Frame
+        The current I3Frame.
+    convex_hull : Scipy.ConvexHull
+        A convex hull.
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
+
+    Returns
+    -------
+    I3MapStringDouble
+        The computed labels.
+    """
     labels = dataclasses.I3MapStringDouble()
 
     primary_nu, tau, first_cascade, second_cascade = get_nutau_interactions(
         frame)
     labels['MC_PrimaryInDetectorEnergyLoss'] = get_tau_energy_deposited(
-        frame, convex_hull, tau, first_cascade, second_cascade)
+        frame, convex_hull, tau, first_cascade, second_cascade,
+        track_cache=track_cache,
+    )
     labels['MC_PrimaryEnergy'] = primary_nu.energy
 
     return labels

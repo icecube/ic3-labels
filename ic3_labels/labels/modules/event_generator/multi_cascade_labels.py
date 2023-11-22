@@ -71,6 +71,10 @@ class EventGeneratorMultiCascadeLabels(MCLabelsBase):
         frame : I3Frame
             The frame to which to add the labels.
         """
+
+        # get track_cache
+        track_cache = mu_utils.get_muongun_track_cache(frame)
+
         mc_tree = frame[self._mc_tree_name]
 
         # get cascades: for this synthetic simulation it is assumed
@@ -83,6 +87,7 @@ class EventGeneratorMultiCascadeLabels(MCLabelsBase):
             convex_hull=self._convex_hull,
             extend_boundary=self._extend_boundary,
             write_mc_cascade_to_frame=False,
+            track_cache=track_cache,
         )
         primary_cascade = mc_tree.get_daughters(primary)[0]
 
