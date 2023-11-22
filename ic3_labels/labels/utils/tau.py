@@ -71,9 +71,7 @@ def get_tau_energy_deposited(
     '''
     if tau is None or first_cascade is None or second_cascade is None:
         return np.nan
-    v_pos = (tau.pos.x, tau.pos.y, tau.pos.z)
-    v_dir = (tau.dir.x, tau.dir.y, tau.dir.z)
-    intersection_ts = geometry.get_intersections(convex_hull, v_pos, v_dir)
+    intersection_ts = geometry.get_intersections(convex_hull, tau.pos, tau.dir)
 
     # tau didn't hit convex_hull
     if intersection_ts.size == 0:

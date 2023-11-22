@@ -2,9 +2,7 @@
 '''
 from __future__ import print_function, division
 import numpy as np
-from icecube import dataclasses, icetray
-
-from scipy.spatial import ConvexHull
+from icecube import dataclasses, icetray, phys_services
 
 from ic3_labels.labels.utils import detector
 
@@ -24,9 +22,9 @@ class MCLabelsBase(icetray.I3ConditionalModule):
         self.AddParameter("PrimaryKey", "Name of the primary.", 'MCPrimary')
         self.AddParameter(
             "ConvexHull",
-            "The the convex hull to use. Must either be an instance of "
-            "scipy.spatial.ConvexHull or a string defining a convex hull "
-            "in ic3_labels.labels.utils.detector."
+            "The convex hull to use. Must either be an instance of "
+            "icecube.phys_services.ExtrudedPolygon or a string defining a "
+            "convex hull in ic3_labels.labels.utils.detector."
             "Or a string named icecube_hull_ext_{extension in meters}."
             "If None is provided, a "
             "convex hull around the outer IceCube strings will be constructed "
@@ -62,12 +60,15 @@ class MCLabelsBase(icetray.I3ConditionalModule):
                 domPosDict[(74, 60)], domPosDict[(72, 60)],
                 domPosDict[(78, 60)], domPosDict[(75, 60)]
                 ]
-            self._convex_hull = ConvexHull(points)
+            self._convex_hull = phys_services.ExtrudedPolygon(points)
 
         elif isinstance(self._convex_hull, str):
             if self._convex_hull.startswith("icecube_hull_ext_"):
                 extension = float(self._convex_hull.split("_")[-1])
-                self._convex_hull = detector.get_extended_convex_hull(extension)
+
+                self._convex_hull = phys_services.ExtrudedPolygon(
+                    detector.icecube_hull_points_i3, padding=extension,
+                )
             else:
                 self._convex_hull = getattr(detector, self._convex_hull)
 

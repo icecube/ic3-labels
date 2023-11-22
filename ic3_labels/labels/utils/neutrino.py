@@ -70,10 +70,10 @@ def get_interaction_neutrino(frame, primary,
                                 daughters[0].pos,
                                 extend_boundary=extend_boundary)
         else:
-            point_inside = geometry.point_is_inside(convex_hull,
-                                                    (daughters[0].pos.x,
-                                                     daughters[0].pos.y,
-                                                     daughters[0].pos.z))
+            point_inside = geometry.point_is_inside(
+                convex_hull, daughters[0].pos,
+            )
+
         if not point_inside:
             nu_in_ice = None
 
@@ -143,10 +143,7 @@ def get_interaction_neutrino_rec(frame, primary,
         point_inside = geometry.is_in_detector_bounds(
                             daughters[0].pos, extend_boundary=extend_boundary)
     else:
-        point_inside = geometry.point_is_inside(convex_hull,
-                                                (daughters[0].pos.x,
-                                                 daughters[0].pos.y,
-                                                 daughters[0].pos.z))
+        point_inside = geometry.point_is_inside(convex_hull, daughters[0].pos)
 
     if point_inside:
         # interaction is inside the convex hull: neutrino found!

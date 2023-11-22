@@ -201,6 +201,7 @@ def get_weighted_primary(frame, mctree_name=None):
 
 def particle_is_inside(particle, convex_hull):
     '''Checks if a particle is inside the convex hull.
+
     The particle is considered inside if any part of its track is inside
     the convex hull. In the case of point like particles with length zero,
     the particle will be considered to be inside if the vertex is inside
@@ -218,13 +219,12 @@ def particle_is_inside(particle, convex_hull):
     bool
         True if particle is inside, otherwise False.
     '''
-    v_pos = (particle.pos.x, particle.pos.y, particle.pos.z)
-    v_dir = (particle.dir.x, particle.dir.y, particle.dir.z)
-    intersection_ts = geometry.get_intersections(convex_hull, v_pos, v_dir)
+    intersection_ts = geometry.get_intersections(
+        convex_hull, particle.pos, particle.dir)
 
     # particle didn't hit convex_hull
     if intersection_ts.size == 0:
-        return None
+        return False
 
     # particle hit convex_hull:
     #   Expecting two intersections

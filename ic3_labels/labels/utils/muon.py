@@ -1022,17 +1022,16 @@ def get_muon_convex_hull_intersections(track, convex_hull):
     array_like
         The two intersections points
     """
-    v_pos = (track.pos.x, track.pos.y, track.pos.z)
-    v_dir = (track.dir.x, track.dir.y, track.dir.z)
-    intersection_ts = geometry.get_intersections(convex_hull, v_pos, v_dir)
+    intersection_ts = geometry.get_intersections(
+        convex_hull, track.pos, track.dir)
 
     if len(intersection_ts) == 1:
         # vertex is possible exactly on edge of convex hull
         # move vertex slightly by eps
         eps = 1e-4
         muon_pos_shifted = track.pos + eps * track.dir
-        v_pos = (muon_pos_shifted.x, muon_pos_shifted.y, muon_pos_shifted.z)
-        intersection_ts = geometry.get_intersections(convex_hull, v_pos, v_dir)
+        intersection_ts = geometry.get_intersections(
+            convex_hull, muon_pos_shifted, track.dir)
 
     # track hit convex_hull:
     #   Expecting zero or two intersections
@@ -1286,8 +1285,7 @@ def is_mmc_particle_inside(mmc_particle, convex_hull):
 
 
 def is_muon_inside(muon, convex_hull):
-    ''' Find out if muon is insice volume
-        defined by the convex hull
+    '''Find out if muon is inside volume defined by the convex hull
 
     Parameters
     ----------
@@ -1304,8 +1302,7 @@ def is_muon_inside(muon, convex_hull):
     if not is_muon(muon):
         raise ValueError('Particle:\n{}\nis not a muon.'.format(muon))
 
-    return particle_is_inside(particle=muon,
-                              convex_hull=convex_hull)
+    return particle_is_inside(particle=muon, convex_hull=convex_hull)
 
 
 def get_mmc_particles_inside(frame, convex_hull):

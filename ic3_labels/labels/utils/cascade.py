@@ -336,10 +336,7 @@ def get_cascade_energy_deposited(frame, convex_hull, cascade):
     energy : float
         Deposited Energy.
     '''
-    if geometry.point_is_inside(
-            convex_hull,
-            (cascade.pos.x, cascade.pos.y, cascade.pos.z)
-            ):
+    if geometry.point_is_inside(convex_hull, cascade.pos):
         # if inside convex hull: add all of the energy
         return convert_to_em_equivalent(cascade)
     else:
@@ -416,10 +413,8 @@ def get_cascade_of_primary_nu(frame, primary,
         point_inside = geometry.is_in_detector_bounds(
                             daughters[0].pos, extend_boundary=extend_boundary)
     else:
-        point_inside = geometry.point_is_inside(convex_hull,
-                                                (daughters[0].pos.x,
-                                                 daughters[0].pos.y,
-                                                 daughters[0].pos.z))
+        point_inside = geometry.point_is_inside(convex_hull, daughters[0].pos)
+
     assert point_inside, 'Expected interaction to be inside defined volume!'
     # -----------------------
 
