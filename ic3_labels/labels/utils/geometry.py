@@ -41,7 +41,7 @@ def get_intersections(convex_hull, pos, direction):
         Scaling factors for v_dir to get the intersection points.
         Actual intersection points are v_pos + t * v_dir.
     '''
-    res = polygon.intersection(pos, direction)
+    res = convex_hull.intersection(pos, direction)
     return np.array([t for t in (res.first, res.second) if np.isfinite(t)])
 
 
