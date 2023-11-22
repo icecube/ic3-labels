@@ -103,8 +103,7 @@ def get_total_deposited_energy(frame,
 
         if convex_hull is not None:
             # use convex hull to determine if inside detector
-            if not geometry.point_is_inside(convex_hull,
-                                            (p.pos.x, p.pos.y, p.pos.z)):
+            if not geometry.point_is_inside(convex_hull, p.pos):
                 continue
 
         if extend_boundary is not None:
