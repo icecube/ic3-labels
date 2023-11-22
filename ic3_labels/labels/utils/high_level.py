@@ -97,8 +97,9 @@ def get_total_deposited_energy(frame,
 
         # use a basic cylinder to determine if particle was inside
         if cylinder_ext is not None:
-            if (np.abs(p.pos.z) > 500 + cylinder_ext or
-                    np.sqrt(p.pos.x**2 + p.pos.y**2) > 500 + cylinder_ext):
+            dist = 500 + cylinder_ext
+            if (p.pos.z > dist or p.pos.z < -dist or
+                    p.pos.x**2 + p.pos.y**2 > dist**2):
                 continue
 
         if convex_hull is not None:
