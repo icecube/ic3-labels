@@ -2,6 +2,7 @@
 '''Helper functions for geometry calculations.
 '''
 from __future__ import print_function, division
+import math
 import numpy as np
 import logging
 
@@ -42,7 +43,7 @@ def get_intersections(convex_hull, pos, direction):
         Actual intersection points are v_pos + t * v_dir.
     '''
     res = convex_hull.intersection(pos, direction)
-    return np.array([t for t in (res.first, res.second) if np.isfinite(t)])
+    return tuple(t for t in (res.first, res.second) if math.isfinite(t))
 
 
 def point_is_inside(convex_hull, pos):
@@ -66,12 +67,10 @@ def point_is_inside(convex_hull, pos):
         True if the point is inside the detector.
         False if the point is outside the detector
     '''
-    t_s = get_intersections(
-        convex_hull=convex_hull,
-        pos=pos,
-        direction=dataclasses.I3Direction(0., 0., 1.),
-    )
-    return len(t_s) == 2 and (t_s >= 0).any() and (t_s <= 0).any()
+
+    # note: the distances are ordered and comparison against NaN results False
+    res = convex_hull.intersection(pos, direction)
+    return res.first <= 0 and res.second >= 0
 
 
 def distance_to_convex_hull(convex_hull, pos):

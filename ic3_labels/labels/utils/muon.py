@@ -536,7 +536,7 @@ def get_inf_muon_binned_energy_losses(
     intersection_ts = get_muon_convex_hull_intersections(muon, convex_hull)
 
     # muon didn't hit convex_hull
-    if intersection_ts.size == 0:
+    if len(intersection_ts) == 0:
         return []
 
     min_ts = min(intersection_ts)
@@ -903,7 +903,7 @@ def get_muon_energy_deposited(frame, convex_hull, muon, track_cache=None):
     intersection_ts = get_muon_convex_hull_intersections(muon, convex_hull)
 
     # muon didn't hit convex_hull
-    if intersection_ts.size == 0:
+    if len(intersection_ts) == 0:
         return 0.0
 
     min_ts = min(intersection_ts)
@@ -948,7 +948,7 @@ def get_muon_initial_point_inside(muon, convex_hull):
     intersection_ts = get_muon_convex_hull_intersections(muon, convex_hull)
 
     # muon didn't hit convex_hull
-    if intersection_ts.size == 0:
+    if len(intersection_ts) == 0:
         return None
 
     min_ts = min(intersection_ts)
@@ -987,7 +987,7 @@ def is_stopping_muon(muon, convex_hull):
     intersection_ts = get_muon_convex_hull_intersections(muon, convex_hull)
 
     # muon didn't hit convex_hull
-    if intersection_ts.size == 0:
+    if len(intersection_ts) == 0:
         return False
 
     min_ts = min(intersection_ts)
@@ -1066,7 +1066,7 @@ def get_muon_exit_point(muon, convex_hull):
     intersection_ts = get_muon_convex_hull_intersections(muon, convex_hull)
 
     # muon didn't hit convex_hull
-    if intersection_ts.size == 0:
+    if len(intersection_ts) == 0:
         return None
 
     min_ts = min(intersection_ts)
@@ -1706,7 +1706,7 @@ def get_muon_track_length_inside(muon, convex_hull):
     intersection_ts = get_muon_convex_hull_intersections(muon, convex_hull)
 
     # muon didn't hit convex_hull
-    if intersection_ts.size == 0:
+    if len(intersection_ts) == 0:
         return 0
 
     min_ts = min(intersection_ts)

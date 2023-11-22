@@ -74,7 +74,7 @@ def get_tau_energy_deposited(
     intersection_ts = geometry.get_intersections(convex_hull, tau.pos, tau.dir)
 
     # tau didn't hit convex_hull
-    if intersection_ts.size == 0:
+    if len(intersection_ts) == 0:
         return 0.0
 
     # tau hit convex_hull:

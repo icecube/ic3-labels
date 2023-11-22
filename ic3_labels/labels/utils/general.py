@@ -223,7 +223,7 @@ def particle_is_inside(particle, convex_hull):
         convex_hull, particle.pos, particle.dir)
 
     # particle didn't hit convex_hull
-    if intersection_ts.size == 0:
+    if len(intersection_ts) == 0:
         return False
 
     # particle hit convex_hull:
