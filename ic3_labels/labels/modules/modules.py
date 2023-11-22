@@ -31,7 +31,7 @@ class MCLabelsDeepLearning(MCLabelsBase):
 
     def Physics(self, frame):
         # get track_cache
-        track_cache = mu_utils.get_muongun_track_cache(frame)
+        track_cache, _ = mu_utils.get_muongun_track_cache(frame)
 
         labels = hl.get_labels(
             frame=frame,
@@ -53,7 +53,7 @@ class MCLabelsDeepLearning(MCLabelsBase):
 class MCLabelsTau(MCLabelsBase):
     def Physics(self, frame):
         # get track_cache
-        track_cache = mu_utils.get_muongun_track_cache(frame)
+        track_cache, _ = mu_utils.get_muongun_track_cache(frame)
 
         labels = hl.get_tau_labels(
             frame=frame,
@@ -70,7 +70,7 @@ class MCLabelsTau(MCLabelsBase):
 class MCLabelsCascadeParameters(MCLabelsBase):
     def Physics(self, frame):
         # get track_cache
-        track_cache = mu_utils.get_muongun_track_cache(frame)
+        track_cache, _ = mu_utils.get_muongun_track_cache(frame)
 
         labels = hl.get_cascade_parameters(
             frame=frame,
@@ -103,7 +103,7 @@ class MCLabelsCascades(MCLabelsBase):
     def Physics(self, frame):
 
         # get track_cache
-        track_cache = mu_utils.get_muongun_track_cache(frame)
+        track_cache, _ = mu_utils.get_muongun_track_cache(frame)
 
         labels = hl.get_cascade_labels(
             frame=frame,
@@ -123,7 +123,7 @@ class MCLabelsCorsikaMultiplicity(MCLabelsBase):
     def Physics(self, frame):
 
         # get track_cache
-        track_cache = mu_utils.get_muongun_track_cache(frame)
+        track_cache, _ = mu_utils.get_muongun_track_cache(frame)
 
         labels = hl.get_muon_bundle_information(
             frame=frame,
@@ -165,7 +165,7 @@ class MCLabelsCorsikaAzimuthExcess(MCLabelsBase):
     def Physics(self, frame):
 
         # get track_cache
-        track_cache = mu_utils.get_muongun_track_cache(frame)
+        track_cache, _ = mu_utils.get_muongun_track_cache(frame)
 
         # create empty labelDict
         labels = dataclasses.I3MapStringDouble()
@@ -248,7 +248,7 @@ class MCLabelsMuonScattering(MCLabelsBase):
     def Physics(self, frame):
 
         # get track_cache
-        track_cache = mu_utils.get_muongun_track_cache(frame)
+        track_cache, _ = mu_utils.get_muongun_track_cache(frame)
 
         labels = mu_utils.get_muon_scattering_info(
                             frame=frame,
@@ -352,7 +352,7 @@ class MCLabelsMuonEnergyLossesInCylinder(MCLabelsBase):
     def Physics(self, frame):
 
         # get track_cache
-        track_cache = mu_utils.get_muongun_track_cache(frame)
+        track_cache, _ = mu_utils.get_muongun_track_cache(frame)
 
         # get muon
         muon = mu_utils.get_muon(
@@ -422,7 +422,7 @@ class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
     def Physics(self, frame):
 
         # get track_cache
-        track_cache = mu_utils.get_muongun_track_cache(frame)
+        track_cache, _ = mu_utils.get_muongun_track_cache(frame)
 
         # get muon
         muon = mu_utils.get_muon(

@@ -73,7 +73,7 @@ class EventGeneratorMultiCascadeLabels(MCLabelsBase):
         """
 
         # get track_cache
-        track_cache = mu_utils.get_muongun_track_cache(frame)
+        track_cache, _ = mu_utils.get_muongun_track_cache(frame)
 
         mc_tree = frame[self._mc_tree_name]
 
