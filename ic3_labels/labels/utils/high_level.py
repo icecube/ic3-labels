@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*
 '''Helper functions for icecube specific labels.
 '''
@@ -145,12 +144,14 @@ def get_energy_deposited(frame, convex_hull, particle):
     raise NotImplementedError
 
 
-def get_energy_deposited_including_daughters(frame,
-                                             convex_hull,
-                                             particle,
-                                             muongun_primary_neutrino_id=None,
-                                             mctree_name='I3MCTree',
-                                             ):
+def get_energy_deposited_including_daughters(
+        frame,
+        convex_hull,
+        particle,
+        muongun_primary_neutrino_id=None,
+        mctree_name='I3MCTree',
+        track_cache=None,
+):
     '''Function to get the total energy a particle or any of its
     daughters deposited in the volume defined by the convex hull.
     Assumes that Cascades lose all of their energy in the convex
@@ -162,14 +163,11 @@ def get_energy_deposited_including_daughters(frame,
     ----------
     frame : current frame
         needed to retrieve MMCTrackList and I3MCTree
-
     convex_hull : scipy.spatial.ConvexHull
         defining the desired convex volume
-
     particle : I3Particle
         Particle.
         (Particle can be of any type: Muon, Cascade, Neutrino...)
-
     muongun_primary_neutrino_id : I3ParticleID
         In case of a MuonGun dataset, the primary neutrino has
         an unknown type and a pdg_encoding of 0.
@@ -177,6 +175,9 @@ def get_energy_deposited_including_daughters(frame,
         be passed along.
     mctree_name : str, optional
         The name of the I3MCTree to use.
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -200,10 +201,10 @@ def get_energy_deposited_including_daughters(frame,
         # neutrinos
         for daughter in frame[mctree_name].get_daughters(particle):
             energy_loss += get_energy_deposited_including_daughters(
-                                                frame, convex_hull, daughter)
+                frame, convex_hull, daughter, track_cache=track_cache)
     elif particle.pdg_encoding in (13, -13):  # CC [Muon +/-]
         energy_loss = mu_utils.get_muon_energy_deposited(
-                                                frame, convex_hull, particle)
+            frame, convex_hull, particle, track_cache=track_cache)
 
     # sanity Checks
     else:
@@ -259,7 +260,9 @@ def get_tau_entry_info(frame, tau, convex_hull, mctree_name='I3MCTree'):
     return entry, time, energy
 
 
-def get_muon_bundle_information(frame, convex_hull, energy_threshold=20):
+def get_muon_bundle_information(
+        frame, convex_hull, energy_threshold=20, track_cache=None,
+):
     """Calculate muon bundle information:
 
     Number of muons for certain selections, relative leading muon energy,
@@ -277,6 +280,9 @@ def get_muon_bundle_information(frame, convex_hull, energy_threshold=20):
     energy_threshold : int, optional
         Energy threshold in GeV at which to count muons.
         Muons below this threshold will be discarded.
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -303,7 +309,7 @@ def get_muon_bundle_information(frame, convex_hull, energy_threshold=20):
             # is the same as the vertex (Discard muon in this case)
             if (initial_point - muon.pos).magnitude > 1:
                 entry_energy = mu_utils.get_muon_energy_at_position(
-                                                    frame, muon, initial_point)
+                    frame, muon, initial_point, track_cache=track_cache)
                 energies_at_entry.append(entry_energy)
 
         cyl_energy = particle.Ei
@@ -356,28 +362,33 @@ def get_muon_bundle_information(frame, convex_hull, energy_threshold=20):
     return bundle_info
 
 
-def get_muon_information(frame, muon, dom_pos_dict,
-                         convex_hull, pulse_map_string='InIcePulses',
-                         mcpe_series_map_name='I3MCPESeriesMap'):
+def get_muon_information(
+        frame, muon, dom_pos_dict, convex_hull,
+        pulse_map_string='InIcePulses',
+        mcpe_series_map_name='I3MCPESeriesMap',
+        track_cache=None,
+):
     '''Function to get labels for a muon
 
     Parameters
     ----------
+    frame : I3Frame
+        The current I3Frame.
     muon : I3Particle
         Muon.
-
     dom_pos_dict : dict
         Dictionary with key of form (string,key) : (x,y,z)
         for all DOMs.
         string and key are of type int
-
     convex_hull : scipy.spatial.ConvexHull
         defining the desired convex volume
-
     pulse_map_string : key of pulse map in frame,
         of which the pulses should be computed for
-
-    mcpe_series_map_name : key of mcpe series map in frame
+    mcpe_series_map_name : str, optional
+        The name if the I3MCPESeriesMap
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -472,7 +483,8 @@ def get_muon_information(frame, muon, dom_pos_dict,
     if Entry:
         TimeAtEntry = mu_utils.get_muon_time_at_position(muon, Entry)
         EntryDistanceToDeepCore = geometry.distance_to_deepcore_hull(Entry)
-        EnergyEntry = mu_utils.get_muon_energy_at_position(frame, muon, Entry)
+        EnergyEntry = mu_utils.get_muon_energy_at_position(
+            frame, muon, Entry, track_cache=track_cache)
     else:
         # handle missing values
         Entry = dataclasses.I3Position(0, 0, 0)
@@ -485,7 +497,8 @@ def get_muon_information(frame, muon, dom_pos_dict,
     if Exit:
         TimeAtExit = mu_utils.get_muon_time_at_position(muon, Exit)
         ExitDistanceToDeepCore = geometry.distance_to_deepcore_hull(Exit)
-        EnergyExit = mu_utils.get_muon_energy_at_position(frame, muon, Exit)
+        EnergyExit = mu_utils.get_muon_energy_at_position(
+            frame, muon, Exit, track_cache=track_cache)
     else:
         # handle missing values
         Exit = dataclasses.I3Position(0, 0, 0)
@@ -498,13 +511,14 @@ def get_muon_information(frame, muon, dom_pos_dict,
     TimeAtCenter = mu_utils.get_muon_time_at_position(muon, Center)
     CenterDistanceToBorder = geometry.distance_to_icecube_hull(Center)
     CenterDistanceToDeepCore = geometry.distance_to_deepcore_hull(Center)
-    EnergyCenter = mu_utils.get_muon_energy_at_position(frame, muon, Center)
+    EnergyCenter = mu_utils.get_muon_energy_at_position(
+        frame, muon, Center, track_cache=track_cache)
 
     # other labels
     InDetectorTrackLength = mu_utils.get_muon_track_length_inside(
                                                     muon, convex_hull)
     InDetectorEnergyLoss = mu_utils.get_muon_energy_deposited(
-                                                    frame, convex_hull, muon)
+        frame, convex_hull, muon, track_cache=track_cache)
 
     # add labels to info_dict
     info_dict['NoOfHitDOMs'] = NoOfHitDOMs
@@ -563,29 +577,24 @@ def get_primary_information(frame, primary,
                             mcpe_series_map_name='I3MCPESeriesMap',
                             muongun_primary_neutrino_id=None,
                             mctree_name='I3MCTree',
+                            track_cache=None,
                             ):
     '''Function to get labels for the primary
 
     Parameters
     ----------
     frame : frame
-
     primary : I3Particle
         Primary particle
-
     dom_pos_dict : dict
         Dictionary of form (string,key) : (x,y,z)
         for all DOMs.
         string and key are of type int
-
     convex_hull : scipy.spatial.ConvexHull
         defining the desired convex volume
-
     pulse_map_string : key of pulse map in frame,
         of which the pulses should be computed for
-
     mcpe_series_map_name : key of mcpe series map in frame
-
     muongun_primary_neutrino_id : I3ParticleID
         In case of a MuonGun dataset, the primary neutrino has
         an unknown type and a pdg_encoding of 0.
@@ -593,6 +602,9 @@ def get_primary_information(frame, primary,
         be passed along.
     mctree_name : str, optional
         The name of the I3MCTree to use.
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -602,9 +614,11 @@ def get_primary_information(frame, primary,
     info_dict = {}
 
     # get labels depending on pulse map
-    pulse_map = general.get_pulse_map(frame, primary,
-                                      pulse_map_string=pulse_map_string,
-                                      mcpe_series_map_name=mcpe_series_map_name)
+    pulse_map = general.get_pulse_map(
+        frame, primary,
+        pulse_map_string=pulse_map_string,
+        mcpe_series_map_name=mcpe_series_map_name,
+    )
 
     NoOfHitDOMs = len(pulse_map.keys())
     NoOfPulses = 0
@@ -641,8 +655,10 @@ def get_primary_information(frame, primary,
         # Interaction outside of Detector
         IsStartingTrack = False
     InDetectorEnergyLoss = get_energy_deposited_including_daughters(
-                    frame, convex_hull, primary,
-                    muongun_primary_neutrino_id=muongun_primary_neutrino_id)
+        frame, convex_hull, primary,
+        muongun_primary_neutrino_id=muongun_primary_neutrino_id,
+        track_cache=track_cache,
+    )
 
     # add labels to info_dict
     info_dict['NoOfHitDOMs'] = NoOfHitDOMs
@@ -742,34 +758,31 @@ def get_misc_information(frame,
     return info_dict
 
 
-def get_labels(frame, convex_hull,
-               domPosDict, primary,
-               pulse_map_string='InIcePulses',
-               mcpe_series_map_name='I3MCPESeriesMap',
-               is_muongun=False):
+def get_labels(
+        frame, convex_hull,
+        domPosDict, primary,
+        pulse_map_string='InIcePulses',
+        mcpe_series_map_name='I3MCPESeriesMap',
+        is_muongun=False,
+        track_cache=None,
+):
     '''Function to get extensive labels for muons, primary and general event
     data.
 
     Parameters
     ----------
     frame : frame
-
     convex_hull : scipy.spatial.ConvexHull
         defining the desired convex volume
-
     domPosDict : dict
         Dictionary of form (string,key) : (x,y,z)
         for all DOMs.
         string and key are of type int
-
     primary : I3Particle
         Primary particle
-
     pulse_map_string : key of pulse map in frame,
         of which the mask should be computed for
-
     mcpe_series_map_name : key of mcpe series map in frame
-
     is_muongun : bool
         In case of a MuonGun dataset, the primary neutrino has
         an unknown type and a pdg_encoding of 0.
@@ -779,6 +792,9 @@ def get_labels(frame, convex_hull,
         the primary id. However, this will loosen up sanity
         checks. Therefore, an explicit decision to use MuonGun
         is prefered.
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -822,15 +838,16 @@ def get_labels(frame, convex_hull,
 
     # get muons
     mostEnergeticMuon = mu_utils.get_most_energetic_muon_inside(
-                                                frame, convex_hull,
-                                                muons_inside=muons_inside)
+        frame, convex_hull, muons_inside=muons_inside, track_cache=track_cache)
+
     highestEDepositMuon = mu_utils.get_highest_deposit_muon_inside(
-                                                frame, convex_hull,
-                                                muons_inside=muons_inside)
+        frame, convex_hull, muons_inside=muons_inside, track_cache=track_cache)
+
     mostVisibleMuon = mu_utils.get_most_visible_muon_inside(
-                                            frame, convex_hull,
-                                            pulse_map_string=pulse_map_string,
-                                            mcpe_series_map_name=mcpe_series_map_name)
+        frame, convex_hull,
+        pulse_map_string=pulse_map_string,
+        mcpe_series_map_name=mcpe_series_map_name,
+    )
     primaryMuon = mu_utils.get_muon_of_inice_neutrino(
                     frame,
                     muongun_primary_neutrino_id=muongun_primary_neutrino_id)
@@ -845,28 +862,22 @@ def get_labels(frame, convex_hull,
 
     # get labels for most energetic muon
     mostEnergeticMuon_info = get_muon_information(
-                            frame, mostEnergeticMuon, domPosDict, convex_hull,
-                            pulse_map_string=pulse_map_string)
+        frame, mostEnergeticMuon, domPosDict, convex_hull,
+        pulse_map_string=pulse_map_string,
+        track_cache=track_cache,
+    )
     for key in mostEnergeticMuon_info.keys():
         labels['MostEnergeticMuon'+key] = mostEnergeticMuon_info[key]
-
-    # # get labels for highest deposit muon
-    # if highestEDepositMuon == mostEnergeticMuon:
-    #     highestEDepositMuon_info = mostEnergeticMuon_info
-    # else:
-    #     highestEDepositMuon_info = get_muon_information(frame,
-    #             highestEDepositMuon, domPosDict, convex_hull,
-    #             pulse_map_string=pulse_map_string)
-    # for key in highestEDepositMuon_info.keys():
-    #     labels['HighestEDepositMuon'+key] = highestEDepositMuon_info[key]
 
     # get labels for most visible muon
     if mostVisibleMuon == mostEnergeticMuon:
         mostVisibleMuon_info = mostEnergeticMuon_info
     else:
         mostVisibleMuon_info = get_muon_information(
-                            frame, mostVisibleMuon, domPosDict, convex_hull,
-                            pulse_map_string=pulse_map_string)
+            frame, mostVisibleMuon, domPosDict, convex_hull,
+            pulse_map_string=pulse_map_string,
+            track_cache=track_cache,
+        )
     for key in mostVisibleMuon_info.keys():
         labels['MostVisibleMuon'+key] = mostVisibleMuon_info[key]
 
@@ -877,24 +888,33 @@ def get_labels(frame, convex_hull,
         primaryMuon_info = mostVisibleMuon_info
     else:
         primaryMuon_info = get_muon_information(
-                                frame, primaryMuon, domPosDict, convex_hull,
-                                pulse_map_string=pulse_map_string)
+            frame, primaryMuon, domPosDict, convex_hull,
+            pulse_map_string=pulse_map_string,
+            track_cache=track_cache,
+        )
     for key in primaryMuon_info.keys():
         labels['PrimaryMuon'+key] = primaryMuon_info[key]
 
     # get labels for primary particle
     primary_info = get_primary_information(
-                    frame, primary, domPosDict, convex_hull,
-                    pulse_map_string=pulse_map_string,
-                    muongun_primary_neutrino_id=muongun_primary_neutrino_id)
+        frame, primary, domPosDict, convex_hull,
+        pulse_map_string=pulse_map_string,
+        muongun_primary_neutrino_id=muongun_primary_neutrino_id,
+        track_cache=track_cache,
+    )
     for key in primary_info.keys():
         labels['Primary'+key] = primary_info[key]
 
     return labels
 
 
-def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
-                       track_length_threshold=30, mctree_name='I3MCTree'):
+def get_cascade_labels(
+        frame, primary, convex_hull,
+        extend_boundary=0,
+        track_length_threshold=30,
+        mctree_name='I3MCTree',
+        track_cache=None,
+):
     """Get general cascade labels.
 
     Parameters
@@ -911,6 +931,9 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
     track_length_threshold : int, optional
         The miminum length (in meter) of a cascade/muon after which it is
         considered as a track event.
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -927,8 +950,8 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
     labels['num_coincident_events'] = \
         general.get_num_coincident_events(frame)
 
-    bundle_info = get_muon_bundle_information(frame=frame,
-                                              convex_hull=convex_hull)
+    bundle_info = get_muon_bundle_information(
+        frame=frame, convex_hull=convex_hull, track_cache=track_cache)
     for k in ['leading_energy_rel_entry', 'num_muons_at_entry',
               'num_muons_at_entry_above_threshold']:
         labels[k] = bundle_info[k]
@@ -1034,8 +1057,9 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
                 # ------------------------------
                 # NuMu CC Muon entering detector
                 # ------------------------------
-                entry, time, energy = mu_utils.get_muon_entry_info(frame, muon,
-                                                                   convex_hull)
+                entry, time, energy = mu_utils.get_muon_entry_info(
+                    frame, muon, convex_hull, track_cache=track_cache)
+
                 labels['p_entering'] = 1
                 labels['p_entering_muon_single'] = 1
                 labels['p_entering_muon_single_stopping'] = \
@@ -1144,8 +1168,9 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
             assert mu_utils.is_muon(muon), \
                 'Expected muon but got {!r}'.format(muon)
 
-        entry, time, energy = mu_utils.get_muon_entry_info(frame, muon,
-                                                           convex_hull)
+        entry, time, energy = mu_utils.get_muon_entry_info(
+            frame, muon, convex_hull, track_cache=track_cache)
+
         labels['p_entering'] = 1
         labels['p_entering_muon_single'] = 1
         labels['p_entering_muon_single_stopping'] = \
@@ -1178,8 +1203,9 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
         energy_max = float('-inf')
         for m in muons:
             if mu_utils.is_muon(m):
-                entry, time, energy = mu_utils.get_muon_entry_info(frame, m,
-                                                                   convex_hull)
+                entry, time, energy = mu_utils.get_muon_entry_info(
+                    frame, m, convex_hull, track_cache=track_cache)
+
                 if energy > energy_max:
                     time_max = time
                     entry_max = entry
@@ -1240,7 +1266,10 @@ def get_cascade_labels(frame, primary, convex_hull, extend_boundary=0,
 
 def get_cascade_parameters(
         frame, primary, convex_hull,
-        extend_boundary=200, write_mc_cascade_to_frame=True):
+        extend_boundary=200,
+        write_mc_cascade_to_frame=True,
+        track_cache=None,
+):
     """Get cascade parameters.
 
     Parameters
@@ -1254,6 +1283,11 @@ def get_cascade_parameters(
         Will be used to compute muon entry point for an entering muon.
     extend_boundary : float, optional
         Extend boundary of convex_hull by this distance [in meters].
+    write_mc_cascade_to_frame : bool
+        If true, the cascade will be written to the I3Frame.
+    track_cache : dict[MuonGun.Track], optional
+        A dictionary of the harvested MuonGun tracks in the frame.
+        The structure of the dictionary is {particle_id: MuonGun.Track}.
 
     Returns
     -------
@@ -1290,8 +1324,9 @@ def get_cascade_parameters(
             # NuMu CC Muon entering detector
             # ------------------------------
             # set cascade parameters to muon entry information
-            entry, time, energy = mu_utils.get_muon_entry_info(frame, muon,
-                                                               convex_hull)
+            entry, time, energy = mu_utils.get_muon_entry_info(
+                frame, muon, convex_hull, track_cache=track_cache)
+
             length = mu_utils.get_muon_track_length_inside(muon, convex_hull)
             cascade = dataclasses.I3Particle()
             cascade.pos.x = entry.x

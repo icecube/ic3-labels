@@ -30,13 +30,19 @@ class MCLabelsDeepLearning(MCLabelsBase):
         self._is_muongun = self.GetParameter("IsMuonGun")
 
     def Physics(self, frame):
-        labels = hl.get_labels(frame=frame,
-                               convex_hull=self._convex_hull,
-                               domPosDict=self._dom_pos_dict,
-                               primary=frame[self._primary_key],
-                               pulse_map_string=self._pulse_map_string,
-                               mcpe_series_map_name=self._mcpe_series_map_name,
-                               is_muongun=self._is_muongun)
+        # get track_cache
+        track_cache = mu_utils.get_muongun_track_cache(frame)
+
+        labels = hl.get_labels(
+            frame=frame,
+            convex_hull=self._convex_hull,
+            domPosDict=self._dom_pos_dict,
+            primary=frame[self._primary_key],
+            pulse_map_string=self._pulse_map_string,
+            mcpe_series_map_name=self._mcpe_series_map_name,
+            is_muongun=self._is_muongun,
+            track_cache=track_cache,
+        )
 
         # write to frame
         frame.Put(self._output_key, labels)
@@ -46,9 +52,14 @@ class MCLabelsDeepLearning(MCLabelsBase):
 
 class MCLabelsTau(MCLabelsBase):
     def Physics(self, frame):
+        # get track_cache
+        track_cache = mu_utils.get_muongun_track_cache(frame)
+
         labels = hl.get_tau_labels(
-                    frame=frame,
-                    convex_hull=self._convex_hull)
+            frame=frame,
+            convex_hull=self._convex_hull,
+            track_cache=track_cache,
+        )
 
         # write to frame
         frame.Put(self._output_key, labels)
@@ -58,10 +69,16 @@ class MCLabelsTau(MCLabelsBase):
 
 class MCLabelsCascadeParameters(MCLabelsBase):
     def Physics(self, frame):
-        labels = hl.get_cascade_parameters(frame=frame,
-                                           primary=frame[self._primary_key],
-                                           convex_hull=self._convex_hull,
-                                           extend_boundary=500)
+        # get track_cache
+        track_cache = mu_utils.get_muongun_track_cache(frame)
+
+        labels = hl.get_cascade_parameters(
+            frame=frame,
+            primary=frame[self._primary_key],
+            convex_hull=self._convex_hull,
+            extend_boundary=500,
+            track_cache=track_cache,
+        )
 
         # write to frame
         frame.Put(self._output_key, labels)
@@ -84,10 +101,17 @@ class MCLabelsCascades(MCLabelsBase):
         self._extend_boundary = self.GetParameter("ExtendBoundary")
 
     def Physics(self, frame):
-        labels = hl.get_cascade_labels(frame=frame,
-                                       primary=frame[self._primary_key],
-                                       convex_hull=self._convex_hull,
-                                       extend_boundary=self._extend_boundary)
+
+        # get track_cache
+        track_cache = mu_utils.get_muongun_track_cache(frame)
+
+        labels = hl.get_cascade_labels(
+            frame=frame,
+            primary=frame[self._primary_key],
+            convex_hull=self._convex_hull,
+            extend_boundary=self._extend_boundary,
+            track_cache=track_cache,
+        )
 
         # write to frame
         frame.Put(self._output_key, labels)
@@ -97,8 +121,16 @@ class MCLabelsCascades(MCLabelsBase):
 
 class MCLabelsCorsikaMultiplicity(MCLabelsBase):
     def Physics(self, frame):
-        labels = hl.get_muon_bundle_information(frame=frame,
-                                                convex_hull=self._convex_hull)
+
+        # get track_cache
+        track_cache = mu_utils.get_muongun_track_cache(frame)
+
+        labels = hl.get_muon_bundle_information(
+            frame=frame,
+            convex_hull=self._convex_hull,
+            track_cache=track_cache,
+        )
+
         labels['num_coincident_events'] = \
             general.get_num_coincident_events(frame)
 
@@ -131,6 +163,10 @@ class MCLabelsCorsikaMultiplicity(MCLabelsBase):
 
 class MCLabelsCorsikaAzimuthExcess(MCLabelsBase):
     def Physics(self, frame):
+
+        # get track_cache
+        track_cache = mu_utils.get_muongun_track_cache(frame)
+
         # create empty labelDict
         labels = dataclasses.I3MapStringDouble()
 
@@ -139,8 +175,11 @@ class MCLabelsCorsikaAzimuthExcess(MCLabelsBase):
 
         # get muons
         mostEnergeticMuon = mu_utils.get_most_energetic_muon_inside(
-                                                frame, self._convex_hull,
-                                                muons_inside=muons_inside)
+            frame, self._convex_hull,
+            muons_inside=muons_inside,
+            track_cache=track_cache,
+        )
+
         if mostEnergeticMuon is None:
             labels['Muon_energy'] = np.nan
             labels['Muon_vertexX'] = np.nan
@@ -207,6 +246,10 @@ class MCLabelsMuonScattering(MCLabelsBase):
         self._min_rel_loss_energy = self.GetParameter("MinRelativeLossEnergy")
 
     def Physics(self, frame):
+
+        # get track_cache
+        track_cache = mu_utils.get_muongun_track_cache(frame)
+
         labels = mu_utils.get_muon_scattering_info(
                             frame=frame,
                             primary=frame[self._primary_key],
@@ -216,6 +259,7 @@ class MCLabelsMuonScattering(MCLabelsBase):
                             min_length_after=self._min_length_after,
                             min_muon_entry_energy=self._min_muon_entry_energy,
                             min_rel_loss_energy=self._min_rel_loss_energy,
+                            track_cache=track_cache,
                             )
         frame.Put(self._output_key, labels)
 
@@ -307,11 +351,15 @@ class MCLabelsMuonEnergyLossesInCylinder(MCLabelsBase):
 
     def Physics(self, frame):
 
+        # get track_cache
+        track_cache = mu_utils.get_muongun_track_cache(frame)
+
         # get muon
         muon = mu_utils.get_muon(
             frame=frame,
             primary=frame[self._primary_key],
             convex_hull=self._convex_hull,
+            track_cache=track_cache,
         )
 
         labels = dataclasses.I3MapStringDouble()
@@ -323,6 +371,7 @@ class MCLabelsMuonEnergyLossesInCylinder(MCLabelsBase):
             num_bins=self._num_bins,
             cylinder_height=self._cylinder_height,
             cylinder_radius=self._cylinder_radius,
+            track_cache=track_cache,
           )
 
         # write to frame
@@ -371,11 +420,16 @@ class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
         self._max_num_bins = self.GetParameter("MaxNumBins")
 
     def Physics(self, frame):
+
+        # get track_cache
+        track_cache = mu_utils.get_muongun_track_cache(frame)
+
         # get muon
         muon = mu_utils.get_muon(
             frame=frame,
             primary=frame[self._primary_key],
             convex_hull=self._convex_hull,
+            track_cache=track_cache,
         )
 
         labels = dataclasses.I3MapStringDouble()
@@ -387,7 +441,8 @@ class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
                         muon=muon,
                         bin_width=self._bin_width,
                         boundary=self._boundary,
-                        return_bin_centers=self._write_vector
+                        return_bin_centers=self._write_vector,
+                        track_cache=track_cache,
                     )
         else:
             binned_energy_losses = mu_utils.get_binned_energy_losses_in_cube(
@@ -395,7 +450,8 @@ class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
                 muon=muon,
                 bin_width=self._bin_width,
                 boundary=self._boundary,
-                return_bin_centers=self._write_vector
+                return_bin_centers=self._write_vector,
+                track_cache=track_cache,
             )
 
         # write to frame
