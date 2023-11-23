@@ -19,6 +19,11 @@ from ic3_labels.labels.utils.geometry_scipy import (
 )
 
 
+# create an arbitrary direction vector for point_is_inside
+# This is defined as a global variable to reduce computational load
+DEFAULT_DIRECTION = dataclasses.I3Direction(0, 0, 1)
+
+
 def get_intersections(convex_hull, pos, direction):
     '''Get intersections with convex hull
 
@@ -69,7 +74,7 @@ def point_is_inside(convex_hull, pos):
     '''
 
     # note: the distances are ordered and comparison against NaN results False
-    res = convex_hull.intersection(pos, direction)
+    res = convex_hull.intersection(pos, DEFAULT_DIRECTION)
     return res.first <= 0 and res.second >= 0
 
 
