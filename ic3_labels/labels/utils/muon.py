@@ -606,24 +606,9 @@ def get_muon_entry_info(frame, muon, convex_hull, track_cache=None):
         # get closest approach point as entry approximation
         entry = get_muon_closest_approach_to_center(frame, muon)
     time = get_muon_time_at_position(muon, entry)
+    energy = get_muon_energy_at_position(
+        frame, muon, entry, track_cache=track_cache)
 
-    # Nancy's MuonGun simulation datasets do not have I3MCTree or MMCTrackList
-    # included: use muon energy instead
-    # This might be an ok approximation, since MuonGun muons are often injected
-    # not too far out of detector volume
-    if 'I3MCTree' not in frame:
-        log_warn('Frame does not include key `I3MCTree`. '
-                 'Setting muon entry energy to muon vertex energy!')
-        energy = muon.energy
-    else:
-        energy = get_muon_energy_at_position(
-            frame, muon, entry, track_cache=track_cache)
-
-        if not np.isfinite(energy):
-            log_warn(
-                'Muon entry energy is not finite!'
-                'Setting  energy to muon vertex energy!')
-            energy = muon.energy
     return entry, time, energy
 
 
