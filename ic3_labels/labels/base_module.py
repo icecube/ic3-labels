@@ -60,7 +60,9 @@ class MCLabelsBase(icetray.I3ConditionalModule):
                 domPosDict[(74, 60)], domPosDict[(72, 60)],
                 domPosDict[(78, 60)], domPosDict[(75, 60)]
                 ]
-            self._convex_hull = phys_services.ExtrudedPolygon(points)
+            self._convex_hull = phys_services.ExtrudedPolygon(
+                detector.convert_pos_list(points)
+            )
 
         elif isinstance(self._convex_hull, str):
             if self._convex_hull.startswith("icecube_hull_ext_"):
