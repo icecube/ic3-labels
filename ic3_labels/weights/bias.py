@@ -129,7 +129,6 @@ class BaseBiasedSelection(icetray.I3ConditionalModule):
         passed = self.random_service.uniform(0., 1.) <= keep_prob
 
         bias_weights = dataclasses.I3MapStringDouble({
-            'keep_prob': keep_prob,
             'weight_multiplier': 1. / keep_prob,
             'passed': float(passed),
         })
