@@ -171,21 +171,10 @@ def get_weighted_primary(frame, mctree_name=None):
     if len(primaries) == 1:
         idx = 0
 
-    elif 'I3MCWeightDict' in frame:
-        idx = [i for i in range(len(primaries)) if primaries[i].is_neutrino]
-        assert len(idx) == 0, (idx, primaries)
-        idx = idx[0]
-
     elif 'CorsikaWeightMap' in frame:
         wmap = frame['CorsikaWeightMap']
 
-        if len(primaries) == 0:
-            return None
-
-        elif len(primaries) == 1:
-            idx = 0
-
-        elif 'PrimaryEnergy' in wmap:
+        if 'PrimaryEnergy' in wmap:
             prim_e = wmap['PrimaryEnergy']
             idx = int(np.nanargmin([abs(p.energy-prim_e) for p in primaries]))
 
@@ -195,6 +184,11 @@ def get_weighted_primary(frame, mctree_name=None):
 
         else:
             idx = 0
+    
+    elif 'I3MCWeightDict' in frame:
+        idx = [i for i in range(len(primaries)) if primaries[i].is_neutrino]
+        assert len(idx) == 1, (idx, primaries)
+        idx = idx[0]
 
     return primaries[idx]
 
