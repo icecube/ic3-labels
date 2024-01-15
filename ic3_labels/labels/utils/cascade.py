@@ -13,7 +13,6 @@ try:
     ShowerParameters = I3SimConstants.ShowerParameters
 
 except (ImportError, AttributeError) as e:
-
     try:
         from icecube.sim_services import ShowerParameters
         ShowerParameters = ShowerParameters
