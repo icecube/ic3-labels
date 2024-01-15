@@ -13,9 +13,14 @@ try:
     ShowerParameters = I3SimConstants.ShowerParameters
 
 except (ImportError, AttributeError) as e:
-    print("Can not include 'ShowerParameters' from icecube.sim_services")
-    print('Using custom python module instead.')
-    from ic3_labels.labels.utils.shower_parameters import ShowerParameters
+
+    try:
+        from icecube.sim_services import ShowerParameters
+        ShowerParameters = ShowerParameters
+    except ImportError:
+        print("Can not include 'ShowerParameters' from icecube.sim_services")
+        print('Using custom python module instead.')
+        from ic3_labels.labels.utils.shower_parameters import ShowerParameters
 
 from ic3_labels.labels.utils import geometry
 from ic3_labels.labels.utils.neutrino import get_interaction_neutrino
