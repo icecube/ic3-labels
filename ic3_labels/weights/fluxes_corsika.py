@@ -49,8 +49,8 @@ def get_fluxes_and_names(fallback_to_ic3_labels_flux=False):
 
     # cross-check if used fluxes have correct units
     # note: simweights changed output from m^2 to cm^2 at some point
-    flux = fluxes.Hoerandel()(1e5, 14)
-    flux_ic3labels = _fluxes.Hoerandel()(1e5, 14)
+    flux = fluxes.Hoerandel()(1e5, 2212)
+    flux_ic3labels = _fluxes.Hoerandel()(1e5, 2212)
     assert np.allclose(flux * unit_conversion, flux_ic3labels), (
         flux, flux_ic3labels, unit_conversion)
 
@@ -64,7 +64,7 @@ def get_fluxes_and_names(fallback_to_ic3_labels_flux=False):
                 try:
                     flux_model = MIMIC_NEUTRINOFLUX(
                         cls(), obj, unit_conversion=unit_conversion)
-                    flux_model.getFlux(1e4, 14, 0.)
+                    flux_model.getFlux(1e4, 2212, 0.)
 
                 except TypeError as e:
 
