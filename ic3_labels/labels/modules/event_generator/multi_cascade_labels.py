@@ -4,6 +4,7 @@ from icecube import dataclasses, icetray
 from ic3_labels.labels.base_module import MCLabelsBase
 from ic3_labels.labels.utils import high_level as hl
 from ic3_labels.labels.utils.cascade import get_cascade_em_equivalent
+from ic3_labels.labels.utils import muon as mu_utils
 
 
 class EventGeneratorMultiCascadeLabels(MCLabelsBase):
