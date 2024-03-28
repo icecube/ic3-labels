@@ -26,43 +26,12 @@ class EventGeneratorMultiCascadeLabels(MCLabelsBase):
                           "Extend boundary of convex hull around IceCube "
                           "[in meters].",
                           500)
-        self.AddParameter("RunOnDAQFrames",
-                          "If True, the label module will run on DAQ frames "
-                          "instead of Physics frames",
-                          False)
 
     def Configure(self):
         # super(EventGeneratorMuonTrackLabels, self).Configure(self)
         MCLabelsBase.Configure(self)
         self._extend_boundary = self.GetParameter("ExtendBoundary")
         self._mc_tree_name = self.GetParameter("MCTreeName")
-        self._run_on_daq = self.GetParameter("RunOnDAQFrames")
-
-    def DAQ(self, frame):
-        """Run on DAQ frames.
-
-        Parameters
-        ----------
-        frame : I3Frame
-            The current DAQ Frame
-        """
-        if self._run_on_daq:
-            self.add_labels(frame)
-
-        self.PushFrame(frame)
-
-    def Physics(self, frame):
-        """Run on Physics frames.
-
-        Parameters
-        ----------
-        frame : I3Frame
-            The current Physics Frame
-        """
-        if not self._run_on_daq:
-            self.add_labels(frame)
-
-        self.PushFrame(frame)
 
     def add_labels(self, frame):
         """Add labels to frame

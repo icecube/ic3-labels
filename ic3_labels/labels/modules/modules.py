@@ -68,7 +68,8 @@ class MCLabelsTau(MCLabelsBase):
 
 
 class MCLabelsCascadeParameters(MCLabelsBase):
-    def Physics(self, frame):
+
+    def add_labels(self, frame):
         # get track_cache
         track_cache, _ = mu_utils.get_muongun_track_cache(frame)
 
@@ -82,8 +83,6 @@ class MCLabelsCascadeParameters(MCLabelsBase):
 
         # write to frame
         frame.Put(self._output_key, labels)
-
-        self.PushFrame(frame)
 
 
 class MCLabelsCascades(MCLabelsBase):
