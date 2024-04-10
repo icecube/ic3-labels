@@ -1,7 +1,7 @@
 from ic3_labels.labels.utils import general
 
 
-def get_weighted_primary(frame, MCPrimary='MCPrimary', mctree_name=None):
+def get_weighted_primary(frame, MCPrimary="MCPrimary", mctree_name=None):
     """Add weighted primary to frame
 
     Weighted CORSIKA simulation (as well as some NuGen simulation) can have
@@ -21,4 +21,5 @@ def get_weighted_primary(frame, MCPrimary='MCPrimary', mctree_name=None):
         will be used.
     """
     frame[MCPrimary] = general.get_weighted_primary(
-        frame=frame, mctree_name=mctree_name)
+        frame=frame, mctree_name=mctree_name
+    )

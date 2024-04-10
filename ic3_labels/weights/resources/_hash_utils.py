@@ -19,6 +19,7 @@ The dataclass type is ignored: two instances of different types
 will have the same hash if they have the same attribute/value pairs.
 
 """
+
 import dataclasses
 import datetime
 import hashlib
@@ -41,12 +42,12 @@ from typing import Dict
 # it did not allow objects to cache the hash.
 
 _VERSION = 0
-_EXCLUDE = '_hash_exclude_'
+_EXCLUDE = "_hash_exclude_"
 
 
 def get_hash(thing: object) -> bytes:
-    prefix = _VERSION.to_bytes(1, 'big')
-    digest = hashlib.md5(_json_dumps(thing).encode('utf-8')).digest()
+    prefix = _VERSION.to_bytes(1, "big")
+    digest = hashlib.md5(_json_dumps(thing).encode("utf-8")).digest()
     return prefix + digest[:-1]
 
 
@@ -58,7 +59,7 @@ def _json_dumps(thing: object) -> str:
         ensure_ascii=False,
         sort_keys=True,
         indent=None,
-        separators=(',', ':'),
+        separators=(",", ":"),
     )
 
 
@@ -68,8 +69,10 @@ def _json_default(thing: object) -> Any:
     except TypeError:
         pass
     if isinstance(thing, datetime.datetime):
-        return thing.isoformat(timespec='microseconds')
-    raise TypeError(f"Object of type {type(thing).__name__} is not JSON serializable")
+        return thing.isoformat(timespec="microseconds")
+    raise TypeError(
+        f"Object of type {type(thing).__name__} is not JSON serializable"
+    )
 
 
 def _dataclass_dict(thing: object) -> Dict[str, Any]:
@@ -99,4 +102,3 @@ def _dataclass_dict(thing: object) -> Dict[str, Any]:
         rv[field.name] = value
 
     return rv
-

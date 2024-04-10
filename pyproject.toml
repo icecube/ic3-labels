@@ -55,8 +55,8 @@ target-version = ["py38"]
 
 [tool.ruff]
 # select = ["ALL"]
-fixable = ["I"]
-ignore = [
+lint.fixable = ["I"]
+lint.ignore = [
     "D213",   # multi-line-summary-second-line incompatible with multi-line-summary-first-line
     "D203",   # one-blank-line-before-class" incompatible with no-blank-line-before-class
     "D401",   # non-imperative-mood
@@ -73,5 +73,5 @@ ignore = [
 line-length = 79
 target-version = "py38"
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "numpy"

@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*
-'''Helper functions for geometry calculations.
-'''
+"""Helper functions for geometry calculations.
+"""
+
 from __future__ import print_function, division
 import math
 import numpy as np
@@ -25,7 +25,7 @@ DEFAULT_DIRECTION = dataclasses.I3Direction(0, 0, 1)
 
 
 def get_intersections(convex_hull, pos, direction):
-    '''Get intersections with convex hull
+    """Get intersections with convex hull
 
     Function to get the intersection points of an infinite line and the
     convex hull. The returned t's are the scaling factors for v_dir to
@@ -46,13 +46,13 @@ def get_intersections(convex_hull, pos, direction):
     t : array-like shape=(n_intersections)
         Scaling factors for v_dir to get the intersection points.
         Actual intersection points are v_pos + t * v_dir.
-    '''
+    """
     res = convex_hull.intersection(pos, direction)
     return tuple(t for t in (res.first, res.second) if math.isfinite(t))
 
 
 def point_is_inside(convex_hull, pos):
-    '''Determine if a point is inside the convex hull.
+    """Determine if a point is inside the convex hull.
 
     A default directional vector is asumend. If this track has an intersection
     in front and behind v_pos, then must v_pos be inside the hull.
@@ -71,7 +71,7 @@ def point_is_inside(convex_hull, pos):
     is_inside : boolean
         True if the point is inside the detector.
         False if the point is outside the detector
-    '''
+    """
 
     # note: the distances are ordered and comparison against NaN results False
     res = convex_hull.intersection(pos, DEFAULT_DIRECTION)
@@ -79,7 +79,7 @@ def point_is_inside(convex_hull, pos):
 
 
 def distance_to_convex_hull(convex_hull, pos):
-    '''Determine closest distance of a point to the convex hull.
+    """Determine closest distance of a point to the convex hull.
 
     Parameters
     ----------
@@ -94,14 +94,14 @@ def distance_to_convex_hull(convex_hull, pos):
         absolute value of closest distance from the point
         to the convex hull
         (maybe easier/better to have distance poositive
-         or negativ depending on wheter the point is inside
-         or outside. Alernatively check with point_is_inside)
-    '''
+         or negative depending on whether the point is inside
+         or outside. Alternatively check with point_is_inside)
+    """
     raise NotImplementedError
 
 
 def is_in_detector_bounds(pos, extend_boundary=60):
-    '''Determine whether a point is withtin detector bounds
+    """Determine whether a point is within detector bounds
 
     Parameters
     ----------
@@ -114,7 +114,7 @@ def is_in_detector_bounds(pos, extend_boundary=60):
     -------
     bool
         True if within detector bounds + extend_boundary
-    '''
+    """
     convex_hull = ExtrudedPolygon(
         detector.icecube_hull_points_i3,
         padding=extend_boundary,

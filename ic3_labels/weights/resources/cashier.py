@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import os
 import numpy as np
 import pickle
@@ -25,7 +24,7 @@ class Cashier(object):
 
         # load pickled cache or create new one
         if os.path.exists(self._path):
-            with open(self._path, 'rb') as handle:
+            with open(self._path, "rb") as handle:
                 self._cache = pickle.load(handle)
         else:
             self._cache = {}
@@ -39,13 +38,14 @@ class Cashier(object):
             If read-only is set to True.
         """
         if self._read_only:
-            raise ValueError('Cache is read-only!')
+            raise ValueError("Cache is read-only!")
 
         else:
-            print('Saving to:', self._path)
-            with open(self._path, 'wb') as handle:
+            print("Saving to:", self._path)
+            with open(self._path, "wb") as handle:
                 pickle.dump(
-                    self._cache, handle, protocol=self._pickle_protocol)
+                    self._cache, handle, protocol=self._pickle_protocol
+                )
 
     def get(self, key):
         """Get item from cache by key
@@ -107,12 +107,13 @@ def cache(cache_file=".cache", pickle_protocol=3, read_only=True):
     -------
     Result of decorated function
     """
+
     def decorator(fn):
         def wrapped(*args, **kwargs):
             objects = (
                 [fn.__name__]
-                + list(args) +
-                [kwargs[k] for k in sorted(kwargs.keys())]
+                + list(args)
+                + [kwargs[k] for k in sorted(kwargs.keys())]
             )
             objects_tr = []
             for o in objects:
@@ -133,5 +134,7 @@ def cache(cache_file=".cache", pickle_protocol=3, read_only=True):
                 res = fn(*args, **kwargs)
                 c.set(md5_key, res)
                 return res
+
         return wrapped
+
     return decorator

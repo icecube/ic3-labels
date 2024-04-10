@@ -1,13 +1,14 @@
-#!/usr/bin/env python
 """
 The code in this file is modified from:
     http://atmb4u.github.io/cashier with BSD license
 Credit goes to Anoop Thomas Mathew
 """
+
 import os
 import errno
 import sqlite3
 from time import time
+
 try:
     from pickle import loads, dumps
 except ImportError:
@@ -19,23 +20,25 @@ except ImportError:
 from hashlib import md5
 
 meta_data = {
-    'version': '1.3.0',
-    'url': 'http://atmb4u.github.io/cashier',
-    'description': 'Caching for python functions',
-    'author': 'Anoop Thomas Mathew',
-    'license': 'BSD'
+    "version": "1.3.0",
+    "url": "http://atmb4u.github.io/cashier",
+    "description": "Caching for python functions",
+    "author": "Anoop Thomas Mathew",
+    "license": "BSD",
 }
 
 
 class Cashier(object):
-    _create_sql = 'CREATE TABLE IF NOT EXISTS bucket (key TEXT PRIMARY KEY, val BLOB, exp FLOAT)'
-    _get_sql = 'SELECT val, exp FROM bucket WHERE key = ?'
-    _del_sql = 'DELETE FROM bucket WHERE key = ?'
-    _set_sql = 'INSERT OR REPLACE INTO bucket (key, val, exp) VALUES (?, ?, ?)'
-    _count_sql = 'SELECT COUNT(*) FROM bucket'
-    _oldest = 'select key FROM bucket ORDER BY exp ASC LIMIT 1'
+    _create_sql = "CREATE TABLE IF NOT EXISTS bucket (key TEXT PRIMARY KEY, val BLOB, exp FLOAT)"
+    _get_sql = "SELECT val, exp FROM bucket WHERE key = ?"
+    _del_sql = "DELETE FROM bucket WHERE key = ?"
+    _set_sql = "INSERT OR REPLACE INTO bucket (key, val, exp) VALUES (?, ?, ?)"
+    _count_sql = "SELECT COUNT(*) FROM bucket"
+    _oldest = "select key FROM bucket ORDER BY exp ASC LIMIT 1"
 
-    def __init__(self, file_name=".cache", default_timeout=84600, default_length=10000):
+    def __init__(
+        self, file_name=".cache", default_timeout=84600, default_length=10000
+    ):
         """
         Inspired by: flask.pocoo.org/snippets/87/
         initialize Cashier object for handling SQLite
@@ -50,7 +53,7 @@ class Cashier(object):
         self.__url__ = meta_data.get("url")
         self.path = os.path.abspath(file_name)
         try:
-            open(self.path, 'ab')
+            open(self.path, "ab")
         except OSError as e:
             if e.errno != errno.EEXIST or not os.path.isfile(self.path):
                 raise
@@ -71,8 +74,10 @@ class Cashier(object):
             self.connection_cache[t_id] = {}
         if key not in self.connection_cache[t_id]:
             conn = sqlite3.Connection(
-                self.path, timeout=60, check_same_thread=False,
-                isolation_level=None
+                self.path,
+                timeout=60,
+                check_same_thread=False,
+                isolation_level=None,
             )
             with conn:
                 conn.execute(self._create_sql)
@@ -118,16 +123,18 @@ class Cashier(object):
                 old_key = next(conn.execute(self._oldest))
                 if old_key:
                     self.delete(old_key[0])
-            conn.execute(self._set_sql, (key, value, time() + self.default_timeout))
+            conn.execute(
+                self._set_sql, (key, value, time() + self.default_timeout)
+            )
 
 
 def cache(
-        cache_file=".cache",
-        cache_time=84600,
-        cache_length=10000,
-        retry_if_blank=False,
-        pickle_protocol=3,
-        ):
+    cache_file=".cache",
+    cache_time=84600,
+    cache_length=10000,
+    retry_if_blank=False,
+    pickle_protocol=3,
+):
     """
     Cache function results into a SQLite locally. Extremely handy when you are dealing with I/O heavy operations
     which seldom changes or CPU intensive functions as well.
@@ -141,17 +148,18 @@ def cache(
     :param pickle_protocol: pickle protocol to use for hash creation
     :return:
     """
+
     def decorator(fn):
         def wrapped(*args, **kwargs):
             key = fn.__name__ + str(dumps(args, protocol=pickle_protocol))
-            md5_key = md5(key.encode('utf8')).hexdigest()
+            md5_key = md5(key.encode("utf8")).hexdigest()
             c = Cashier(cache_file, cache_time, cache_length)
             datum = c.get(md5_key)
             if datum:
                 try:
                     info = loads(datum)
-                except:
-                    info = loads(bytearray(datum.encode('ascii')))
+                except Exception:
+                    info = loads(bytearray(datum.encode("ascii")))
 
                 # # ---------------------------------------
                 # # HACK to transform sqlite to pickle dict
@@ -186,5 +194,7 @@ def cache(
             res = fn(*args, **kwargs)
             c.set(md5_key, dumps(res))
             return res
+
         return wrapped
+
     return decorator

@@ -1,7 +1,6 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*
-'''Helper functions for icecube specific labels.
-'''
+"""Helper functions for icecube specific labels.
+"""
+
 from __future__ import print_function, division
 import numpy as np
 from icecube import dataclasses, simclasses
@@ -10,15 +9,15 @@ from icecube.icetray.i3logging import log_warn
 # Try to import ShowerParameters from I3SimConstants
 try:
     from icecube.sim_services import I3SimConstants
+
     ShowerParameters = I3SimConstants.ShowerParameters
 
-except (ImportError, AttributeError) as e:
+except (ImportError, AttributeError):
     try:
         from icecube.sim_services import ShowerParameters
-        ShowerParameters = ShowerParameters
     except ImportError:
         print("Can not include 'ShowerParameters' from icecube.sim_services")
-        print('Using custom python module instead.')
+        print("Using custom python module instead.")
         from ic3_labels.labels.utils.shower_parameters import ShowerParameters
 
 from ic3_labels.labels.utils import geometry
@@ -49,7 +48,6 @@ HadronTypes = [
     dataclasses.I3Particle.ParticleType.PPlus,
     dataclasses.I3Particle.ParticleType.PMinus,
     dataclasses.I3Particle.ParticleType.K0_Short,
-
     dataclasses.I3Particle.ParticleType.Eta,
     dataclasses.I3Particle.ParticleType.Lambda,
     dataclasses.I3Particle.ParticleType.SigmaPlus,
@@ -97,15 +95,16 @@ def get_interaction_extension_length(frame, primary):
     float
         The maximum extension length.
     """
-    tree = frame['I3MCTree']
+    tree = frame["I3MCTree"]
     daughters = tree.get_daughters(primary)
 
-    assert len(daughters) > 0, 'Expected at least 1 daughter'
+    assert len(daughters) > 0, "Expected at least 1 daughter"
 
     vertex = daughters[0].pos
 
-    extension = get_extension_from_vertex(frame, primary, vertex,
-                                          consider_particle_length=False)
+    extension = get_extension_from_vertex(
+        frame, primary, vertex, consider_particle_length=False
+    )
     return (vertex - extension).magnitude
 
 
@@ -126,19 +125,21 @@ def get_interaction_extension_pos(frame, primary):
     I3Position
         The position of the maximum extension.
     """
-    tree = frame['I3MCTree']
+    tree = frame["I3MCTree"]
     daughters = tree.get_daughters(primary)
 
-    assert len(daughters) >= 2, 'Expected at least 2 daughters'
+    assert len(daughters) >= 2, "Expected at least 2 daughters"
 
     vertex = daughters[0].pos
 
-    return get_extension_from_vertex(frame, primary, vertex,
-                                     consider_particle_length=False)
+    return get_extension_from_vertex(
+        frame, primary, vertex, consider_particle_length=False
+    )
 
 
-def get_extension_from_vertex(frame, particle, vertex,
-                              consider_particle_length=True):
+def get_extension_from_vertex(
+    frame, particle, vertex, consider_particle_length=True
+):
     """Get the maximum extension of a particle or any of its daughter particles
     in regard to the given vertex.
 
@@ -162,7 +163,7 @@ def get_extension_from_vertex(frame, particle, vertex,
     I3Position
         The position of the maximum extension.
     """
-    tree = frame['I3MCTree']
+    tree = frame["I3MCTree"]
     daughters = tree.get_daughters(particle)
 
     if consider_particle_length:
@@ -174,7 +175,7 @@ def get_extension_from_vertex(frame, particle, vertex,
         max_distance = (vertex - particle_end_pos).magnitude
         max_extension = particle_end_pos
     else:
-        max_distance = 0.
+        max_distance = 0.0
         max_extension = None
 
     for d in daughters:
@@ -244,28 +245,30 @@ def get_cascade_em_equivalent(mctree, cascade_primary):
     # ---------------------------------
     # stopping conditions for recursion
     # ---------------------------------
-    if (cascade_primary.location_type !=
-            dataclasses.I3Particle.LocationType.InIce):
+    if (
+        cascade_primary.location_type
+        != dataclasses.I3Particle.LocationType.InIce
+    ):
         # skip particles that are way outside of the detector volume
-        return 0., 0., 0., 0.
+        return 0.0, 0.0, 0.0, 0.0
 
     # check if we have a muon or tau
     if cascade_primary.type in [
-            dataclasses.I3Particle.ParticleType.MuMinus,
-            dataclasses.I3Particle.ParticleType.MuPlus,
-            dataclasses.I3Particle.ParticleType.TauMinus,
-            dataclasses.I3Particle.ParticleType.TauPlus,
-            ]:
+        dataclasses.I3Particle.ParticleType.MuMinus,
+        dataclasses.I3Particle.ParticleType.MuPlus,
+        dataclasses.I3Particle.ParticleType.TauMinus,
+        dataclasses.I3Particle.ParticleType.TauPlus,
+    ]:
         # For simplicity we will assume that all energy is deposited.
         # Note: this is wrong for instance for taus that decay where the
         # neutrino will carry away a large fraction of the energy
-        return cascade_primary.energy, 0., 0., cascade_primary.energy
+        return cascade_primary.energy, 0.0, 0.0, cascade_primary.energy
 
     if len(daughters) == 0:
 
         if cascade_primary.is_neutrino:
             # skip neutrino: the energy is not visible
-            return 0., 0., 0., 0.
+            return 0.0, 0.0, 0.0, 0.0
 
         else:
 
@@ -274,31 +277,35 @@ def get_cascade_em_equivalent(mctree, cascade_primary):
 
             # EM energy
             if cascade_primary.type in EMTypes:
-                return energy, energy, 0., 0.
+                return energy, energy, 0.0, 0.0
 
             # Hadronic energy
             elif cascade_primary.type in HadronTypes:
-                return energy, 0., energy, 0.
+                return energy, 0.0, energy, 0.0
 
             else:
-                log_warn('Unknown particle type: {}. Assuming hadron!'.format(
-                    cascade_primary.type))
-                return energy, 0., energy, 0.
+                log_warn(
+                    "Unknown particle type: {}. Assuming hadron!".format(
+                        cascade_primary.type
+                    )
+                )
+                return energy, 0.0, energy, 0.0
 
     # ---------------------------------
 
     # collect energy from hadronic, em, and tracks
-    energy_total = 0.
-    energy_em = 0.
-    energy_hadron = 0.
-    energy_track = 0.
+    energy_total = 0.0
+    energy_em = 0.0
+    energy_hadron = 0.0
+    energy_track = 0.0
 
     # recursively walk through daughters and accumulate energy
-    for daugther in daughters:
+    for daughter in daughters:
 
         # get energy depositions of particle and its daughters
         e_total, e_em, e_hadron, e_track = get_cascade_em_equivalent(
-            mctree, daugther)
+            mctree, daughter
+        )
 
         # CMC splits up hadronic cascades to segments of electrons
         # In other words: if the cascade primary is a hadron, the daughter
@@ -317,7 +324,7 @@ def get_cascade_em_equivalent(mctree, cascade_primary):
 
 
 def get_cascade_energy_deposited(frame, convex_hull, cascade):
-    '''Function to get the total energy a cascade deposited
+    """Function to get the total energy a cascade deposited
         in the volume defined by the convex hull. Assumes
         that Cascades lose all of their energy in the convex
         hull if their vertex is in the hull. Otherwise the enrgy
@@ -339,7 +346,7 @@ def get_cascade_energy_deposited(frame, convex_hull, cascade):
     -------
     energy : float
         Deposited Energy.
-    '''
+    """
     if geometry.point_is_inside(convex_hull, cascade.pos):
         # if inside convex hull: add all of the energy
         return convert_to_em_equivalent(cascade)
@@ -347,10 +354,9 @@ def get_cascade_energy_deposited(frame, convex_hull, cascade):
         return 0.0
 
 
-def get_cascade_of_primary_nu(frame, primary,
-                              convex_hull=None,
-                              extend_boundary=200,
-                              sanity_check=False):
+def get_cascade_of_primary_nu(
+    frame, primary, convex_hull=None, extend_boundary=200, sanity_check=False
+):
     """Get cascade of a primary particle.
 
     The I3MCTree is traversed to find the first interaction inside the convex
@@ -381,7 +387,7 @@ def get_cascade_of_primary_nu(frame, primary,
         The returned I3Particle will have the vertex, direction and total
         visible energy (EM equivalent) of the cascade. In addition it will
         have the type of the interaction NEUTRINO. The visible energy is
-        defined here as the sum of the EM equivalent energies of the  daugther
+        defined here as the sum of the EM equivalent energies of the  daughter
         particles, unless these are neutrinos.  Only energies of particles
         that have 'InIce' location_type are considered. This meas that
         energies from hadron daughter particles get converted to the EM
@@ -394,15 +400,18 @@ def get_cascade_of_primary_nu(frame, primary,
     float
         The total EM equivalent energy in muons and taus (tracks).
     """
-    neutrino = get_interaction_neutrino(frame, primary,
-                                        convex_hull=convex_hull,
-                                        extend_boundary=extend_boundary,
-                                        sanity_check=sanity_check)
+    neutrino = get_interaction_neutrino(
+        frame,
+        primary,
+        convex_hull=convex_hull,
+        extend_boundary=extend_boundary,
+        sanity_check=sanity_check,
+    )
 
     if neutrino is None or not neutrino.is_neutrino:
         return None, None, None, None
 
-    mctree = frame['I3MCTree']
+    mctree = frame["I3MCTree"]
 
     # traverse I3MCTree until first interaction inside the convex hull is found
     daughters = mctree.get_daughters(neutrino)
@@ -410,16 +419,17 @@ def get_cascade_of_primary_nu(frame, primary,
     # -----------------------
     # Sanity Checks
     # -----------------------
-    assert len(daughters) > 0, 'Expected at least one daughter!'
+    assert len(daughters) > 0, "Expected at least one daughter!"
 
     # check if point is inside
     if convex_hull is None:
         point_inside = geometry.is_in_detector_bounds(
-                            daughters[0].pos, extend_boundary=extend_boundary)
+            daughters[0].pos, extend_boundary=extend_boundary
+        )
     else:
         point_inside = geometry.point_is_inside(convex_hull, daughters[0].pos)
 
-    assert point_inside, 'Expected interaction to be inside defined volume!'
+    assert point_inside, "Expected interaction to be inside defined volume!"
     # -----------------------
 
     # interaction is inside the convex hull/extension boundary: cascade found!
@@ -436,7 +446,8 @@ def get_cascade_of_primary_nu(frame, primary,
     # tau can immediately decay in neutrinos which carry away energy
     # that would not be visible, this is currently not accounted for
     e_total, e_em, e_hadron, e_track = get_cascade_em_equivalent(
-        mctree, neutrino)
+        mctree, neutrino
+    )
 
     cascade.energy = e_total
     return cascade, e_em, e_hadron, e_track

@@ -11,23 +11,23 @@ from ic3_labels.labels.modules.modules import (
     MCLabelsMuonEnergyLossesMillipede,
 )
 from ic3_labels.labels.modules.event_generator.muon_track_labels import (
-    EventGeneratorMuonTrackLabels
+    EventGeneratorMuonTrackLabels,
 )
 from ic3_labels.labels.modules.event_generator.multi_cascade_labels import (
-    EventGeneratorMultiCascadeLabels
+    EventGeneratorMultiCascadeLabels,
 )
 
 __all__ = [
-    'MCLabelsDeepLearning',
-    'MCLabelsTau',
-    'MCLabelsCascadeParameters',
-    'MCLabelsCascades',
-    'MCLabelsCorsikaMultiplicity',
-    'MCLabelsCorsikaAzimuthExcess',
-    'MCLabelsMuonScattering',
-    'MCLabelsMuonEnergyLosses',
-    'MCLabelsMuonEnergyLossesInCylinder',
-    'MCLabelsMuonEnergyLossesMillipede',
-    'EventGeneratorMuonTrackLabels',
-    'EventGeneratorMultiCascadeLabels',
+    "MCLabelsDeepLearning",
+    "MCLabelsTau",
+    "MCLabelsCascadeParameters",
+    "MCLabelsCascades",
+    "MCLabelsCorsikaMultiplicity",
+    "MCLabelsCorsikaAzimuthExcess",
+    "MCLabelsMuonScattering",
+    "MCLabelsMuonEnergyLosses",
+    "MCLabelsMuonEnergyLossesInCylinder",
+    "MCLabelsMuonEnergyLossesMillipede",
+    "EventGeneratorMuonTrackLabels",
+    "EventGeneratorMultiCascadeLabels",
 ]

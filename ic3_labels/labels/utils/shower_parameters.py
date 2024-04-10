@@ -1,4 +1,4 @@
-'''
+"""
 Pybindings for I3SimConstants.ShowerParameters, e.g.:
     from icecube.sim_services import I3SimConstants
     ShowerParameters = I3SimConstants.ShowerParameters
@@ -11,9 +11,10 @@ This is a python implementation and copy of:
 
 ToDo:
     Once pybindings are available in icecube metaprojects, deprecate this
-    pyhton copy to ensure that code is not being duplicated in different
+    python copy to ensure that code is not being duplicated in different
     areas.
-'''
+"""
+
 import numpy as np
 from icecube.icetray import I3Units
 from icecube import dataclasses
@@ -21,7 +22,6 @@ from icecube.icetray.i3logging import log_warn
 
 
 class ShowerParameters(object):
-
     """ShowerParameters copy of sim_services.I3SimConstants.ShowerParameters
 
     Attributes
@@ -30,21 +30,22 @@ class ShowerParameters(object):
         Description
     """
 
-    def __init__(self, particle_type, energy,
-                 density=0.9216*(I3Units.g/I3Units.cm3)):
+    def __init__(
+        self, particle_type, energy, density=0.9216 * (I3Units.g / I3Units.cm3)
+    ):
 
-        # initalize variables
-        self.a = 0.
-        self.b = 0.
-        self.emScale = 1.
-        self.emScaleSigma = 0.
+        # initialize variables
+        self.a = 0.0
+        self.b = 0.0
+        self.emScale = 1.0
+        self.emScaleSigma = 0.0
 
         # protect against extremely low energies
         # NB: while Equation 4.11 of Leif's Masters' thesis is written in terms
         # of log10, we use the natural log here and divide the energy-scaling
         # coefficients (beta) below by ln(10) to compensate
-        self.logE = max(0., np.log(energy))
-        self.Lrad = 0.358*(I3Units.g/I3Units.cm3)/density
+        self.logE = max(0.0, np.log(energy))
+        self.Lrad = 0.358 * (I3Units.g / I3Units.cm3) / density
 
         self.isElectron = particle_type in [
             dataclasses.I3Particle.ParticleType.EMinus,
@@ -70,7 +71,6 @@ class ShowerParameters(object):
             dataclasses.I3Particle.ParticleType.PPlus,
             dataclasses.I3Particle.ParticleType.PMinus,
             dataclasses.I3Particle.ParticleType.K0_Short,
-
             dataclasses.I3Particle.ParticleType.Eta,
             dataclasses.I3Particle.ParticleType.Lambda,
             dataclasses.I3Particle.ParticleType.SigmaPlus,
@@ -110,48 +110,53 @@ class ShowerParameters(object):
             dataclasses.I3Particle.ParticleType.TauPlus,
         ]
 
-        if ((not self.isHadron) and (not self.isElectron) and (not self.isMuon)
-                and (not self.isTau)):
+        if (
+            (not self.isHadron)
+            and (not self.isElectron)
+            and (not self.isMuon)
+            and (not self.isTau)
+        ):
             # if we don't know it but it has a pdg code,
             # it is probably a hadron..
             self.isHadron = True
 
             # Added safety check: throw error in this case to make sure nothing
-            # weird is happenning unkowingly
-            # raise ValueError('Unkown particle type {!r}'.format(particle_type))
+            # weird is happening unknowingly
+            # raise ValueError('Unknown particle type {!r}'.format(particle_type))
             log_warn(
-                'Unkown particle type {!r}. Assuming this is a hadron!'.format(
-                    particle_type)
+                "Unknown particle type {!r}. Assuming this is a hadron!".format(
+                    particle_type
+                )
             )
 
         if self.isElectron:
 
             if particle_type == dataclasses.I3Particle.ParticleType.EPlus:
-                self.a = 2.00035+0.63190*self.logE
-                self.b = self.Lrad/0.63008
+                self.a = 2.00035 + 0.63190 * self.logE
+                self.b = self.Lrad / 0.63008
 
             elif particle_type in [
-                    dataclasses.I3Particle.ParticleType.Gamma,
-                    dataclasses.I3Particle.ParticleType.Pi0,  # gamma, pi0
-                    ]:
+                dataclasses.I3Particle.ParticleType.Gamma,
+                dataclasses.I3Particle.ParticleType.Pi0,  # gamma, pi0
+            ]:
 
-                self.a = 2.83923+0.58209*self.logE
-                self.b = self.Lrad/0.64526
+                self.a = 2.83923 + 0.58209 * self.logE
+                self.b = self.Lrad / 0.64526
 
             else:
-                self.a = 2.01849+0.63176*self.logE
-                self.b = self.Lrad/0.63207
+                self.a = 2.01849 + 0.63176 * self.logE
+                self.b = self.Lrad / 0.63207
 
         elif self.isHadron:
 
-            self.E0 = 0.
-            self.m = 0.
-            self.f0 = 1.
-            self.rms0 = 0.
-            self.gamma = 0.
+            self.E0 = 0.0
+            self.m = 0.0
+            self.f0 = 1.0
+            self.rms0 = 0.0
+            self.gamma = 0.0
 
             if particle_type == dataclasses.I3Particle.ParticleType.PiMinus:
-                self.a = 1.69176636+0.40803489 * self.logE
+                self.a = 1.69176636 + 0.40803489 * self.logE
                 self.b = self.Lrad / 0.34108075
                 self.E0 = 0.19826506
                 self.m = 0.16218006
@@ -160,7 +165,7 @@ class ShowerParameters(object):
                 self.gamma = 1.35070162
 
             elif particle_type == dataclasses.I3Particle.ParticleType.K0_Long:
-                self.a = 1.95948974+0.34934666 * self.logE
+                self.a = 1.95948974 + 0.34934666 * self.logE
                 self.b = self.Lrad / 0.34535151
                 self.E0 = 0.21687243
                 self.m = 0.16861530
@@ -169,7 +174,7 @@ class ShowerParameters(object):
                 self.gamma = 1.37528605
 
             elif particle_type == dataclasses.I3Particle.ParticleType.PPlus:
-                self.a = 1.47495778+0.40450398 * self.logE
+                self.a = 1.47495778 + 0.40450398 * self.logE
                 self.b = self.Lrad / 0.35226706
                 self.E0 = 0.29579368
                 self.m = 0.19373018
@@ -178,7 +183,7 @@ class ShowerParameters(object):
                 self.gamma = 1.45477346
 
             elif particle_type == dataclasses.I3Particle.ParticleType.Neutron:
-                self.a = 1.57739060+0.40631102 * self.logE
+                self.a = 1.57739060 + 0.40631102 * self.logE
                 self.b = self.Lrad / 0.35269455
                 self.E0 = 0.66725124
                 self.m = 0.19263595
@@ -187,7 +192,7 @@ class ShowerParameters(object):
                 self.gamma = 1.45086895
 
             elif particle_type == dataclasses.I3Particle.ParticleType.PMinus:
-                self.a = 1.92249171+0.33701751 * self.logE
+                self.a = 1.92249171 + 0.33701751 * self.logE
                 self.b = self.Lrad / 0.34969748
                 self.E0 = 0.29579368
                 self.m = 0.19373018
@@ -196,7 +201,7 @@ class ShowerParameters(object):
                 self.gamma = 1.50438415
 
             else:
-                self.a = 1.58357292+0.41886807 * self.logE
+                self.a = 1.58357292 + 0.41886807 * self.logE
                 self.b = self.Lrad / 0.33833116
                 self.E0 = 0.18791678
                 self.m = 0.16267529
@@ -205,13 +210,15 @@ class ShowerParameters(object):
                 self.gamma = 1.35589541
 
             e = max(2.71828183, energy)
-            self.emScale = 1. - pow(e/self.E0, -self.m)*(1.-self.f0)
-            self.emScaleSigma = \
-                self.emScale*self.rms0*pow(np.log(e), -self.gamma)
+            self.emScale = 1.0 - pow(e / self.E0, -self.m) * (1.0 - self.f0)
+            self.emScaleSigma = (
+                self.emScale * self.rms0 * pow(np.log(e), -self.gamma)
+            )
 
         else:
-            raise ValueError('Particle type {!r} is not a shower'.format(
-                                                                particle_type))
+            raise ValueError(
+                "Particle type {!r} is not a shower".format(particle_type)
+            )
 
-        if (energy < 1.*I3Units.GeV):
-            self.b = 0.  # this sets the cascade length to 0
+        if energy < 1.0 * I3Units.GeV:
+            self.b = 0.0  # this sets the cascade length to 0
