@@ -29,7 +29,7 @@ class MCLabelsDeepLearning(MCLabelsBase):
         MCLabelsBase.Configure(self)
         self._is_muongun = self.GetParameter("IsMuonGun")
 
-    def Physics(self, frame):
+    def add_labels(self, frame):
         # get track_cache
         track_cache, _ = mu_utils.get_muongun_track_cache(frame)
 
@@ -47,11 +47,9 @@ class MCLabelsDeepLearning(MCLabelsBase):
         # write to frame
         frame.Put(self._output_key, labels)
 
-        self.PushFrame(frame)
-
 
 class MCLabelsTau(MCLabelsBase):
-    def Physics(self, frame):
+    def add_labels(self, frame):
         # get track_cache
         track_cache, _ = mu_utils.get_muongun_track_cache(frame)
 
@@ -63,8 +61,6 @@ class MCLabelsTau(MCLabelsBase):
 
         # write to frame
         frame.Put(self._output_key, labels)
-
-        self.PushFrame(frame)
 
 
 class MCLabelsCascadeParameters(MCLabelsBase):
@@ -99,7 +95,7 @@ class MCLabelsCascades(MCLabelsBase):
         MCLabelsBase.Configure(self)
         self._extend_boundary = self.GetParameter("ExtendBoundary")
 
-    def Physics(self, frame):
+    def add_labels(self, frame):
 
         # get track_cache
         track_cache, _ = mu_utils.get_muongun_track_cache(frame)
@@ -115,11 +111,9 @@ class MCLabelsCascades(MCLabelsBase):
         # write to frame
         frame.Put(self._output_key, labels)
 
-        self.PushFrame(frame)
-
 
 class MCLabelsCorsikaMultiplicity(MCLabelsBase):
-    def Physics(self, frame):
+    def add_labels(self, frame):
 
         # get track_cache
         track_cache, _ = mu_utils.get_muongun_track_cache(frame)
@@ -157,11 +151,9 @@ class MCLabelsCorsikaMultiplicity(MCLabelsBase):
         # write to frame
         frame.Put(self._output_key, dataclasses.I3MapStringDouble(labels))
 
-        self.PushFrame(frame)
-
 
 class MCLabelsCorsikaAzimuthExcess(MCLabelsBase):
-    def Physics(self, frame):
+    def add_labels(self, frame):
 
         # get track_cache
         track_cache, _ = mu_utils.get_muongun_track_cache(frame)
@@ -198,8 +190,6 @@ class MCLabelsCorsikaAzimuthExcess(MCLabelsBase):
 
         # write to frame
         frame.Put(self._output_key, labels)
-
-        self.PushFrame(frame)
 
 
 class MCLabelsMuonScattering(MCLabelsBase):
@@ -244,7 +234,7 @@ class MCLabelsMuonScattering(MCLabelsBase):
         self._min_muon_entry_energy = self.GetParameter("MinMuonEntryEnergy")
         self._min_rel_loss_energy = self.GetParameter("MinRelativeLossEnergy")
 
-    def Physics(self, frame):
+    def add_labels(self, frame):
 
         # get track_cache
         track_cache, _ = mu_utils.get_muongun_track_cache(frame)
@@ -261,8 +251,6 @@ class MCLabelsMuonScattering(MCLabelsBase):
                             track_cache=track_cache,
                             )
         frame.Put(self._output_key, labels)
-
-        self.PushFrame(frame)
 
 
 class MCLabelsMuonEnergyLosses(MCLabelsBase):
@@ -290,7 +278,7 @@ class MCLabelsMuonEnergyLosses(MCLabelsBase):
         self._include_under_over_flow = \
             self.GetParameter("IncludeUnderOverFlow")
 
-    def Physics(self, frame):
+    def add_labels(self, frame):
 
         labels = dataclasses.I3MapStringDouble()
 
@@ -326,8 +314,6 @@ class MCLabelsMuonEnergyLosses(MCLabelsBase):
 
         frame.Put(self._output_key, labels)
 
-        self.PushFrame(frame)
-
 
 class MCLabelsMuonEnergyLossesInCylinder(MCLabelsBase):
     def __init__(self, context):
@@ -348,7 +334,7 @@ class MCLabelsMuonEnergyLossesInCylinder(MCLabelsBase):
         self._cylinder_height = self.GetParameter("CylinderHeight")
         self._cylinder_radius = self.GetParameter("CylinderRadius")
 
-    def Physics(self, frame):
+    def add_labels(self, frame):
 
         # get track_cache
         track_cache, _ = mu_utils.get_muongun_track_cache(frame)
@@ -386,8 +372,6 @@ class MCLabelsMuonEnergyLossesInCylinder(MCLabelsBase):
 
         frame.Put(self._output_key, labels)
 
-        self.PushFrame(frame)
-
 
 class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
     def __init__(self, context):
@@ -418,7 +402,7 @@ class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
         self._write_vector = self.GetParameter("WriteParticleVector")
         self._max_num_bins = self.GetParameter("MaxNumBins")
 
-    def Physics(self, frame):
+    def add_labels(self, frame):
 
         # get track_cache
         track_cache, _ = mu_utils.get_muongun_track_cache(frame)
@@ -493,5 +477,3 @@ class MCLabelsMuonEnergyLossesMillipede(MCLabelsBase):
                 )
                 part_vec.append(part)
             frame.Put(self._output_key + 'ParticleVector', part_vec)
-
-        self.PushFrame(frame)

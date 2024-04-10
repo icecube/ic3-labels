@@ -74,6 +74,17 @@ class MCLabelsBase(icetray.I3ConditionalModule):
         self.PushFrame(frame)
 
     def add_labels(self, frame):
+        """Add labels to frame
+
+        This method should be implemented by the derived class.
+        Labels should be added to the frame using the key specified in
+        self._output_key.
+
+        Parameters
+        ----------
+        frame : I3Frame
+            The frame to which to add the labels.
+        """
         raise NotImplementedError
 
     def Geometry(self, frame):
