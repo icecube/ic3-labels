@@ -1,0 +1,9 @@
+# .coveragerc
+
+[run]
+branch = True
+source = ic3_labels
+
+[report]
+
+omit = ic3_labels/__about__.py

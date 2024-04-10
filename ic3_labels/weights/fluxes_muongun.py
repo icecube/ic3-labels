@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 from __future__ import division, print_function
 
 import os
@@ -12,7 +10,7 @@ from icecube.icetray.i3logging import log_info as log
 
 
 def harvest_generators(infiles, n_files=-1, equal_generators=True):
-    '''
+    """
     Harvest serialized generator configurations from a set of I3 files.
 
     Parameters
@@ -39,26 +37,28 @@ def harvest_generators(infiles, n_files=-1, equal_generators=True):
         If equal_generators is true, but no number of files is explicitly
         given. This is needed, since only the first file of the input files
         will be used.
-    '''
+    """
     if not isinstance(infiles, list):
         infiles = [infiles]
 
     generator = None
     n_generators = 0
     if equal_generators:
-        log('Assuming all generator objects of the given file list are equal!')
+        log("Assuming all generator objects of the given file list are equal!")
         if n_files == -1 or not isinstance(n_files, int):
-            raise ValueError('For equal generators the number of files needs '
-                             'to be given explicitly!')
+            raise ValueError(
+                "For equal generators the number of files needs "
+                "to be given explicitly!"
+            )
 
     for fname in infiles:
 
         try:
             f = dataio.I3File(fname)
-            frame = f.pop_frame(icetray.I3Frame.Stream('S'))
+            frame = f.pop_frame(icetray.I3Frame.Stream("S"))
             f.close()
         except RuntimeError as e:
-            log('WARNING: Could not retrieve S-Frame from {!r}'.format(fname))
+            log("WARNING: Could not retrieve S-Frame from {!r}".format(fname))
             log(str(e))
         else:
             if frame is not None:
@@ -66,14 +66,19 @@ def harvest_generators(infiles, n_files=-1, equal_generators=True):
                     try:
                         frame_obj = frame[key]
                     except KeyError:
-                        log('WARNING: Could not retrieve {} from frame'.format(
-                            key))
+                        log(
+                            "WARNING: Could not retrieve {} from frame".format(
+                                key
+                            )
+                        )
                         frame_obj = None
                     if isinstance(frame_obj, MuonGun.GenerationProbability):
-                        log('{}: found "{}" ({})'.format(
-                            fname,
-                            key,
-                            type(frame_obj).__name__), unit="MuonGun")
+                        log(
+                            '{}: found "{}" ({})'.format(
+                                fname, key, type(frame_obj).__name__
+                            ),
+                            unit="MuonGun",
+                        )
                         n_generators += 1
                         if generator is None:
                             generator = frame_obj
@@ -101,12 +106,13 @@ def get_fluxes_and_names():
         List of MuonGun models
         List of model names
     """
-    table_path = os.path.expandvars('$I3_BUILD/MuonGun/resources/tables/*')
+    table_path = os.path.expandvars("$I3_BUILD/MuonGun/resources/tables/*")
     table_files = glob(table_path)
     table_files = [os.path.basename(table_file) for table_file in table_files]
 
     flux_names = np.unique(
-        [table_file.split('.')[0] for table_file in table_files])
+        [table_file.split(".")[0] for table_file in table_files]
+    )
 
     fluxes = []
     for flux_name in flux_names:

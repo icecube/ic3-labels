@@ -1,7 +1,6 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*
-'''Helper functions for icecube specific labels.
-'''
+"""Helper functions for icecube specific labels.
+"""
+
 from __future__ import print_function, division
 import numpy as np
 from icecube import dataclasses, MuonGun, simclasses
@@ -10,10 +9,9 @@ from icecube.phys_services import I3Calculator
 from ic3_labels.labels.utils import geometry
 
 
-def get_interaction_neutrino(frame, primary,
-                             convex_hull=None,
-                             extend_boundary=0,
-                             sanity_check=False):
+def get_interaction_neutrino(
+    frame, primary, convex_hull=None, extend_boundary=0, sanity_check=False
+):
     """Get the first neutrino daughter of a primary neutrino, that interacted
     inside the convex hull.
 
@@ -49,12 +47,12 @@ def get_interaction_neutrino(frame, primary,
         Description
     """
 
-    mctree = frame['I3MCTree']
+    mctree = frame["I3MCTree"]
 
     # get first in ice neutrino
     nu_in_ice = None
     for p in mctree:
-        if p.is_neutrino and p.location_type_string == 'InIce':
+        if p.is_neutrino and p.location_type_string == "InIce":
             nu_in_ice = p
             break
 
@@ -62,16 +60,17 @@ def get_interaction_neutrino(frame, primary,
 
         # check if nu_in_ice has interaction inside convex hull
         daughters = mctree.get_daughters(nu_in_ice)
-        assert len(daughters) > 0, 'Expected at least one daughter!'
+        assert len(daughters) > 0, "Expected at least one daughter!"
 
         # check if point is inside
         if convex_hull is None:
             point_inside = geometry.is_in_detector_bounds(
-                                daughters[0].pos,
-                                extend_boundary=extend_boundary)
+                daughters[0].pos, extend_boundary=extend_boundary
+            )
         else:
             point_inside = geometry.point_is_inside(
-                convex_hull, daughters[0].pos,
+                convex_hull,
+                daughters[0].pos,
             )
 
         if not point_inside:
@@ -82,24 +81,28 @@ def get_interaction_neutrino(frame, primary,
     # ---------------
     if sanity_check:
         nu_in_ice_rec = get_interaction_neutrino_rec(
-                                    frame=frame,
-                                    primary=primary,
-                                    convex_hull=convex_hull,
-                                    extend_boundary=extend_boundary)
+            frame=frame,
+            primary=primary,
+            convex_hull=convex_hull,
+            extend_boundary=extend_boundary,
+        )
 
         if nu_in_ice_rec != nu_in_ice:
-            if (nu_in_ice_rec is None or nu_in_ice is None or
-                    nu_in_ice_rec.id != nu_in_ice.id or
-                    nu_in_ice_rec.minor_id != nu_in_ice.minor_id):
-                raise ValueError('{} != {}'.format(nu_in_ice_rec, nu_in_ice))
+            if (
+                nu_in_ice_rec is None
+                or nu_in_ice is None
+                or nu_in_ice_rec.id != nu_in_ice.id
+                or nu_in_ice_rec.minor_id != nu_in_ice.minor_id
+            ):
+                raise ValueError("{} != {}".format(nu_in_ice_rec, nu_in_ice))
     # ---------------
 
     return nu_in_ice
 
 
-def get_interaction_neutrino_rec(frame, primary,
-                                 convex_hull=None,
-                                 extend_boundary=0):
+def get_interaction_neutrino_rec(
+    frame, primary, convex_hull=None, extend_boundary=0
+):
     """Get the first neutrino daughter of a primary neutrino, that interacted
     inside the convex hull.
 
@@ -129,7 +132,7 @@ def get_interaction_neutrino_rec(frame, primary,
     if primary is None:
         return None
 
-    mctree = frame['I3MCTree']
+    mctree = frame["I3MCTree"]
 
     # traverse I3MCTree until first interaction inside the convex hull is found
     daughters = mctree.get_daughters(primary)
@@ -141,7 +144,8 @@ def get_interaction_neutrino_rec(frame, primary,
     # check if interaction point is inside
     if convex_hull is None:
         point_inside = geometry.is_in_detector_bounds(
-                            daughters[0].pos, extend_boundary=extend_boundary)
+            daughters[0].pos, extend_boundary=extend_boundary
+        )
     else:
         point_inside = geometry.point_is_inside(convex_hull, daughters[0].pos)
 
@@ -154,15 +158,15 @@ def get_interaction_neutrino_rec(frame, primary,
 
     else:
         # daughters are not inside convex hull.
-        # Either one of these daughters has secondary partcles which has an
+        # Either one of these daughters has secondary particles which has an
         # interaction inside, or there is no interaction within the convex hull
 
         interaction_neutrinos = []
         for n in daughters:
             # check if this neutrino has interaction inside the convex hull
-            neutrino = get_interaction_neutrino_rec(frame, n,
-                                                    convex_hull,
-                                                    extend_boundary)
+            neutrino = get_interaction_neutrino_rec(
+                frame, n, convex_hull, extend_boundary
+            )
             if neutrino is not None:
                 interaction_neutrinos.append(neutrino)
 
@@ -172,7 +176,7 @@ def get_interaction_neutrino_rec(frame, primary,
 
         if len(interaction_neutrinos) > 1:
             print(interaction_neutrinos)
-            raise ValueError('Expected only one neutrino to interact!')
+            raise ValueError("Expected only one neutrino to interact!")
 
         # Found a neutrino that had an interaction inside the convex hull
         return interaction_neutrinos[0]

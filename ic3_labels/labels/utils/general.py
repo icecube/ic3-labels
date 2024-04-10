@@ -1,7 +1,6 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*
-'''Helper functions for icecube specific labels.
-'''
+"""Helper functions for icecube specific labels.
+"""
+
 from __future__ import print_function, division
 import numpy as np
 from icecube import dataclasses, MuonGun, simclasses
@@ -11,7 +10,8 @@ from ic3_labels.labels.utils import geometry
 
 
 def get_significant_energy_loss(
-        frame, pulse_key='InIceDSTPulses', mctree_name='I3MCTree'):
+    frame, pulse_key="InIceDSTPulses", mctree_name="I3MCTree"
+):
     """Get the most significant energy loss from the I3MCTree that may have
     caused the hits given by the pulses 'pulse_key'.
 
@@ -37,26 +37,26 @@ def get_significant_energy_loss(
     """
     # get pulses
     pulses = frame[pulse_key]
-    if isinstance(pulses, dataclasses.I3RecoPulseSeriesMapMask) or \
-            isinstance(pulses, dataclasses.I3RecoPulseSeriesMapUnion):
+    if isinstance(pulses, dataclasses.I3RecoPulseSeriesMapMask) or isinstance(
+        pulses, dataclasses.I3RecoPulseSeriesMapUnion
+    ):
         pulses = pulses.apply(frame)
 
     # collect positions and charge of hit DOMs
     positions = []
     charges = []
     for om_key, dom_pulses in pulses:
-        positions.append(frame['I3Geometry'].omgeo[om_key].position)
+        positions.append(frame["I3Geometry"].omgeo[om_key].position)
         charges.append(np.sum([p.charge for p in dom_pulses]))
-    total_charge = np.sum(charges)
 
     def get_angle_factor(angle):
         if angle < np.deg2rad(45):
-            return 1.
+            return 1.0
         else:
-            return 1. - 0.9*((angle - np.deg2rad(45)) / np.deg2rad(135))
+            return 1.0 - 0.9 * ((angle - np.deg2rad(45)) / np.deg2rad(135))
 
     def calc_factor(particle):
-        factor = 0.
+        factor = 0.0
 
         for pos, charge in zip(positions, charges):
             diff = pos - particle.pos
@@ -73,15 +73,16 @@ def get_significant_energy_loss(
 
     def get_relevant_children(parent):
 
-        allowed_types = [dataclasses.I3Particle.NuclInt,
-                         dataclasses.I3Particle.PairProd,
-                         dataclasses.I3Particle.Brems,
-                         dataclasses.I3Particle.DeltaE,
-                         dataclasses.I3Particle.EMinus,
-                         dataclasses.I3Particle.EPlus,
-                         dataclasses.I3Particle.Hadrons,
-                         ]
-        # Rekursion stop
+        allowed_types = [
+            dataclasses.I3Particle.NuclInt,
+            dataclasses.I3Particle.PairProd,
+            dataclasses.I3Particle.Brems,
+            dataclasses.I3Particle.DeltaE,
+            dataclasses.I3Particle.EMinus,
+            dataclasses.I3Particle.EPlus,
+            dataclasses.I3Particle.Hadrons,
+        ]
+        # Recursion stop
         if parent.type in allowed_types and parent.pos.magnitude < 2000:
             return [parent]
 
@@ -92,10 +93,9 @@ def get_significant_energy_loss(
         return children
 
     # Now walk through energy losses and calculate factor for each
-    max_factor = -float('inf')
+    max_factor = -float("inf")
     cascade = None
 
-    relevant_particles = []
     for primary in mctree.get_primaries():
         # go through all daughter particles
         for p in get_relevant_children(primary):
@@ -115,8 +115,8 @@ def get_significant_energy_loss(
     return energy_loss
 
 
-def get_num_coincident_events(frame, mctree_name='I3MCTree'):
-    '''Get Number of coincident events (= number of primaries in I3MCTree).
+def get_num_coincident_events(frame, mctree_name="I3MCTree"):
+    """Get Number of coincident events (= number of primaries in I3MCTree).
 
     Parameters
     ----------
@@ -128,7 +128,7 @@ def get_num_coincident_events(frame, mctree_name='I3MCTree'):
     Returns
     -------
     int
-    '''
+    """
     return len(frame[mctree_name].get_primaries())
 
 
@@ -158,7 +158,7 @@ def get_weighted_primary(frame, mctree_name=None):
     """
 
     if mctree_name is None:
-        for mctree in ['I3MCTree_preMuonProp', 'I3MCTree']:
+        for mctree in ["I3MCTree_preMuonProp", "I3MCTree"]:
             if (mctree in frame) and (len(frame[mctree].primaries) != 0):
                 mctree_name = mctree
                 break
@@ -171,21 +171,25 @@ def get_weighted_primary(frame, mctree_name=None):
     if len(primaries) == 1:
         idx = 0
 
-    elif 'CorsikaWeightMap' in frame:
-        wmap = frame['CorsikaWeightMap']
+    elif "CorsikaWeightMap" in frame:
+        wmap = frame["CorsikaWeightMap"]
 
-        if 'PrimaryEnergy' in wmap:
-            prim_e = wmap['PrimaryEnergy']
-            idx = int(np.nanargmin([abs(p.energy-prim_e) for p in primaries]))
+        if "PrimaryEnergy" in wmap:
+            prim_e = wmap["PrimaryEnergy"]
+            idx = int(
+                np.nanargmin([abs(p.energy - prim_e) for p in primaries])
+            )
 
-        elif 'PrimarySpectralIndex' in wmap:
-            prim_e = wmap['Weight']**(-1./wmap['PrimarySpectralIndex'])
-            idx = int(np.nanargmin([abs(p.energy-prim_e) for p in primaries]))
+        elif "PrimarySpectralIndex" in wmap:
+            prim_e = wmap["Weight"] ** (-1.0 / wmap["PrimarySpectralIndex"])
+            idx = int(
+                np.nanargmin([abs(p.energy - prim_e) for p in primaries])
+            )
 
         else:
             idx = 0
-    
-    elif 'I3MCWeightDict' in frame:
+
+    elif "I3MCWeightDict" in frame:
         idx = [i for i in range(len(primaries)) if primaries[i].is_neutrino]
         assert len(idx) == 1, (idx, primaries)
         idx = idx[0]
@@ -194,7 +198,7 @@ def get_weighted_primary(frame, mctree_name=None):
 
 
 def particle_is_inside(particle, convex_hull):
-    '''Checks if a particle is inside the convex hull.
+    """Checks if a particle is inside the convex hull.
 
     The particle is considered inside if any part of its track is inside
     the convex hull. In the case of point like particles with length zero,
@@ -212,9 +216,10 @@ def particle_is_inside(particle, convex_hull):
     -------
     bool
         True if particle is inside, otherwise False.
-    '''
+    """
     intersection_ts = geometry.get_intersections(
-        convex_hull, particle.pos, particle.dir)
+        convex_hull, particle.pos, particle.dir
+    )
 
     # particle didn't hit convex_hull
     if len(intersection_ts) == 0:
@@ -224,7 +229,7 @@ def particle_is_inside(particle, convex_hull):
     #   Expecting two intersections
     #   What happens if track is exactly along edge of hull?
     #   If only one ts: track exactly hit a corner of hull?
-    assert len(intersection_ts) == 2, 'Expected exactly 2 intersections'
+    assert len(intersection_ts) == 2, "Expected exactly 2 intersections"
 
     min_ts = min(intersection_ts)
     max_ts = max(intersection_ts)
@@ -242,8 +247,9 @@ def particle_is_inside(particle, convex_hull):
 
 
 def get_ids_of_particle_and_daughters(
-        frame, particle, ids, mctree_name='I3MCTree'):
-    '''Get particle ids of particle and all its daughters.
+    frame, particle, ids, mctree_name="I3MCTree"
+):
+    """Get particle ids of particle and all its daughters.
 
     Parameters
     ----------
@@ -262,7 +268,7 @@ def get_ids_of_particle_and_daughters(
     -------
     ids : list
         List of all particle ids
-    '''
+    """
     if particle is None:
         return ids
     ids.append(particle.id)
@@ -272,9 +278,8 @@ def get_ids_of_particle_and_daughters(
     return ids
 
 
-def get_all_parents(
-        frame, particle, mctree_name='I3MCTree', reorder=True):
-    '''Get all parents of the specified particle
+def get_all_parents(frame, particle, mctree_name="I3MCTree", reorder=True):
+    """Get all parents of the specified particle
 
     Parameters
     ----------
@@ -291,7 +296,7 @@ def get_all_parents(
     -------
     list of I3Particle
         List of all parent particles
-    '''
+    """
 
     parents = []
     while frame[mctree_name].has_parent(particle):
@@ -304,11 +309,14 @@ def get_all_parents(
     return parents
 
 
-def get_pulse_map(frame, particle,
-                  pulse_map_string='InIcePulses',
-                  mcpe_series_map_name='I3MCPESeriesMap',
-                  max_time_dif=10):
-    '''Get map of pulses induced by a specific particle.
+def get_pulse_map(
+    frame,
+    particle,
+    pulse_map_string="InIcePulses",
+    mcpe_series_map_name="I3MCPESeriesMap",
+    max_time_dif=10,
+):
+    """Get map of pulses induced by a specific particle.
        Pulses to be used can be specified through
        pulse_map_string.
         [This is only a guess on which reco Pulses
@@ -341,10 +349,14 @@ def get_pulse_map(frame, particle,
     ValueError
         Description
 
-    '''
+    """
     if particle.id.majorID == 0 and particle.id.minorID == 0:
-        raise ValueError('Can not get pulse map for particle\
-                            with id == (0,0)\n{}'.format(particle))
+        raise ValueError(
+            "Can not get pulse map for particle\
+                            with id == (0,0)\n{}".format(
+                particle
+            )
+        )
 
     particle_pulse_series_map = {}
     if pulse_map_string in frame:
@@ -355,8 +367,10 @@ def get_pulse_map(frame, particle,
         # [works directly with I3ParticleID in  Version combo.trunk r152630]
         ids = {(i.majorID, i.minorID) for i in ids}
 
-        assert (0, 0) not in ids, \
-            'Daughter particle with id (0,0) should not exist'
+        assert (
+            0,
+            0,
+        ) not in ids, "Daughter particle with id (0,0) should not exist"
 
         # get pulses defined by pulse_map_string
         in_ice_pulses = frame[pulse_map_string]
@@ -367,11 +381,15 @@ def get_pulse_map(frame, particle,
         valid_keys = set(frame[mcpe_series_map_name].keys())
 
         # find all pulses resulting from particle or daughters of particle
-        shared_keys = {key for key in in_ice_pulses.keys()
-                       if key in valid_keys}
+        shared_keys = {
+            key for key in in_ice_pulses.keys() if key in valid_keys
+        }
         for key in shared_keys:
-            mc_pulse_times = [p.time for p in frame[mcpe_series_map_name][key]
-                              if (p.ID.majorID, p.ID.minorID) in ids]
+            mc_pulse_times = [
+                p.time
+                for p in frame[mcpe_series_map_name][key]
+                if (p.ID.majorID, p.ID.minorID) in ids
+            ]
             particle_in_ice_pulses = []
             if mc_pulse_times:
                 # speed things up:
@@ -391,12 +409,14 @@ def get_pulse_map(frame, particle,
     return type(in_ice_pulses)(particle_pulse_series_map)
 
 
-def get_noise_pulse_map(frame,
-                        pulse_map_string='InIcePulses',
-                        mcpe_series_map_name='I3MCPESeriesMap',
-                        empty_id=dataclasses.I3ParticleID(),
-                        max_time_dif=10):
-    '''Get map of pulses induced by noise.
+def get_noise_pulse_map(
+    frame,
+    pulse_map_string="InIcePulses",
+    mcpe_series_map_name="I3MCPESeriesMap",
+    empty_id=dataclasses.I3ParticleID(),
+    max_time_dif=10,
+):
+    """Get map of pulses induced by noise.
         [This is only a guess on which reco Pulses
          could be originated from noise.]
 
@@ -425,7 +445,7 @@ def get_noise_pulse_map(frame,
     pulse_map : I3RecoPulseSeriesMap
         Map of pulses.
         ----- Better if done over I3RecoPulseSeriesMapMask ... ----
-    '''
+    """
 
     noise_pulse_series_map = {}
     if pulse_map_string in frame:
@@ -439,11 +459,15 @@ def get_noise_pulse_map(frame,
             in_ice_pulses = in_ice_pulses.apply(frame)
 
         # find all pulses resulting from noise
-        shared_keys = {key for key in in_ice_pulses.keys()
-                       if key in valid_keys}
+        shared_keys = {
+            key for key in in_ice_pulses.keys() if key in valid_keys
+        }
         for key in shared_keys:
-            mc_pulse_times = [p.time for p in frame[mcpe_series_map_name][key]
-                              if p.ID == empty_id]
+            mc_pulse_times = [
+                p.time
+                for p in frame[mcpe_series_map_name][key]
+                if p.ID == empty_id
+            ]
             noise_in_ice_pulses = []
             if mc_pulse_times:
                 # speed things up:
@@ -464,11 +488,13 @@ def get_noise_pulse_map(frame,
 
 
 def get_pulse_primary_mapping(
-        frame, primaries,
-        pulse_map_string='InIcePulses',
-        mcpe_series_map_name='I3MCPESeriesMap',
-        max_time_dif=10):
-    '''Get mapping of pulses to primary particles
+    frame,
+    primaries,
+    pulse_map_string="InIcePulses",
+    mcpe_series_map_name="I3MCPESeriesMap",
+    max_time_dif=10,
+):
+    """Get mapping of pulses to primary particles
 
        Pulses to be used can be specified through
        pulse_map_string.
@@ -514,7 +540,7 @@ def get_pulse_primary_mapping(
             1: pulses associated to the first particle in `primaries`.
             ...
             n: pulses associated to the n-th particle in `primaries`.
-    '''
+    """
     mapping = dataclasses.I3MapKeyVectorInt()
     if pulse_map_string in frame:
 
@@ -530,11 +556,15 @@ def get_pulse_primary_mapping(
             # [works directly with I3ParticleID  > combo.trunk r152630]
             ids = {(i.majorID, i.minorID) for i in ids}
 
-            assert (0, 0) not in ids, \
-                'Daughter particle with id (0,0) should not exist'
+            assert (
+                0,
+                0,
+            ) not in ids, "Daughter particle with id (0,0) should not exist"
 
-            assert (0, -1) not in ids, \
-                'Daughter particle with id (0,-1) should not exist'
+            assert (
+                0,
+                -1,
+            ) not in ids, "Daughter particle with id (0,-1) should not exist"
 
             mapping_ids[i + 1] = ids
 

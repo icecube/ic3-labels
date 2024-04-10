@@ -32,39 +32,43 @@ Environment Variables:
 
 Credit for the vast majority of code in this file goes to Mathis Boerner.
 """
+
 import os
 import logging
 from copy import deepcopy
-import os
 import numpy as np
 from scipy.interpolate import RectBivariateSpline
 
 import ic3_labels
 
-log = logging.getLogger('MCEqFlux')
+log = logging.getLogger("MCEqFlux")
 
 
 # If cashier is available, set up directory for caching of MCEq results
 try:
     from ic3_labels.weights.resources.cashier import cache
+
     got_cashier = True
 
-    if 'MCEQ_CACHE_DIR' in os.environ:
-        cache_dir = os.environ['MCEQ_CACHE_DIR']
-        log.info("Found 'MCEQ_CACHE_DIR' in environment variables: {}".format(
-            cache_dir))
+    if "MCEQ_CACHE_DIR" in os.environ:
+        cache_dir = os.environ["MCEQ_CACHE_DIR"]
+        log.info(
+            "Found 'MCEQ_CACHE_DIR' in environment variables: {}".format(
+                cache_dir
+            )
+        )
 
         if not os.path.exists(cache_dir):
-            log.info('Creating cache directory: {}'.format(cache_dir))
+            log.info("Creating cache directory: {}".format(cache_dir))
             os.makedirs(cache_dir)
 
-        CACHE_FILE = os.path.join(cache_dir, 'mceq.cache')
+        CACHE_FILE = os.path.join(cache_dir, "mceq.cache")
 
     else:
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        CACHE_FILE = os.path.join(script_dir, 'resources', 'mceq.cache')
+        CACHE_FILE = os.path.join(script_dir, "resources", "mceq.cache")
 
-    log.info('Using MCEq cache file: {}'.format(CACHE_FILE))
+    log.info("Using MCEq cache file: {}".format(CACHE_FILE))
 
 except ImportError:
     got_cashier = False
@@ -74,26 +78,27 @@ except ImportError:
 
 # Dictionary that converts ptype -> MCEq type string
 PTYPE_CONVERTER = {
-    12: 'nue',
-    -12: 'antinue',
-    14: 'numu',
-    -14: 'antinumu',
-    16: 'nutau',
-    -16: 'antinutau',
-    13: 'mu+',
-    -13: 'mu-',
+    12: "nue",
+    -12: "antinue",
+    14: "numu",
+    -14: "antinumu",
+    16: "nutau",
+    -16: "antinutau",
+    13: "mu+",
+    -13: "mu-",
 }
 
 
 def get_spline(
-        interaction_model,
-        primary_model,
-        months,
-        theta_grid,
-        theta_grid_cos,
-        cached=True,
-        cache_file=CACHE_FILE,
-        cache_read_only=False):
+    interaction_model,
+    primary_model,
+    months,
+    theta_grid,
+    theta_grid_cos,
+    cached=True,
+    cache_file=CACHE_FILE,
+    cache_read_only=False,
+):
     """Get MCEq spline
 
     Solves the MCEq cascade equations for the given parameters. The equations
@@ -175,16 +180,20 @@ def get_spline(
             ...
         }
     """
-    log.info('Getting Spline for {}; {} (cached={})'.format(
-        interaction_model,
-        primary_model,
-        cached))
+    log.info(
+        "Getting Spline for {}; {} (cached={})".format(
+            interaction_model, primary_model, cached
+        )
+    )
 
     def __solve_month__(
-            mceq_run, e_grid, theta_grid, theta_grid_cos,
-            ptype_converter=PTYPE_CONVERTER,
-            eps=1e-128,
-            ):
+        mceq_run,
+        e_grid,
+        theta_grid,
+        theta_grid_cos,
+        ptype_converter=PTYPE_CONVERTER,
+        eps=1e-128,
+    ):
         """Solve MCEq equations for the provided mceq_run instance.
 
         Parameters
@@ -237,50 +246,49 @@ def get_spline(
             # fill in flux totals
             for key, value in ptype_converter.items():
                 total_flux_dict[key][:, i] = mceq_run.get_solution(
-                    'total_{}'.format(value))
+                    "total_{}".format(value)
+                )
                 conv_flux_dict[key][:, i] = mceq_run.get_solution(
-                    'conv_{}'.format(value))
+                    "conv_{}".format(value)
+                )
                 pr_flux_dict[key][:, i] = mceq_run.get_solution(
-                    'pr_{}'.format(value))
+                    "pr_{}".format(value)
+                )
 
         # create splines
         for key, value in ptype_converter.items():
             total_spline_dict[key] = RectBivariateSpline(
                 e_grid,
                 theta_grid,
-                np.log10(np.clip(total_flux_dict[key], eps, float('inf'))),
+                np.log10(np.clip(total_flux_dict[key], eps, float("inf"))),
                 s=0,
             )
             conv_spline_dict[key] = RectBivariateSpline(
                 e_grid,
                 theta_grid,
-                np.log10(np.clip(conv_flux_dict[key], eps, float('inf'))),
+                np.log10(np.clip(conv_flux_dict[key], eps, float("inf"))),
                 s=0,
             )
             pr_spline_dict[key] = RectBivariateSpline(
                 e_grid,
                 theta_grid,
-                np.log10(np.clip(pr_flux_dict[key], eps, float('inf'))),
+                np.log10(np.clip(pr_flux_dict[key], eps, float("inf"))),
                 s=0,
             )
 
-        spline_dicts = [
-            total_spline_dict, conv_spline_dict, pr_spline_dict
-        ]
+        spline_dicts = [total_spline_dict, conv_spline_dict, pr_spline_dict]
 
-        flux_dicts = [
-            total_flux_dict, conv_flux_dict, pr_flux_dict
-        ]
+        flux_dicts = [total_flux_dict, conv_flux_dict, pr_flux_dict]
 
         return spline_dicts, flux_dicts
 
     def __get_spline__(
-            interaction_model,
-            primary_model,
-            months,
-            theta_grid,
-            theta_grid_cos,
-            ):
+        interaction_model,
+        primary_model,
+        months,
+        theta_grid,
+        theta_grid_cos,
+    ):
         """Get MCEq spline for the provided settings
 
         Parameters
@@ -312,8 +320,9 @@ def get_spline(
         AttributeError
             If the provided `primary_model` is unknown.
         """
-        log.info('\tCalculating \'{}\' \'{}\''.format(
-            interaction_model, primary_model))
+        log.info(
+            "\tCalculating '{}' '{}'".format(interaction_model, primary_model)
+        )
 
         import mceq_config
         from MCEq import version
@@ -321,11 +330,11 @@ def get_spline(
         import crflux.models as pm
 
         config_updates = {
-            'h_obs': 1000.,
-            'debug_level': 1,
+            "h_obs": 1000.0,
+            "debug_level": 1,
         }
-        if 'MKL_PATH' in os.environ:
-            config_updates['MKL_path'] = os.environ['MKL_PATH']
+        if "MKL_PATH" in os.environ:
+            config_updates["MKL_path"] = os.environ["MKL_PATH"]
 
         splines = {}
         pmodels = {
@@ -335,15 +344,17 @@ def get_spline(
             "H4a": (pm.HillasGaisser2012, "H4a"),
             "poly-gonato": (pm.PolyGonato, False),
             "TIG": (pm.Thunman, None),
-            "ZS": (pm.ZatsepinSokolskaya, 'default'),
-            "ZSP": (pm.ZatsepinSokolskaya, 'pamela'),
+            "ZS": (pm.ZatsepinSokolskaya, "default"),
+            "ZSP": (pm.ZatsepinSokolskaya, "pamela"),
             "GH": (pm.GaisserHonda, None),
-            "GSF": (pm.GlobalSplineFitBeta, None)
+            "GSF": (pm.GlobalSplineFitBeta, None),
         }
 
         for i, month in enumerate(months):
-            config_updates['density_model'] = (
-                'MSIS00_IC', ('SouthPole', month))
+            config_updates["density_model"] = (
+                "MSIS00_IC",
+                ("SouthPole", month),
+            )
 
             # update settings in mceq_config
             # Previous method mceq_config.config is deprecated and resulted
@@ -355,49 +366,50 @@ def get_spline(
                 pmodel = pmodels[primary_model]
             except KeyError:
                 raise AttributeError(
-                    'primary_model {} unknown. options: {}'.format(
-                        primary_model, pmodels.keys()))
+                    "primary_model {} unknown. options: {}".format(
+                        primary_model, pmodels.keys()
+                    )
+                )
             mceq_run = MCEqRun(
                 interaction_model=interaction_model,
                 primary_model=pmodel,
                 theta_deg=0.0,
-                **config_updates)
+                **config_updates,
+            )
             e_grid = np.log10(deepcopy(mceq_run.e_grid))
             spline_dicts, flux_dicts = __solve_month__(
-                mceq_run,
-                e_grid,
-                theta_grid,
-                theta_grid_cos)
+                mceq_run, e_grid, theta_grid, theta_grid_cos
+            )
 
             splines[i] = {}
-            splines[i]['total_spline_dict'] = spline_dicts[0]
-            splines[i]['conv_spline_dict'] = spline_dicts[1]
-            splines[i]['pr_spline_dict'] = spline_dicts[2]
-            splines[i]['total_flux_dict'] = flux_dicts[0]
-            splines[i]['conv_flux_dict'] = flux_dicts[1]
-            splines[i]['pr_flux_dict'] = flux_dicts[2]
-            splines[i]['config_updates'] = deepcopy(config_updates)
-            splines[i]['mceq_version'] = version.__version__
-            splines[i]['ic3_labels_version'] = ic3_labels.__version__
-            splines[i]['e_grid'] = e_grid
-            splines[i]['theta_grid'] = theta_grid
+            splines[i]["total_spline_dict"] = spline_dicts[0]
+            splines[i]["conv_spline_dict"] = spline_dicts[1]
+            splines[i]["pr_spline_dict"] = spline_dicts[2]
+            splines[i]["total_flux_dict"] = flux_dicts[0]
+            splines[i]["conv_flux_dict"] = flux_dicts[1]
+            splines[i]["pr_flux_dict"] = flux_dicts[2]
+            splines[i]["config_updates"] = deepcopy(config_updates)
+            splines[i]["mceq_version"] = version.__version__
+            splines[i]["ic3_labels_version"] = ic3_labels.__version__
+            splines[i]["e_grid"] = e_grid
+            splines[i]["theta_grid"] = theta_grid
         return splines
 
     if got_cashier and cached:
         if cache_file is None:
-            cache_f = 'mceq.cache'
+            cache_f = "mceq.cache"
         else:
             cache_f = cache_file
-        log.info('\tUsing cache \'{}\''.format(cache_f))
+        log.info("\tUsing cache '{}'".format(cache_f))
 
         @cache(cache_file=cache_f, read_only=cache_read_only)
         def wrapped_get_spline(
-                interaction_model,
-                primary_model,
-                months,
-                theta_grid,
-                theta_grid_cos,
-                ):
+            interaction_model,
+            primary_model,
+            months,
+            theta_grid,
+            theta_grid_cos,
+        ):
             return __get_spline__(
                 interaction_model=interaction_model,
                 primary_model=primary_model,
@@ -424,7 +436,6 @@ def get_spline(
 
 
 class MCEQFlux(object):
-
     """MCQe Flux Wrapper
 
     Attributes
@@ -456,15 +467,16 @@ class MCEQFlux(object):
     """
 
     def __init__(
-            self,
-            min_theta_deg=0.,
-            max_theta_deg=180.,
-            theta_grid_cos=False,
-            theta_steps=181,
-            season='full_year',
-            flux_type='total',
-            random_state=None,
-            **kwargs):
+        self,
+        min_theta_deg=0.0,
+        max_theta_deg=180.0,
+        theta_grid_cos=False,
+        theta_steps=181,
+        season="full_year",
+        flux_type="total",
+        random_state=None,
+        **kwargs,
+    ):
         """Initialize MCEQFlux Instance
 
         Parameters
@@ -490,7 +502,7 @@ class MCEQFlux(object):
                 'pr': prompt neutrino flux
                 'conv': conventional neutrino flux
             This will set the default flux type when calling `getFlux()`.
-            You may, however, overwrite this defaul by passing an alternative
+            You may, however, overwrite this default by passing an alternative
             flux type to `getFlux()`. Setting this default value allows for
             drop in replacement of other flux implementations in IceCube.
         random_state : np.random.Randomstate or int, optional
@@ -501,27 +513,30 @@ class MCEQFlux(object):
         if not isinstance(random_state, np.random.RandomState):
             random_state = np.random.RandomState(random_state)
         self.random_state = random_state
-        if season.lower() == 'full_year':
+        if season.lower() == "full_year":
             self.months = [
-                'January',
-                'February',
-                'March',
-                'April',
-                'May',
-                'June',
-                'July',
-                'August',
-                'September',
-                'October',
-                'November',
-                'December',
+                "January",
+                "February",
+                "March",
+                "April",
+                "May",
+                "June",
+                "July",
+                "August",
+                "September",
+                "October",
+                "November",
+                "December",
             ]
         else:
             self.months = [season]
 
-        if flux_type.lower() not in ['total', 'conv', 'pr']:
-            raise ValueError('Flux type: {} must be on of {}'.format(
-                flux_type.lower(), ['total', 'conv', 'pr']))
+        if flux_type.lower() not in ["total", "conv", "pr"]:
+            raise ValueError(
+                "Flux type: {} must be on of {}".format(
+                    flux_type.lower(), ["total", "conv", "pr"]
+                )
+            )
 
         self.flux_type = flux_type
         self.set_month_weights(np.ones_like(self.months, dtype=float))
@@ -532,18 +547,19 @@ class MCEQFlux(object):
             self.max_theta = np.cos(np.deg2rad(max_theta_deg))
         self.theta_grid_cos = theta_grid_cos
         self.theta_grid = np.linspace(
-            self.min_theta, self.max_theta, theta_steps)
+            self.min_theta, self.max_theta, theta_steps
+        )
 
         self.splines = None
 
     def initialize(
-            self,
-            interaction_model='SIBYLL2.3c',
-            primary_model='H3a',
-            cached=True,
-            cache_file=CACHE_FILE,
-            cache_read_only=False,
-            ):
+        self,
+        interaction_model="SIBYLL2.3c",
+        primary_model="H3a",
+        cached=True,
+        cache_file=CACHE_FILE,
+        cache_read_only=False,
+    ):
         """Initialize MCEQFlux instance
 
         This will compute the splines or retrieve these from the cache
@@ -582,22 +598,27 @@ class MCEQFlux(object):
 
         from MCEq import version
 
-        # throw warning if there is a version mis-match.
+        # throw warning if there is a version mismatch.
         for key, spline in self.splines.items():
             msg = (
-                'Cached file was created with {} version {}, '
-                'but this is version {}!'
+                "Cached file was created with {} version {}, "
+                "but this is version {}!"
             )
-            if version.__version__ != spline['mceq_version']:
-                log.warning(msg.format(
-                    'MCEq', spline['mceq_version'], version.__version__))
+            if version.__version__ != spline["mceq_version"]:
+                log.warning(
+                    msg.format(
+                        "MCEq", spline["mceq_version"], version.__version__
+                    )
+                )
 
-            if ic3_labels.__version__ != spline['ic3_labels_version']:
-                log.warning(msg.format(
-                    'ic3_labels',
-                    spline['ic3_labels_version'],
-                    ic3_labels.__version__,
-                ))
+            if ic3_labels.__version__ != spline["ic3_labels_version"]:
+                log.warning(
+                    msg.format(
+                        "ic3_labels",
+                        spline["ic3_labels_version"],
+                        ic3_labels.__version__,
+                    )
+                )
 
     def set_month_weights(self, month_weights):
         """Summary
@@ -619,20 +640,20 @@ class MCEQFlux(object):
         """
         if len(month_weights) != len(self.months):
             raise AttributeError(
-                'month_weights needs to be of the same '
-                'length like self.months.'
+                "month_weights needs to be of the same "
+                "length like self.months."
             )
         self.month_weights = month_weights / np.sum(month_weights)
 
     def getFlux(
-            self,
-            ptype,
-            energy,
-            costheta,
-            selected_month=None,
-            random_state=None,
-            flux_type=None,
-            ):
+        self,
+        ptype,
+        energy,
+        costheta,
+        selected_month=None,
+        random_state=None,
+        flux_type=None,
+    ):
         """Get flux for provided particle
 
         The flux is given in GeV^-1 cm^-2 s^-1 sr^-1 and may be used to
@@ -682,20 +703,22 @@ class MCEQFlux(object):
             If wrong `flux_type` is provided.
         """
         if self.splines is None:
-            raise RuntimeError(
-                'No splines calculated! Run \'initialize\' first')
+            raise RuntimeError("No splines calculated! Run 'initialize' first")
 
         if len(self.months) == 1 and selected_month is not None:
             raise ValueError(
-                'The months may not be set, since the MCEQFlux instance is '
-                + 'initialized with only one month: {}'.format(self.months)
+                "The months may not be set, since the MCEQFlux instance is "
+                + "initialized with only one month: {}".format(self.months)
             )
 
         if flux_type is None:
             flux_type = self.flux_type
-        elif flux_type.lower() not in ['total', 'conv', 'pr']:
-            raise ValueError('Flux type: "{}" must be on of {}'.format(
-                flux_type.lower(), ['total', 'conv', 'pr']))
+        elif flux_type.lower() not in ["total", "conv", "pr"]:
+            raise ValueError(
+                'Flux type: "{}" must be on of {}'.format(
+                    flux_type.lower(), ["total", "conv", "pr"]
+                )
+            )
             flux_type = flux_type.lower()
 
         if random_state is None:
@@ -722,7 +745,7 @@ class MCEQFlux(object):
         else:
             selected_month = list(self.splines.keys())[0]
         flux = np.ones_like(energy)
-        flux[:] = float('NaN')
+        flux[:] = float("NaN")
         log10_energy = np.log10(energy)
         theta = np.rad2deg(np.arccos(costheta))
 
@@ -734,9 +757,7 @@ class MCEQFlux(object):
                 else:
                     is_in_month = selected_month == i
                     idx_ptype = np.logical_and(mask_ptype, is_in_month)
-                flux[idx_ptype] = self.splines[i][
-                        flux_type + '_spline_dict'][ptype_i](
-                    log10_energy[idx_ptype],
-                    theta[idx_ptype],
-                    grid=False)
-        return np.power(10., flux)
+                flux[idx_ptype] = self.splines[i][flux_type + "_spline_dict"][
+                    ptype_i
+                ](log10_energy[idx_ptype], theta[idx_ptype], grid=False)
+        return np.power(10.0, flux)

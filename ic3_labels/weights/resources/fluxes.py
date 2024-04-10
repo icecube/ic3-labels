@@ -4,14 +4,15 @@ A collection of cosmic ray flux paramerizations.
 This files contains the same Cosmic Ray flux models as :file:`weighting/python/fluxes.py`.
 However they have been refactored to:
 
-* Use PDG particle codes natively instad of CORSIKA code
-* Use :py:func:`numpy.piecewise` instad of :py:mod:`numexpr`
+* Use PDG particle codes natively instead of CORSIKA code
+* Use :py:func:`numpy.piecewise` instead of :py:mod:`numexpr`
 * Follow :py:mod:`numpy` broadcasting rules
 
 Code from:
     https://github.com/icecube/simweights/blob/master/simweights/fluxes.py
 
 """
+
 from enum import IntEnum
 
 from numpy import asarray, broadcast_arrays, exp, piecewise, sqrt
@@ -85,12 +86,12 @@ def corsika_to_pdg(cid):
 
 class CosmicRayFlux:
     """
-    Base class for cosmic ray fluxes that uses :py:func:`numpy.piecewise` for effient
+    Base class for cosmic ray fluxes that uses :py:func:`numpy.piecewise` for efficient
     mathematical evaluation
 
     Derived must set `ptypes` to enumerate the particle types in this model.
     :py:func:`_funcs` must be set to a list of functions to be called for each particle
-    type. :py:func:`_condition()` can be overidden if additional piecewise conditions are
+    type. :py:func:`_condition()` can be overridden if additional piecewise conditions are
     desired.
     """
 
@@ -142,32 +143,84 @@ class Hoerandel(CosmicRayFlux):
         PDGCode.Fe56Nucleus,
     ]
     _funcs = [
-        lambda E: 11776.445965025136 * E ** -2.71 * (1 + (E / (4.49e6 * 1)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 4749.371132996256 * E ** -2.64 * (1 + (E / (4.49e6 * 2)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 86.7088317618298 * E ** -2.54 * (1 + (E / (4.49e6 * 3)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 84.29044403584496 * E ** -2.75 * (1 + (E / (4.49e6 * 4)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 633.6114770238042 * E ** -2.95 * (1 + (E / (4.49e6 * 5)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 1012.2921411827233 * E ** -2.66 * (1 + (E / (4.49e6 * 6)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 339.6783461252935 * E ** -2.72 * (1 + (E / (4.49e6 * 7)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 1721.4707679448027 * E ** -2.68 * (1 + (E / (4.49e6 * 8)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 38.536639802016566 * E ** -2.69 * (1 + (E / (4.49e6 * 9)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 382.61133470722905 * E ** -2.64 * (1 + (E / (4.49e6 * 10)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 72.00644098601636 * E ** -2.66 * (1 + (E / (4.49e6 * 11)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 666.2427806532402 * E ** -2.64 * (1 + (E / (4.49e6 * 12)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 109.82414739246525 * E ** -2.66 * (1 + (E / (4.49e6 * 13)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 1415.5104103909828 * E ** -2.75 * (1 + (E / (4.49e6 * 14)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 31.722233983367293 * E ** -2.69 * (1 + (E / (4.49e6 * 15)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 102.29054260257044 * E ** -2.55 * (1 + (E / (4.49e6 * 16)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 32.23645896660968 * E ** -2.68 * (1 + (E / (4.49e6 * 17)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 69.53545126418338 * E ** -2.64 * (1 + (E / (4.49e6 * 18)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 47.77105028396875 * E ** -2.65 * (1 + (E / (4.49e6 * 19)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 185.06203553374286 * E ** -2.70 * (1 + (E / (4.49e6 * 20)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 25.28561864152123 * E ** -2.64 * (1 + (E / (4.49e6 * 21)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 76.39737621929389 * E ** -2.61 * (1 + (E / (4.49e6 * 22)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 48.981193059270424 * E ** -2.63 * (1 + (E / (4.49e6 * 23)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 139.16784695018254 * E ** -2.67 * (1 + (E / (4.49e6 * 24)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 32.384244406763116 * E ** -2.46 * (1 + (E / (4.49e6 * 25)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 1201.2410569254007 * E ** -2.59 * (1 + (E / (4.49e6 * 26)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 11776.445965025136
+        * E**-2.71
+        * (1 + (E / (4.49e6 * 1)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 4749.371132996256
+        * E**-2.64
+        * (1 + (E / (4.49e6 * 2)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 86.7088317618298
+        * E**-2.54
+        * (1 + (E / (4.49e6 * 3)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 84.29044403584496
+        * E**-2.75
+        * (1 + (E / (4.49e6 * 4)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 633.6114770238042
+        * E**-2.95
+        * (1 + (E / (4.49e6 * 5)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 1012.2921411827233
+        * E**-2.66
+        * (1 + (E / (4.49e6 * 6)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 339.6783461252935
+        * E**-2.72
+        * (1 + (E / (4.49e6 * 7)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 1721.4707679448027
+        * E**-2.68
+        * (1 + (E / (4.49e6 * 8)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 38.536639802016566
+        * E**-2.69
+        * (1 + (E / (4.49e6 * 9)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 382.61133470722905
+        * E**-2.64
+        * (1 + (E / (4.49e6 * 10)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 72.00644098601636
+        * E**-2.66
+        * (1 + (E / (4.49e6 * 11)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 666.2427806532402
+        * E**-2.64
+        * (1 + (E / (4.49e6 * 12)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 109.82414739246525
+        * E**-2.66
+        * (1 + (E / (4.49e6 * 13)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 1415.5104103909828
+        * E**-2.75
+        * (1 + (E / (4.49e6 * 14)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 31.722233983367293
+        * E**-2.69
+        * (1 + (E / (4.49e6 * 15)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 102.29054260257044
+        * E**-2.55
+        * (1 + (E / (4.49e6 * 16)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 32.23645896660968
+        * E**-2.68
+        * (1 + (E / (4.49e6 * 17)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 69.53545126418338
+        * E**-2.64
+        * (1 + (E / (4.49e6 * 18)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 47.77105028396875
+        * E**-2.65
+        * (1 + (E / (4.49e6 * 19)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 185.06203553374286
+        * E**-2.70
+        * (1 + (E / (4.49e6 * 20)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 25.28561864152123
+        * E**-2.64
+        * (1 + (E / (4.49e6 * 21)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 76.39737621929389
+        * E**-2.61
+        * (1 + (E / (4.49e6 * 22)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 48.981193059270424
+        * E**-2.63
+        * (1 + (E / (4.49e6 * 23)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 139.16784695018254
+        * E**-2.67
+        * (1 + (E / (4.49e6 * 24)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 32.384244406763116
+        * E**-2.46
+        * (1 + (E / (4.49e6 * 25)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 1201.2410569254007
+        * E**-2.59
+        * (1 + (E / (4.49e6 * 26)) ** 1.9) ** (-2.1 / 1.9),
     ]
 
 
@@ -176,6 +229,7 @@ class Hoerandel5(CosmicRayFlux):
     Hoerandel with only 5 components, after Becherini et al.\ [#Becherini]_
     (These are the same as used by Arne Schoenwald's version\ [#Schoenwald]_)
     """
+
     ptypes = [
         PDGCode.PPlus,
         PDGCode.He4Nucleus,
@@ -184,11 +238,21 @@ class Hoerandel5(CosmicRayFlux):
         PDGCode.Fe56Nucleus,
     ]
     _funcs = [
-        lambda E: 11776.445965025136 * E ** -2.71 * (1 + (E / (4.49e6 * 1)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 4749.371132996256 * E ** -2.64 * (1 + (E / (4.49e6 * 2)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 3552.5893555039243 * E ** -2.68 * (1 + (E / (4.49e6 * 7)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 3233.6058556071825 * E ** -2.67 * (1 + (E / (4.49e6 * 13)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 1197.9991050096223 * E ** -2.58 * (1 + (E / (4.49e6 * 26)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 11776.445965025136
+        * E**-2.71
+        * (1 + (E / (4.49e6 * 1)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 4749.371132996256
+        * E**-2.64
+        * (1 + (E / (4.49e6 * 2)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 3552.5893555039243
+        * E**-2.68
+        * (1 + (E / (4.49e6 * 7)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 3233.6058556071825
+        * E**-2.67
+        * (1 + (E / (4.49e6 * 13)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 1197.9991050096223
+        * E**-2.58
+        * (1 + (E / (4.49e6 * 26)) ** 1.9) ** (-2.1 / 1.9),
     ]
 
 
@@ -198,12 +262,25 @@ class Hoerandel_IT(CosmicRayFlux):
     """
 
     # pylint: disable=invalid-name
-    ptypes = [PDGCode.PPlus, PDGCode.He4Nucleus, PDGCode.O16Nucleus, PDGCode.Fe56Nucleus]
+    ptypes = [
+        PDGCode.PPlus,
+        PDGCode.He4Nucleus,
+        PDGCode.O16Nucleus,
+        PDGCode.Fe56Nucleus,
+    ]
     _funcs = [
-        lambda E: 11776.445965025136 * E ** -2.71 * (1 + (E / (4.49e6 * 1)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 4749.371132996256 * E ** -2.64 * (1 + (E / (4.49e6 * 2)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 7017.460455316394 * E ** -2.68 * (1 + (E / (4.49e6 * 8)) ** 1.9) ** (-2.1 / 1.9),
-        lambda E: 1197.9991050096223 * E ** -2.58 * (1 + (E / (4.49e6 * 26)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 11776.445965025136
+        * E**-2.71
+        * (1 + (E / (4.49e6 * 1)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 4749.371132996256
+        * E**-2.64
+        * (1 + (E / (4.49e6 * 2)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 7017.460455316394
+        * E**-2.68
+        * (1 + (E / (4.49e6 * 8)) ** 1.9) ** (-2.1 / 1.9),
+        lambda E: 1197.9991050096223
+        * E**-2.58
+        * (1 + (E / (4.49e6 * 26)) ** 1.9) ** (-2.1 / 1.9),
     ]
 
 
@@ -211,6 +288,7 @@ class GaisserHillas(CosmicRayFlux):
     r"""
     Spectral fits from an internal report\ [#Gaisser1]_ and in Astropart. Phys\ [#Gaisser2]_ by Tom Gaisser.
     """
+
     ptypes = [
         PDGCode.PPlus,
         PDGCode.He4Nucleus,
@@ -238,6 +316,7 @@ class GaisserH3a(CosmicRayFlux):
     instead just the extra-galactic accelerators reaching their
     highest energy.
     """
+
     ptypes = [
         PDGCode.PPlus,
         PDGCode.He4Nucleus,
@@ -246,21 +325,21 @@ class GaisserH3a(CosmicRayFlux):
         PDGCode.Fe56Nucleus,
     ]
     _funcs = [
-        lambda E: 7860 * E ** -2.66 * exp(-E / (4e6 * 1))
-        + 20.0 * E ** -2.4 * exp(-E / (3e7 * 1))
-        + 1.70 * E ** -2.4 * exp(-E / (2e9 * 1)),
-        lambda E: 3550 * E ** -2.58 * exp(-E / (4e6 * 2))
-        + 20.0 * E ** -2.4 * exp(-E / (3e7 * 2))
-        + 1.70 * E ** -2.4 * exp(-E / (2e9 * 2)),
-        lambda E: 2200 * E ** -2.63 * exp(-E / (4e6 * 7))
-        + 13.4 * E ** -2.4 * exp(-E / (3e7 * 7))
-        + 1.14 * E ** -2.4 * exp(-E / (2e9 * 7)),
-        lambda E: 1430 * E ** -2.67 * exp(-E / (4e6 * 13))
-        + 13.4 * E ** -2.4 * exp(-E / (3e7 * 13))
-        + 1.14 * E ** -2.4 * exp(-E / (2e9 * 13)),
-        lambda E: 2120 * E ** -2.63 * exp(-E / (4e6 * 26))
-        + 13.4 * E ** -2.4 * exp(-E / (3e7 * 26))
-        + 1.14 * E ** -2.4 * exp(-E / (2e9 * 26)),
+        lambda E: 7860 * E**-2.66 * exp(-E / (4e6 * 1))
+        + 20.0 * E**-2.4 * exp(-E / (3e7 * 1))
+        + 1.70 * E**-2.4 * exp(-E / (2e9 * 1)),
+        lambda E: 3550 * E**-2.58 * exp(-E / (4e6 * 2))
+        + 20.0 * E**-2.4 * exp(-E / (3e7 * 2))
+        + 1.70 * E**-2.4 * exp(-E / (2e9 * 2)),
+        lambda E: 2200 * E**-2.63 * exp(-E / (4e6 * 7))
+        + 13.4 * E**-2.4 * exp(-E / (3e7 * 7))
+        + 1.14 * E**-2.4 * exp(-E / (2e9 * 7)),
+        lambda E: 1430 * E**-2.67 * exp(-E / (4e6 * 13))
+        + 13.4 * E**-2.4 * exp(-E / (3e7 * 13))
+        + 1.14 * E**-2.4 * exp(-E / (2e9 * 13)),
+        lambda E: 2120 * E**-2.63 * exp(-E / (4e6 * 26))
+        + 13.4 * E**-2.4 * exp(-E / (3e7 * 26))
+        + 1.14 * E**-2.4 * exp(-E / (2e9 * 26)),
     ]
 
 
@@ -271,6 +350,7 @@ class GaisserH4a(CosmicRayFlux):
     In the model H4a, on the other hand, the extra-galactic component
     is assumed to be all protons.
     """
+
     ptypes = [
         PDGCode.PPlus,
         PDGCode.He4Nucleus,
@@ -279,13 +359,17 @@ class GaisserH4a(CosmicRayFlux):
         PDGCode.Fe56Nucleus,
     ]
     _funcs = [
-        lambda E: 7860 * E ** -2.66 * exp(-E / (4e6 * 1))
-        + 20.0 * E ** -2.4 * exp(-E / (3e7 * 1))
-        + 200 * E ** -2.6 * exp(-E / 6e10),
-        lambda E: 3550 * E ** -2.58 * exp(-E / (4e6 * 2)) + 20.0 * E ** -2.4 * exp(-E / (3e7 * 2)),
-        lambda E: 2200 * E ** -2.63 * exp(-E / (4e6 * 7)) + 13.4 * E ** -2.4 * exp(-E / (3e7 * 7)),
-        lambda E: 1430 * E ** -2.67 * exp(-E / (4e6 * 13)) + 13.4 * E ** -2.4 * exp(-E / (3e7 * 13)),
-        lambda E: 2120 * E ** -2.63 * exp(-E / (4e6 * 26)) + 13.4 * E ** -2.4 * exp(-E / (3e7 * 26)),
+        lambda E: 7860 * E**-2.66 * exp(-E / (4e6 * 1))
+        + 20.0 * E**-2.4 * exp(-E / (3e7 * 1))
+        + 200 * E**-2.6 * exp(-E / 6e10),
+        lambda E: 3550 * E**-2.58 * exp(-E / (4e6 * 2))
+        + 20.0 * E**-2.4 * exp(-E / (3e7 * 2)),
+        lambda E: 2200 * E**-2.63 * exp(-E / (4e6 * 7))
+        + 13.4 * E**-2.4 * exp(-E / (3e7 * 7)),
+        lambda E: 1430 * E**-2.67 * exp(-E / (4e6 * 13))
+        + 13.4 * E**-2.4 * exp(-E / (3e7 * 13)),
+        lambda E: 2120 * E**-2.63 * exp(-E / (4e6 * 26))
+        + 13.4 * E**-2.4 * exp(-E / (3e7 * 26)),
     ]
 
 
@@ -297,18 +381,26 @@ class GaisserH4a_IT(CosmicRayFlux):
     This is the flux used as an "a priori" estimate of mass-composition to produce the IceTop-only
     flux\ [#Aartsen]_.
     """
+
     # pylint: disable=invalid-name
-    ptypes = [PDGCode.PPlus, PDGCode.He4Nucleus, PDGCode.O16Nucleus, PDGCode.Fe56Nucleus]
+    ptypes = [
+        PDGCode.PPlus,
+        PDGCode.He4Nucleus,
+        PDGCode.O16Nucleus,
+        PDGCode.Fe56Nucleus,
+    ]
     _funcs = [
-        lambda E: 7860 * E ** -2.66 * exp(-E / (4e6 * 1))
-        + 20.0 * E ** -2.4 * exp(-E / (3e7 * 1))
-        + 200 * E ** -2.6 * exp(-E / 6e10),
-        lambda E: 3550 * E ** -2.58 * exp(-E / (4e6 * 2)) + 20.0 * E ** -2.4 * exp(-E / (3e7 * 2)),
-        lambda E: 2200 * E ** -2.63 * exp(-E / (4e6 * 7))
-        + 13.4 * E ** -2.4 * exp(-E / (3e7 * 7))
-        + 1430 * E ** -2.67 * exp(-E / (4e6 * 13))
-        + 13.4 * E ** -2.4 * exp(-E / (3e7 * 13)),
-        lambda E: 2120 * E ** -2.63 * exp(-E / (4e6 * 26)) + 13.4 * E ** -2.4 * exp(-E / (3e7 * 26)),
+        lambda E: 7860 * E**-2.66 * exp(-E / (4e6 * 1))
+        + 20.0 * E**-2.4 * exp(-E / (3e7 * 1))
+        + 200 * E**-2.6 * exp(-E / 6e10),
+        lambda E: 3550 * E**-2.58 * exp(-E / (4e6 * 2))
+        + 20.0 * E**-2.4 * exp(-E / (3e7 * 2)),
+        lambda E: 2200 * E**-2.63 * exp(-E / (4e6 * 7))
+        + 13.4 * E**-2.4 * exp(-E / (3e7 * 7))
+        + 1430 * E**-2.67 * exp(-E / (4e6 * 13))
+        + 13.4 * E**-2.4 * exp(-E / (3e7 * 13)),
+        lambda E: 2120 * E**-2.63 * exp(-E / (4e6 * 26))
+        + 13.4 * E**-2.4 * exp(-E / (3e7 * 26)),
     ]
 
 
@@ -320,6 +412,7 @@ class Honda2004(CosmicRayFlux):
     Note:
         the E_k notation means energy per nucleon!
     """
+
     ptypes = [
         PDGCode.PPlus,
         PDGCode.He4Nucleus,
@@ -329,11 +422,17 @@ class Honda2004(CosmicRayFlux):
     ]
     _funcs = [
         lambda E: (14900) * (E + 2.15 * exp(-0.21 * sqrt(E))) ** (-2.74),
-        lambda E: (14900) * (100 ** (2.71 - 2.74)) * (E + 2.15 * exp(-0.21 * sqrt(E))) ** (-2.71),
-        lambda E: (600 / 4.02) * (E / 4.02 + 1.25 * exp(-0.14 * sqrt(E / 4.02))) ** (-2.64),
-        lambda E: (33.2 / 14.07) * (E / 14.07 + 0.97 * exp(-0.01 * sqrt(E / 14.07))) ** (-2.60),
-        lambda E: (34.2 / 27.13) * (E / 27.13 + 2.14 * exp(-0.01 * sqrt(E / 27.13))) ** (-2.79),
-        lambda E: (4.45 / 56.26) * (E / 56.26 + 3.07 * exp(-0.41 * sqrt(E / 56.26))) ** (-2.68),
+        lambda E: (14900)
+        * (100 ** (2.71 - 2.74))
+        * (E + 2.15 * exp(-0.21 * sqrt(E))) ** (-2.71),
+        lambda E: (600 / 4.02)
+        * (E / 4.02 + 1.25 * exp(-0.14 * sqrt(E / 4.02))) ** (-2.64),
+        lambda E: (33.2 / 14.07)
+        * (E / 14.07 + 0.97 * exp(-0.01 * sqrt(E / 14.07))) ** (-2.60),
+        lambda E: (34.2 / 27.13)
+        * (E / 27.13 + 2.14 * exp(-0.01 * sqrt(E / 27.13))) ** (-2.79),
+        lambda E: (4.45 / 56.26)
+        * (E / 56.26 + 3.07 * exp(-0.41 * sqrt(E / 56.26))) ** (-2.68),
     ]
 
     def _condition(self, energy, pdgid):
@@ -353,17 +452,22 @@ class TIG1996(CosmicRayFlux):
     The parameterization was taken directly from an earlier paper by Thunman et al\ [#Thunman]_.
     Only the nucleon flux was given, so for simplicity we treat it as a proton-only flux.
     """
+
     ptypes = [PDGCode.PPlus]
-    _funcs = [lambda E: 1.70e4 * E ** -2.7, lambda E: 1.74e6 * E ** -3.0, 0]
+    _funcs = [lambda E: 1.70e4 * E**-2.7, lambda E: 1.74e6 * E**-3.0, 0]
 
     def _condition(self, energy, pdgid):
-        return [(pdgid == 2212) * (energy < 5e6), (pdgid == 2212) * (energy >= 5e6)]
+        return [
+            (pdgid == 2212) * (energy < 5e6),
+            (pdgid == 2212) * (energy >= 5e6),
+        ]
 
 
 class GlobalFitGST(CosmicRayFlux):
     r"""
     Spectral fits by Gaisser, Stanev and Tilav\ [#GaisserStanevTilav]_.
     """
+
     ptypes = [
         PDGCode.PPlus,
         PDGCode.He4Nucleus,
@@ -372,15 +476,18 @@ class GlobalFitGST(CosmicRayFlux):
         PDGCode.Fe56Nucleus,
     ]
     _funcs = [
-        lambda E: 7000 * E ** -2.66 * exp(-E / 1.2e5)
-        + 150 * E ** -2.4 * exp(-E / 4e6)
-        + 14 * E ** -2.4 * exp(-E / 1.3e9),
-        lambda E: 3200 * E ** -2.58 * exp(-E / 1.2e5 / 2) + 65 * E ** -2.3 * exp(-E / 4e6 / 2),
-        lambda E: 100 * E ** -2.40 * exp(-E / 1.2e5 / 7) + 6 * E ** -2.3 * exp(-E / 4e6 / 7),
-        lambda E: 130 * E ** -2.40 * exp(-E / 1.2e5 / 13) + 7 * E ** -2.3 * exp(-E / 4e6 / 13),
-        lambda E: 60 * E ** -2.30 * exp(-E / 1.2e5 / 26)
-        + 2.3 * E ** -2.2 * exp(-E / 4e6 / 26)
-        + 0.025 * E ** -2.2 * exp(-E / 1.3e9 / 26),
+        lambda E: 7000 * E**-2.66 * exp(-E / 1.2e5)
+        + 150 * E**-2.4 * exp(-E / 4e6)
+        + 14 * E**-2.4 * exp(-E / 1.3e9),
+        lambda E: 3200 * E**-2.58 * exp(-E / 1.2e5 / 2)
+        + 65 * E**-2.3 * exp(-E / 4e6 / 2),
+        lambda E: 100 * E**-2.40 * exp(-E / 1.2e5 / 7)
+        + 6 * E**-2.3 * exp(-E / 4e6 / 7),
+        lambda E: 130 * E**-2.40 * exp(-E / 1.2e5 / 13)
+        + 7 * E**-2.3 * exp(-E / 4e6 / 13),
+        lambda E: 60 * E**-2.30 * exp(-E / 1.2e5 / 26)
+        + 2.3 * E**-2.2 * exp(-E / 4e6 / 26)
+        + 0.025 * E**-2.2 * exp(-E / 1.3e9 / 26),
     ]
 
 
@@ -461,4 +568,3 @@ class _references:
        `Frontiers of Physics 8, 748 (2013) <https://doi.org/10.1007/s11467-013-0319-7>`_.
        `arXiv:1303.3565 <https://arxiv.org/abs/1303.3565v1>`_.
     """
-

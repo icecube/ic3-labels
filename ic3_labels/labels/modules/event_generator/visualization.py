@@ -9,9 +9,7 @@ from .utils import get_track_energy_depositions, compute_stochasticity
 
 
 class MuonLossVisualizer(icetray.I3ConditionalModule):
-
-    """Class to visualize muon energy losses and the associated labels.
-    """
+    """Class to visualize muon energy losses and the associated labels."""
 
     def __init__(self, context):
         """initialize module.
@@ -22,15 +20,14 @@ class MuonLossVisualizer(icetray.I3ConditionalModule):
             Description
         """
         icetray.I3ConditionalModule.__init__(self, context)
-        self.AddOutBox('OutBox')
-        self.AddParameter('plot_dir', 'A directory for the plots', 'plots')
-        self.AddParameter('mc_tree_name', 'Name of the I3MCTree', 'I3MCTree')
+        self.AddOutBox("OutBox")
+        self.AddParameter("plot_dir", "A directory for the plots", "plots")
+        self.AddParameter("mc_tree_name", "Name of the I3MCTree", "I3MCTree")
 
     def Configure(self):
-        """Configures Module and loads BDT from file.
-        """
-        self.plot_dir = self.GetParameter('plot_dir')
-        self.mc_tree_name = self.GetParameter('mc_tree_name')
+        """Configures Module and loads BDT from file."""
+        self.plot_dir = self.GetParameter("plot_dir")
+        self.mc_tree_name = self.GetParameter("mc_tree_name")
         self.counter = 0
 
     def DAQ(self, frame):
@@ -48,19 +45,28 @@ class MuonLossVisualizer(icetray.I3ConditionalModule):
         muon = mu_utils.get_muon_of_inice_neutrino(frame)
 
         if muon is not None:
-            self.make_plots(mc_tree, muon, file=os.path.join(
-                self.plot_dir, 'energy_loss_cdf_{:08d}.png'.format(
-                    self.counter)))
+            self.make_plots(
+                mc_tree,
+                muon,
+                file=os.path.join(
+                    self.plot_dir,
+                    "energy_loss_cdf_{:08d}.png".format(self.counter),
+                ),
+            )
 
         # push frame to next modules
         self.PushFrame(frame)
         self.counter += 1
 
-    def make_plots(self, mc_tree, track,
-                   num_losses_to_remove=[0, 5],
-                   correct_for_em_loss=True,
-                   extend_boundary=300,
-                   file=None):
+    def make_plots(
+        self,
+        mc_tree,
+        track,
+        num_losses_to_remove=[0, 5],
+        correct_for_em_loss=True,
+        extend_boundary=300,
+        file=None,
+    ):
         """Make energy loss plots for the provided track
 
         Parameters
@@ -91,57 +97,70 @@ class MuonLossVisualizer(icetray.I3ConditionalModule):
             Description
         """
 
-        if track.type not in [dataclasses.I3Particle.MuMinus,
-                              dataclasses.I3Particle.MuPlus]:
+        if track.type not in [
+            dataclasses.I3Particle.MuMinus,
+            dataclasses.I3Particle.MuPlus,
+        ]:
             raise NotImplementedError(
-                'Particle type {} not yet supported'.format(track.type))
+                "Particle type {} not yet supported".format(track.type)
+            )
 
         # Calculate total energy by not removing any cascades
         energy_depositions_dict = get_track_energy_depositions(
-                mc_tree, track, 0,
-                correct_for_em_loss=correct_for_em_loss,
-                extend_boundary=extend_boundary)
-        update_distances = energy_depositions_dict['update_distances']
-        update_energies = energy_depositions_dict['update_energies']
+            mc_tree,
+            track,
+            0,
+            correct_for_em_loss=correct_for_em_loss,
+            extend_boundary=extend_boundary,
+        )
+        update_distances = energy_depositions_dict["update_distances"]
+        update_energies = energy_depositions_dict["update_energies"]
 
         total_energy = update_energies[0] - update_energies[-1]
 
-        # Calculate continous losses by removing all cascades
+        # Calculate continuous losses by removing all cascades
         energy_depositions_dict = get_track_energy_depositions(
-                mc_tree, track, 10000,
-                correct_for_em_loss=correct_for_em_loss,
-                extend_boundary=extend_boundary)
+            mc_tree,
+            track,
+            10000,
+            correct_for_em_loss=correct_for_em_loss,
+            extend_boundary=extend_boundary,
+        )
 
-        cont_distances = energy_depositions_dict['update_distances']
-        cont_energies = energy_depositions_dict['update_energies']
-        cont_cascades = energy_depositions_dict['cascades']
+        cont_distances = energy_depositions_dict["update_distances"]
+        cont_energies = energy_depositions_dict["update_energies"]
+        cont_cascades = energy_depositions_dict["cascades"]
 
-        cont_stochasticity, cont_area_above, cont_area_below = \
+        cont_stochasticity, cont_area_above, cont_area_below = (
             compute_stochasticity(cont_distances, cont_energies)
+        )
 
         # define label format
-        label_format = 'N: {:3d} | E: {:3.3f} TeV [{:2.2f}%]'
-        label_format += ' | Stoch.: {:3.2f} [{:3.2f}, {:3.2f}]'
+        label_format = "N: {:3d} | E: {:3.3f} TeV [{:2.2f}%]"
+        label_format += " | Stoch.: {:3.2f} [{:3.2f}, {:3.2f}]"
 
         fig, ax = plt.subplots(figsize=(9, 6))
         for num_remove in num_losses_to_remove:
 
             # compute energy losses
             energy_depositions_dict = get_track_energy_depositions(
-                    mc_tree, track, num_remove,
-                    correct_for_em_loss=correct_for_em_loss,
-                    extend_boundary=extend_boundary)
+                mc_tree,
+                track,
+                num_remove,
+                correct_for_em_loss=correct_for_em_loss,
+                extend_boundary=extend_boundary,
+            )
 
-            update_distances = energy_depositions_dict['update_distances']
-            update_energies = energy_depositions_dict['update_energies']
-            cascades = energy_depositions_dict['cascades']
-            track_updates = energy_depositions_dict['track_updates']
+            update_distances = energy_depositions_dict["update_distances"]
+            update_energies = energy_depositions_dict["update_energies"]
+            cascades = energy_depositions_dict["cascades"]
 
             if len(update_distances) > 0:
 
                 # compute stochasticity and area above/below diagonal
                 stochasticity, area_above, area_below = compute_stochasticity(
-                    update_distances, update_energies)
+                    update_distances, update_energies
+                )
 
                 cum_energies = np.cumsum(-np.diff(update_energies))
                 ax.plot(
@@ -149,32 +168,40 @@ class MuonLossVisualizer(icetray.I3ConditionalModule):
                     [0] + list(cum_energies / cum_energies[-1]),
                     label=label_format.format(
                         len(cascades),
-                        cum_energies[-1] / 1000.,
-                        100 * cum_energies[-1]/total_energy,
+                        cum_energies[-1] / 1000.0,
+                        100 * cum_energies[-1] / total_energy,
                         stochasticity,
                         area_below,
-                        area_above)
+                        area_above,
+                    ),
                 )
 
-        # Plot continous losses
+        # Plot continuous losses
         cum_energies = np.cumsum(-np.diff(cont_energies))
-        ax.plot([cont_distances[0]] + list(cont_distances[1:]),
-                [0] + list(cum_energies / cum_energies[-1]),
-                label=label_format.format(
-                    len(cont_cascades),
-                    cum_energies[-1] / 1000.,
-                    100 * cum_energies[-1]/total_energy,
-                    cont_stochasticity,
-                    cont_area_below,
-                    cont_area_above))
+        ax.plot(
+            [cont_distances[0]] + list(cont_distances[1:]),
+            [0] + list(cum_energies / cum_energies[-1]),
+            label=label_format.format(
+                len(cont_cascades),
+                cum_energies[-1] / 1000.0,
+                100 * cum_energies[-1] / total_energy,
+                cont_stochasticity,
+                cont_area_below,
+                cont_area_above,
+            ),
+        )
 
-        ax.axvline(cont_distances[0], linestyle='--', color='0.8')
-        ax.axvline(cont_distances[-1], linestyle='--', color='0.8',
-                   label='Detector Boundary')
+        ax.axvline(cont_distances[0], linestyle="--", color="0.8")
+        ax.axvline(
+            cont_distances[-1],
+            linestyle="--",
+            color="0.8",
+            label="Detector Boundary",
+        )
         ax.legend()
-        ax.set_xlabel('Distance / meter')
-        ax.set_ylabel('CDF')
-        ax.set_title('Track Energy: {:3.3f} TeV'.format(track.energy/1000))
+        ax.set_xlabel("Distance / meter")
+        ax.set_ylabel("CDF")
+        ax.set_title("Track Energy: {:3.3f} TeV".format(track.energy / 1000))
         # ax.grid(color='0.8', alpha=0.5)
 
         if file is not None:

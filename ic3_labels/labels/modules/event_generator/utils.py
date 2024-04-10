@@ -7,14 +7,17 @@ from ic3_labels.labels.utils import muon as mu_utils
 from ic3_labels.labels.utils.cascade import convert_to_em_equivalent
 
 
-def get_track_energy_depositions(mc_tree, track, num_to_remove,
-                                 correct_for_em_loss=True,
-                                 energy_threshold=1.,
-                                 extend_boundary=None,
-                                 atol_time=1e-2,
-                                 atol_pos=0.5,
-                                 fix_muon_pair_production_bug=False,
-                                 ):
+def get_track_energy_depositions(
+    mc_tree,
+    track,
+    num_to_remove,
+    correct_for_em_loss=True,
+    energy_threshold=1.0,
+    extend_boundary=None,
+    atol_time=1e-2,
+    atol_pos=0.5,
+    fix_muon_pair_production_bug=False,
+):
     """Get a list of track energy updates and a number of highest energy
     cascades that were removed from the track.
 
@@ -97,10 +100,13 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
 
     # Other tracks such at taus might require additional handling of edge
     # cases. Remove for now
-    if track.type not in [dataclasses.I3Particle.MuMinus,
-                          dataclasses.I3Particle.MuPlus]:
+    if track.type not in [
+        dataclasses.I3Particle.MuMinus,
+        dataclasses.I3Particle.MuPlus,
+    ]:
         raise NotImplementedError(
-            'Particle type {} not yet supported'.format(track.type))
+            "Particle type {} not yet supported".format(track.type)
+        )
 
     # get all daughters of track
     daughters = mc_tree.get_daughters(track)
@@ -171,8 +177,10 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
                 if mu_pairs[0].pdg_encoding == -mu_pairs[1].pdg_encoding:
 
                     # make sure this case only happens outside
-                    assert (daughter.pos.rho >= 800 or
-                            np.abs(daughter.pos.z) >= 800), daughter
+                    assert (
+                        daughter.pos.rho >= 800
+                        or np.abs(daughter.pos.z) >= 800
+                    ), daughter
 
                     is_pair_production = True
                 else:
@@ -191,7 +199,7 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
                 if daughter == mu_pairs[0] or daughter == mu_pairs[1]:
                     is_pair_production = True
             else:
-                raise ValueError('Unexpected number of muons: ', mu_pairs)
+                raise ValueError("Unexpected number of muons: ", mu_pairs)
 
             # if we want to fix for the potential muon-pair-production but
             # we need to account for when the track hits the floor of 0 GeV
@@ -205,12 +213,16 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
                 if daughter.energy <= 1e-5:
                     # find corresponding stochastic loss by checking
                     # if times of vertices match in neighboring daughters
-                    delta_energy = 0.
-                    if index > 0 and (np.abs(daughters[index - 1].time -
-                                             daughter.time) < atol_time):
+                    delta_energy = 0.0
+                    if index > 0 and (
+                        np.abs(daughters[index - 1].time - daughter.time)
+                        < atol_time
+                    ):
                         delta_energy = daughters[index - 1].energy
-                    elif index < n_daughters - 1 and (np.abs(daughters[
-                            index + 1].time - daughter.time) < atol_time):
+                    elif index < n_daughters - 1 and (
+                        np.abs(daughters[index + 1].time - daughter.time)
+                        < atol_time
+                    ):
                         delta_energy = daughters[index + 1].energy
 
                     # correct for remaining energy of track before it hit
@@ -220,8 +232,10 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
                         has_hit_floor = True
 
                         if last_positive_track_update is not None:
-                            assert (last_positive_track_update.pdg_encoding
-                                    == daughter.pdg_encoding)
+                            assert (
+                                last_positive_track_update.pdg_encoding
+                                == daughter.pdg_encoding
+                            )
                             assert last_positive_track_update.energy > 0
                             delta_energy -= last_positive_track_update.energy
 
@@ -263,19 +277,20 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
             if daughter.type == track.type:
                 eps_boundary = 1.0
             else:
-                eps_boundary = 0.
+                eps_boundary = 0.0
 
             # use IceCube boundary + extent_boundary [meters] to check
             if not geometry.is_in_detector_bounds(
-                    daughter.pos,
-                    extend_boundary=extend_boundary + eps_boundary):
+                daughter.pos, extend_boundary=extend_boundary + eps_boundary
+            ):
                 if daughter.type == track.type:
                     if not track_entered_volume:
                         last_update_outside = daughter
 
                         if fix_muon_pair_production_bug:
                             last_update_outside = dataclasses.I3Particle(
-                                last_update_outside)
+                                last_update_outside
+                            )
                             last_update_outside.energy += muon_pair_prod_energy
                 continue
 
@@ -317,8 +332,10 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
     # find the n highest energy depositions and remove these
     indices = np.argsort(stoch_energies)
     sorted_stoch_daughters = [stoch_daughters[i] for i in indices]
-    num_removed = min(num_to_remove, len([d for d in stoch_daughters if
-                                          d.energy > energy_threshold]))
+    num_removed = min(
+        num_to_remove,
+        len([d for d in stoch_daughters if d.energy > energy_threshold]),
+    )
 
     if num_removed == 0:
         cascades = []
@@ -351,35 +368,41 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
 
             # find the track update at the point of the stochastic loss
             index = get_update_index(
-                update_times, update_energies, update_ids, cascade,
+                update_times,
+                update_energies,
+                update_ids,
+                cascade,
                 atol=atol_time,
             )
 
             # the index should only be None if this cascade is part of the
             # decay products, e.g. at the end of the track
             if index is None and np.allclose(
-                    cascade.time, daughters[-1].time, atol=atol_time):
+                cascade.time, daughters[-1].time, atol=atol_time
+            ):
                 unaccounted_daughters.append((cascade, True))
 
-                # we would need to consider the continous losses to estimate
+                # we would need to consider the continuous losses to estimate
                 # the relative energy loss. Instead of doing this, we'll just
                 # add a NaN for now.
-                relative_energy_losses.append(float('nan'))
+                relative_energy_losses.append(float("nan"))
             else:
                 assert index is not None
                 assert np.allclose(
-                    update_times[index], cascade.time, atol=atol_time)
+                    update_times[index], cascade.time, atol=atol_time
+                )
                 assert np.allclose(
                     update_distances[index],
-                    (cascade.pos - track.pos).magnitude, atol=atol_pos)
+                    (cascade.pos - track.pos).magnitude,
+                    atol=atol_pos,
+                )
 
                 # the energy of the muon update is already reduced by the loss.
                 # To obtain the muon energy prior to the loss, we need to add
                 # it back
                 relative_energy_losses.append(
-                    cascade.energy / (
-                        cascade.energy + track_updates[index].energy
-                        )
+                    cascade.energy
+                    / (cascade.energy + track_updates[index].energy)
                 )
 
                 # update all of the remaining track updates
@@ -391,16 +414,17 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
 
         # sanity checks
         assert np.allclose(
-            update_energies[-1] - returned_energy, previous_energy)
+            update_energies[-1] - returned_energy, previous_energy
+        )
         assert (np.diff(update_energies) <= 1e-4).all(), update_energies
 
     else:
 
-        # No track updates exist. We would need to consider the continous
+        # No track updates exist. We would need to consider the continuous
         # losses to estimate the relative energy loss. Instead of doing this,
         # we'll just add NaNs for now.
         for cascade in cascades:
-            relative_energy_losses.append(float('nan'))
+            relative_energy_losses.append(float("nan"))
 
     relative_energy_losses = np.array(relative_energy_losses)
     assert len(relative_energy_losses) == len(cascades)
@@ -415,14 +439,18 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
 
         # find the track update at the point of the stochastic loss
         index = get_update_index(
-            update_times, update_energies, update_ids, daughter,
+            update_times,
+            update_energies,
+            update_ids,
+            daughter,
             atol=atol_time,
         )
         if index is not None:
 
             # perform some sanity checks
             assert np.allclose(
-                update_times[index], daughter.time, atol=atol_time)
+                update_times[index], daughter.time, atol=atol_time
+            )
             assert np.allclose(
                 update_distances[index],
                 (daughter.pos - track.pos).magnitude,
@@ -448,7 +476,7 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
                 delta_energy = daughter.energy - em_energy
 
                 assert delta_energy > -1e-5, delta_energy
-                delta_energy = np.clip(delta_energy, 0., np.inf)
+                delta_energy = np.clip(delta_energy, 0.0, np.inf)
 
                 # need to update additional delta_energy form
                 # update all of the remaining track updates
@@ -465,17 +493,20 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
             # However, we account for the latter case by increasing the
             # convex hull when checking for contained track updates.
             assert np.allclose(
-                daughter.time, daughters[-1].time, atol=atol_time)
+                daughter.time, daughters[-1].time, atol=atol_time
+            )
             unaccounted_daughters.append((daughter, False))
 
     # If there are unnaccounted stochastic energy losses, make sure these
     # are the particle decay
     if len(unaccounted_daughters) > 0:
         assert len(unaccounted_daughters) == 3
-        assert unaccounted_daughters[0][0].pos == \
-            unaccounted_daughters[1][0].pos
-        assert unaccounted_daughters[0][0].pos == \
-            unaccounted_daughters[2][0].pos
+        assert (
+            unaccounted_daughters[0][0].pos == unaccounted_daughters[1][0].pos
+        )
+        assert (
+            unaccounted_daughters[0][0].pos == unaccounted_daughters[2][0].pos
+        )
 
         # add an update distance with the rest of the deposited energy
         if len(update_energies) == 0:
@@ -491,14 +522,18 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
 
         # subtract off energy carried away by neutrinos or not visible
         for daughter, is_accounted_for in unaccounted_daughters:
-            if daughter.type in [
+            if (
+                daughter.type
+                in [
                     dataclasses.I3Particle.NuE,
                     dataclasses.I3Particle.NuMu,
                     dataclasses.I3Particle.NuTau,
                     dataclasses.I3Particle.NuEBar,
                     dataclasses.I3Particle.NuMuBar,
                     dataclasses.I3Particle.NuTauBar,
-                    ] or is_accounted_for:
+                ]
+                or is_accounted_for
+            ):
                 energy_dep -= daughter.energy
 
             elif correct_for_em_loss:
@@ -510,9 +545,11 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
 
         update_distances = np.append(
             update_distances,
-            (track.pos - unaccounted_daughters[0][0].pos).magnitude)
+            (track.pos - unaccounted_daughters[0][0].pos).magnitude,
+        )
         update_energies = np.append(
-            update_energies, previous_energy - energy_dep)
+            update_energies, previous_energy - energy_dep
+        )
 
     # If there is only one track update in the detector, prepend the last one
     # before the detector
@@ -530,20 +567,21 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
 
         # otherwise add the starting track position and energy
         else:
-            update_distances = np.insert(update_distances, 0, 0.)
+            update_distances = np.insert(update_distances, 0, 0.0)
             update_energies = np.insert(update_energies, 0, track.energy)
             track_updates = [track] + track_updates
 
     # energies should be monotonously decreasing except if updates are
     # extremely close to each other
-    assert (np.diff(update_distances)[np.diff(update_energies) >= 0]
-            < 1e-1).all()
+    assert (
+        np.diff(update_distances)[np.diff(update_energies) >= 0] < 1e-1
+    ).all()
 
     # Fix monoticity of energy updates that might have gotten broken due
     # to numerical issues
     energy_corrections = np.diff(update_energies)
-    mask = energy_corrections <= 0.
-    energy_corrections[mask] = 0.
+    mask = energy_corrections <= 0.0
+    energy_corrections[mask] = 0.0
     assert (np.abs(energy_corrections) <= 1e-2).all()
     update_energies[1:] -= energy_corrections
 
@@ -552,24 +590,26 @@ def get_track_energy_depositions(mc_tree, track, num_to_remove,
     assert (np.diff([c.energy for c in cascades]) < 0).all()
 
     return {
-        'update_distances': update_distances,
-        'update_energies': update_energies,
-        'pair_production_muons': pair_production_muons,
-        'cascades': cascades,
-        'track_updates': track_updates,
-        'relative_energy_losses': relative_energy_losses,
+        "update_distances": update_distances,
+        "update_energies": update_energies,
+        "pair_production_muons": pair_production_muons,
+        "cascades": cascades,
+        "track_updates": track_updates,
+        "relative_energy_losses": relative_energy_losses,
     }
 
 
 def get_bundle_energy_depositions(
-            mc_tree, tracks, primary,
-            correct_for_em_loss=True,
-            energy_threshold=1.,
-            extend_boundary=None,
-            atol_time=1e-2,
-            atol_pos=0.5,
-            fix_muon_pair_production_bug=False,
-        ):
+    mc_tree,
+    tracks,
+    primary,
+    correct_for_em_loss=True,
+    energy_threshold=1.0,
+    extend_boundary=None,
+    atol_time=1e-2,
+    atol_pos=0.5,
+    fix_muon_pair_production_bug=False,
+):
     """Get a list of track energy updates for a list of tracks
 
     Combines track updates from the provided list of tracks.
@@ -636,23 +676,24 @@ def get_bundle_energy_depositions(
 
     for track in tracks:
         e_dep_dict = get_track_energy_depositions(
-                mc_tree=mc_tree,
-                track=track,
-                num_to_remove=0,
-                correct_for_em_loss=correct_for_em_loss,
-                energy_threshold=energy_threshold,
-                extend_boundary=extend_boundary,
-                atol_time=atol_time,
-                atol_pos=atol_pos,
-                fix_muon_pair_production_bug=fix_muon_pair_production_bug,
-            )
+            mc_tree=mc_tree,
+            track=track,
+            num_to_remove=0,
+            correct_for_em_loss=correct_for_em_loss,
+            energy_threshold=energy_threshold,
+            extend_boundary=extend_boundary,
+            atol_time=atol_time,
+            atol_pos=atol_pos,
+            fix_muon_pair_production_bug=fix_muon_pair_production_bug,
+        )
 
         if len(e_dep_dict["update_distances"]) > 0:
 
             # correct distances to be relative to primary vertex
             dist_offset = (primary.pos - track.pos).magnitude
-            update_distances = np.array(
-                e_dep_dict["update_distances"]) + dist_offset
+            update_distances = (
+                np.array(e_dep_dict["update_distances"]) + dist_offset
+            )
 
             # take first point among all tracks to be the initial bundle start
             if bundle_dist_start > update_distances[0]:
@@ -683,7 +724,7 @@ def get_bundle_energy_depositions(
         # create energy deposition updates for bundle
         update_distances = np.insert(dep_distances, 0, bundle_dist_start)
         update_energies = np.insert(dep_energies_cum, 0, bundle_energy_start)
-        update_delta_energies = np.insert(dep_energies, 0, 0.)
+        update_delta_energies = np.insert(dep_energies, 0, 0.0)
 
         # some basic sanity checks
         assert np.all(update_energies >= 0), update_energies
@@ -696,14 +737,15 @@ def get_bundle_energy_depositions(
         update_delta_energies = np.atleast_1d([])
 
     return {
-        'update_distances': update_distances,
-        'update_energies': update_energies,
-        'update_delta_energies': update_delta_energies,
+        "update_distances": update_distances,
+        "update_energies": update_energies,
+        "update_delta_energies": update_delta_energies,
     }
 
 
-def get_update_index(update_times, update_energies, update_ids, cascade,
-                     atol=1e-2):
+def get_update_index(
+    update_times, update_energies, update_ids, cascade, atol=1e-2
+):
     """Find the track update index at the given distance
 
     Parameters
@@ -736,13 +778,16 @@ def get_update_index(update_times, update_energies, update_ids, cascade,
 
     # perform sanity checks
     if not np.allclose(update_times[index], cascade.time, atol=atol):
-        raise ValueError('Times do not match: {} != {}!'.format(
-            update_times[index], cascade.time))
+        raise ValueError(
+            "Times do not match: {} != {}!".format(
+                update_times[index], cascade.time
+            )
+        )
 
     if index > 0:
         delta_energy = update_energies[index - 1] - update_energies[index]
         if delta_energy < convert_to_em_equivalent(cascade) - 1e-3:
-            msg = 'Energy loss is larger than available energy: {} !> {}!'
+            msg = "Energy loss is larger than available energy: {} !> {}!"
             raise ValueError(msg.format(delta_energy, cascade.energy))
 
     return index
@@ -776,7 +821,8 @@ def compute_stochasticity(update_distances, update_energies):
     rel_distances = cum_distances / cum_distances[-1]
 
     patch_starts, patch_ends, patch_areas = compute_area_difference(
-        rel_distances, cdf_energies)
+        rel_distances, cdf_energies
+    )
 
     stochasticity = np.sum(np.abs(patch_areas)) / 0.5
     area_above = np.sum(patch_areas[patch_areas > 0])
@@ -814,8 +860,8 @@ def compute_area_difference(x_rel, y_rel):
     patch_starts = []
     patch_ends = []
 
-    x_last = 0.
-    y_last = 0.
+    x_last = 0.0
+    y_last = 0.0
     for x, y in zip(x_rel_list, y_rel_list):
 
         # check if there is a crossing over the diagonal
@@ -898,6 +944,6 @@ def get_area_of_patch(x_last, y_last, x, y):
     area_square = (x - x_last) * y_last
 
     # area of triangle (x_last, y_last), (x, y_last), (x, y) [can be negative]
-    area_triangle = (x - x_last) * (y - y_last) / 2.
+    area_triangle = (x - x_last) * (y - y_last) / 2.0
 
     return area_square + area_triangle
