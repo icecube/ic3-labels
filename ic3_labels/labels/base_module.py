@@ -34,12 +34,58 @@ class MCLabelsBase(icetray.I3ConditionalModule):
         self.AddParameter("OutputKey", "Save labels to this frame key.",
                           'LabelsDeepLearning')
 
+        self.AddParameter("RunOnDAQFrames",
+                    "If True, the label module will run on DAQ frames "
+                    "instead of Physics frames",
+                    False)
+
     def Configure(self):
         self._pulse_map_string = self.GetParameter("PulseMapString")
         self._mcpe_series_map_name = self.GetParameter("MCPESeriesMapName")
         self._primary_key = self.GetParameter("PrimaryKey")
         self._convex_hull = self.GetParameter("ConvexHull")
         self._output_key = self.GetParameter("OutputKey")
+        self._run_on_daq = self.GetParameter("RunOnDAQFrames")
+
+    def DAQ(self, frame):
+        """Run on DAQ frames.
+
+        Parameters
+        ----------
+        frame : I3Frame
+            The current DAQ Frame
+        """
+        if self._run_on_daq:
+            self.add_labels(frame)
+
+        self.PushFrame(frame)
+
+    def Physics(self, frame):
+        """Run on Physics frames.
+
+        Parameters
+        ----------
+        frame : I3Frame
+            The current Physics Frame
+        """
+        if not self._run_on_daq:
+            self.add_labels(frame)
+
+        self.PushFrame(frame)
+
+    def add_labels(self, frame):
+        """Add labels to frame
+
+        This method should be implemented by the derived class.
+        Labels should be added to the frame using the key specified in
+        self._output_key.
+
+        Parameters
+        ----------
+        frame : I3Frame
+            The frame to which to add the labels.
+        """
+        raise NotImplementedError
 
     def Geometry(self, frame):
         geoMap = frame['I3Geometry'].omgeo
