@@ -290,7 +290,7 @@ def get_generator_settings(
             * I3Units.deg,
             ZenithMax=get_steering_param("NUGEN::zenithmax", type=float)
             * I3Units.deg,
-            **nugen_kwargs,
+            **nugen_kwargs
         )
 
     elif category == "CORSIKA-in-ice":

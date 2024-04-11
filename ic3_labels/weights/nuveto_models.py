@@ -621,7 +621,7 @@ class AtmosphericNuVeto(object):
         season="full_year",
         flux_type="total",
         random_state=None,
-        **kwargs,
+        **kwargs
     ):
         """Initialize AtmosphericNuVeto Instance
 
