@@ -454,7 +454,7 @@ def WeightEvents(
             AddMCEqWeights,
             "AddMCEqWeights",
             n_files=dataset_n_files,
-            **mceq_kwargs,
+            **mceq_kwargs
         )
 
     if add_nuveto_pf and dataset_type in ["nugen"]:
@@ -463,7 +463,7 @@ def WeightEvents(
         tray.AddModule(
             AddNuVetoPassingFraction,
             "AddNuVetoPassingFraction",
-            **nuveto_kwargs,
+            **nuveto_kwargs
         )
 
     if add_mese_weights and dataset_type in ["muongun", "nugen", "genie"]:

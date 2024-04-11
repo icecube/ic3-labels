@@ -374,7 +374,7 @@ def get_spline(
                 interaction_model=interaction_model,
                 primary_model=pmodel,
                 theta_deg=0.0,
-                **config_updates,
+                **config_updates
             )
             e_grid = np.log10(deepcopy(mceq_run.e_grid))
             spline_dicts, flux_dicts = __solve_month__(
@@ -475,7 +475,7 @@ class MCEQFlux(object):
         season="full_year",
         flux_type="total",
         random_state=None,
-        **kwargs,
+        **kwargs
     ):
         """Initialize MCEQFlux Instance
 

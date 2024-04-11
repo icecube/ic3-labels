@@ -2,7 +2,6 @@
 """
 
 from __future__ import print_function, division
-import numpy as np
 from icecube import dataclasses, MuonGun, simclasses
 from icecube.phys_services import I3Calculator
 

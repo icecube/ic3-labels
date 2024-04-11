@@ -2,7 +2,6 @@
 """
 
 from __future__ import print_function, division
-import numpy as np
 from icecube import dataclasses, icetray, phys_services
 
 from ic3_labels.labels.utils import detector
