@@ -1,4 +1,3 @@
-__version__ = "1.1.0-dev"
 __author__ = "Mirco Huennefeld"
 __author_email__ = "mirco.huennefeld@tu-dortmund.de"
 __description__ = "MC weights and labels for IceCube simulation data"

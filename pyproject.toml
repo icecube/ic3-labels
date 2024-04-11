@@ -38,10 +38,10 @@ dev = ["pre-commit","black","ruff"]
 test = ["pytest", "coverage", "codecov"]
 
 [project.urls]
-Homepage = "https://github.com/icecube/ic3_labels"
-Documentation = "https://github.com/icecube/ic3_labels"
-"Bug Tracker" = "https://github.com/icecube/ic3_labels/issues"
-Discussions = "https://github.com/icecube/ic3_labels/discussions"
+Homepage = "https://github.com/icecube/ic3-labels"
+Documentation = "https://github.com/icecube/ic3-labels"
+"Bug Tracker" = "https://github.com/icecube/ic3-labels/issues"
+Discussions = "https://github.com/icecube/ic3-labels/discussions"
 
 [tool.setuptools]
 packages = ["ic3_labels"]
