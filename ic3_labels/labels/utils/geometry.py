@@ -2,6 +2,7 @@
 """
 
 from __future__ import print_function, division
+import sys
 import math
 import numpy as np
 import logging
@@ -115,6 +116,18 @@ def is_in_detector_bounds(pos, extend_boundary=60):
     bool
         True if within detector bounds + extend_boundary
     """
+    if not math.isfinite(extend_boundary):
+        if math.isinf(extend_boundary):
+            # Choose a finite value that is close to largest float
+            # Note: choosing sys.float_info.max directly results in
+            #       issues in ExtrudedPolygon, where the point is
+            #       always evaluated as outside (even if it is
+            #       inside the convex hull with the specified padding.)
+            extend_boundary = sys.float_info.max / 10.0
+        else:
+            raise ValueError(
+                f"extend_boundary must be finite, got {extend_boundary}"
+            )
     convex_hull = ExtrudedPolygon(
         detector.icecube_hull_points_i3,
         padding=extend_boundary,
