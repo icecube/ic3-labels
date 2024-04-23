@@ -5,7 +5,7 @@ from __future__ import print_function, division
 import numpy as np
 from icecube import dataclasses, MuonGun, simclasses
 from icecube.phys_services import I3Calculator
-from icecube.icetray.i3logging import log_error, log_warn
+from icecube.icetray.i3logging import log_error, log_warn, log_info
 
 from ic3_labels.labels.utils import geometry
 from ic3_labels.labels.utils.general import get_ids_of_particle_and_daughters
@@ -103,12 +103,14 @@ def get_muongun_track_cache(
     Returns
     -------
     dict
-        A dictionary with items {particle_id: MuonGun.Track}
+        A dictionary with items {particle_id: MuonGun.Track}.
+        None if no I3MCTree or MMCTrackList in frame.
     MuonGun.TrackList
         The list of MuonGun.Tracks
+        None if no I3MCTree or MMCTrackList in frame.
     """
     if mctree_name not in frame or mmctracklist_name not in frame:
-        log_warn(
+        log_info(
             "No I3MCTree or MMCTrackList in frame. "
             "Returning empty track cache."
         )
