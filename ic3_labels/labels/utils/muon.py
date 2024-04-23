@@ -107,6 +107,13 @@ def get_muongun_track_cache(
     MuonGun.TrackList
         The list of MuonGun.Tracks
     """
+    if mctree_name not in frame or mmctracklist_name not in frame:
+        log_warn(
+            "No I3MCTree or MMCTrackList in frame. "
+            "Returning empty track cache."
+        )
+        return None, None
+
     track_list = MuonGun.Track.harvest(
         frame[mctree_name],
         frame[mmctracklist_name],
