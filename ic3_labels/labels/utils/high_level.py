@@ -747,7 +747,10 @@ def get_misc_information(
         Dictionary with all labels
     """
     info_dict = {}
-    in_ice_pulses = frame[pulse_map_string].apply(frame)
+    in_ice_pulses = dataclasses.I3RecoPulseSeriesMap.from_frame(
+        frame,
+        pulse_map_string,
+    )
 
     TotalNoOfHitDOMs = len(in_ice_pulses.keys())
     TotalNoOfPulses = 0

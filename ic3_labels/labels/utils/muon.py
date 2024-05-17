@@ -1560,9 +1560,10 @@ def get_most_visible_muon_inside(
         counter = {(i.majorID, i.minorID): 0.0 for i in ids}
 
         # get pulses defined by pulse_map_string
-        in_ice_pulses = frame[pulse_map_string]
-        if isinstance(in_ice_pulses, dataclasses.I3RecoPulseSeriesMapMask):
-            in_ice_pulses = in_ice_pulses.apply(frame)
+        in_ice_pulses = dataclasses.I3RecoPulseSeriesMap.from_frame(
+            frame,
+            pulse_map_string,
+        )
 
         # get candidate keys
         valid_keys = set(frame[mcpe_series_map_name].keys())

@@ -36,11 +36,7 @@ def get_significant_energy_loss(
         direction, energy, and time set.
     """
     # get pulses
-    pulses = frame[pulse_key]
-    if isinstance(pulses, dataclasses.I3RecoPulseSeriesMapMask) or isinstance(
-        pulses, dataclasses.I3RecoPulseSeriesMapUnion
-    ):
-        pulses = pulses.apply(frame)
+    pulses = dataclasses.I3RecoPulseSeriesMap.from_frame(frame, pulse_key)
 
     # collect positions and charge of hit DOMs
     positions = []
@@ -373,9 +369,10 @@ def get_pulse_map(
         ) not in ids, "Daughter particle with id (0,0) should not exist"
 
         # get pulses defined by pulse_map_string
-        in_ice_pulses = frame[pulse_map_string]
-        if isinstance(in_ice_pulses, dataclasses.I3RecoPulseSeriesMapMask):
-            in_ice_pulses = in_ice_pulses.apply(frame)
+        in_ice_pulses = dataclasses.I3RecoPulseSeriesMap.from_frame(
+            frame,
+            pulse_map_string,
+        )
 
         # get candidate keys
         valid_keys = set(frame[mcpe_series_map_name].keys())
@@ -454,9 +451,10 @@ def get_noise_pulse_map(
         valid_keys = set(frame[mcpe_series_map_name].keys())
 
         # get pulses defined by pulse_map_string
-        in_ice_pulses = frame[pulse_map_string]
-        if isinstance(in_ice_pulses, dataclasses.I3RecoPulseSeriesMapMask):
-            in_ice_pulses = in_ice_pulses.apply(frame)
+        in_ice_pulses = dataclasses.I3RecoPulseSeriesMap.from_frame(
+            frame,
+            pulse_map_string,
+        )
 
         # find all pulses resulting from noise
         shared_keys = {
@@ -569,9 +567,10 @@ def get_pulse_primary_mapping(
             mapping_ids[i + 1] = ids
 
         # get pulses defined by pulse_map_string
-        in_ice_pulses = frame[pulse_map_string]
-        if isinstance(in_ice_pulses, dataclasses.I3RecoPulseSeriesMapMask):
-            in_ice_pulses = in_ice_pulses.apply(frame)
+        in_ice_pulses = dataclasses.I3RecoPulseSeriesMap.from_frame(
+            frame,
+            pulse_map_string,
+        )
 
         # now walk through all pulses
         for key, pulses in in_ice_pulses.items():
