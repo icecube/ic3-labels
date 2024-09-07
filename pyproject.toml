@@ -17,7 +17,7 @@ requires-python = ">=2.7"  # Note: unfortunately need python >=2.7
 
 dependencies = [
     'numpy', 'click', 'pyyaml', 'scipy', 'MCEq', 'crflux',
-    'nuVeto',
+    'nuVeto', 'simweights',
 ]
 
 classifiers = [
