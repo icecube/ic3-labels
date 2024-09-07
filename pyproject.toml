@@ -43,8 +43,8 @@ Documentation = "https://github.com/icecube/ic3-labels"
 "Bug Tracker" = "https://github.com/icecube/ic3-labels/issues"
 Discussions = "https://github.com/icecube/ic3-labels/discussions"
 
-[tool.setuptools]
-packages = ["ic3_labels"]
+[tool.setuptools.packages.find]
+where = ["ic3_labels"]
 
 [tool.setuptools.dynamic]
 version = {attr = "ic3_labels.__version__"}
