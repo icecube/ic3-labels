@@ -6,6 +6,45 @@ import numpy as np
 import logging
 
 
+def get_sphere_intersection(radius, anchor, direction):
+    """Get intersections with sphere
+
+    Get intersection distances of an infinite
+    track with sphere around detector center (0, 0, 0).
+
+    Parameters
+    ----------
+    radius : float
+        Radius of sphere [in meters].
+    anchor : I3Position
+        Anchor point of track.
+    direction : I3Direction
+        Direction of track.
+
+    Returns
+    -------
+    tuple or None
+        The distance to the entry and exit point of the track with the
+        sphere around the detector center if the track intersects the
+        sphere. Otherwise None.
+    """
+    p = (
+        direction.x * anchor.x
+        + direction.y * anchor.y
+        + direction.z * anchor.z
+    )
+    term_inside_root = p**2 - (anchor.magnitude**2 - radius**2)
+
+    if term_inside_root < 0:
+        return None
+
+    sqrt_term = np.sqrt(term_inside_root)
+
+    dist_entry = -p - sqrt_term
+    dist_exit = -p + sqrt_term
+    return dist_entry, dist_exit
+
+
 def ray_triangle_intersection(ray_near, ray_dir, triangle):
     """
     Möller–Trumbore intersection algorithm in pure python

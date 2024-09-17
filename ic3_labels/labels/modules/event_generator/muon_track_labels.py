@@ -1,13 +1,105 @@
 import numpy as np
-from icecube import dataclasses, icetray
+from icecube import dataclasses
 
 from ic3_labels.labels.base_module import MCLabelsBase
 from ic3_labels.labels.utils import high_level as hl
 from ic3_labels.labels.utils import muon as mu_utils
+from ic3_labels.labels.utils import geometry as geo_utils
 from ic3_labels.labels.modules.event_generator.utils import (
     get_track_energy_depositions,
     compute_stochasticity,
+    get_muon_from_frame,
 )
+
+
+class EventGeneratorSphereInfTrackLabels(MCLabelsBase):
+    """Generate labels for tracks in the sphere
+
+    The labels contain information of the track such as:
+
+        - information at the entry point of the infinite
+          track in the sphere: (x, y, z, theta, phi, E, t)
+        - information at the exit point of the infinite
+          track in the sphere: (x, y, z, theta, phi, E, t)
+        - Direction of the track (theta, phi)
+
+    """
+
+    def __init__(self, context):
+        MCLabelsBase.__init__(self, context)
+        self.AddParameter(
+            "SphereRadius",
+            "The radius of the sphere around IceCube [in meters].",
+            600,
+        )
+
+    def Configure(self):
+        MCLabelsBase.Configure(self)
+        self._sphere_radius = self.GetParameter("SphereRadius")
+
+    def add_labels(self, frame):
+        """Add labels to frame
+
+        Parameters
+        ----------
+        frame : I3Frame
+            The frame to which to add the labels.
+        """
+        # get track_cache
+        track_cache, _ = mu_utils.get_muongun_track_cache(frame)
+
+        # get muon
+        muon = get_muon_from_frame(frame, primary=frame[self._primary_key])
+
+        # get intersectios with sphere
+        dist_entry, dist_exit = geo_utils.get_sphere_intersection(
+            radius=self._sphere_radius,
+            anchor=muon.pos,
+            direction=muon.dir,
+        )
+
+        entry_pos = muon.pos + dist_entry * muon.dir
+        exit_pos = muon.pos + dist_exit * muon.dir
+
+        # compute angle representation
+        entry_dir = dataclasses.I3Direction(-entry_pos)
+        exit_dir = dataclasses.I3Direction(-exit_pos)
+
+        # get energy at entry and exit point
+        entry_energy = mu_utils.get_muon_energy_at_distance(
+            frame=frame,
+            muon=muon,
+            distance=dist_entry,
+            track_cache=track_cache,
+        )
+        exit_energy = mu_utils.get_muon_energy_at_distance(
+            frame=frame,
+            muon=muon,
+            distance=dist_exit,
+            track_cache=track_cache,
+        )
+
+        # gather labels
+        labels = dataclasses.I3MapStringDouble()
+        labels["entry_x"] = entry_pos.x
+        labels["entry_y"] = entry_pos.y
+        labels["entry_z"] = entry_pos.z
+        labels["entry_t"] = muon.time + dist_entry / muon.speed
+        labels["entry_zenith"] = entry_dir.zenith
+        labels["entry_azimuth"] = entry_dir.azimuth
+        labels["entry_energy"] = entry_energy
+        labels["exit_x"] = exit_pos.x
+        labels["exit_y"] = exit_pos.y
+        labels["exit_z"] = exit_pos.z
+        labels["exit_t"] = muon.time + dist_exit / muon.speed
+        labels["exit_zenith"] = exit_dir.zenith
+        labels["exit_azimuth"] = exit_dir.azimuth
+        labels["exit_energy"] = exit_energy
+        labels["zenith"] = muon.dir.zenith
+        labels["azimuth"] = muon.dir.azimuth
+
+        # write to frame
+        frame.Put(self._output_key, labels)
 
 
 class EventGeneratorMuonTrackLabels(MCLabelsBase):
@@ -64,7 +156,7 @@ class EventGeneratorMuonTrackLabels(MCLabelsBase):
             The frame to which to add the labels.
         """
         # get muon
-        muon = self.get_muon(frame, primary=frame[self._primary_key])
+        muon = get_muon_from_frame(frame, primary=frame[self._primary_key])
 
         # compute energy updates and high energy losses
         energy_depositions_dict = get_track_energy_depositions(
@@ -172,70 +264,3 @@ class EventGeneratorMuonTrackLabels(MCLabelsBase):
 
         # write to frame
         frame.Put(self._output_key, labels)
-
-    def get_muon(self, frame, primary):
-        """Get muon from frame
-
-        Parameters
-        ----------
-        frame : I3Frame
-            The current frame.
-        primary : I3Particle
-            The primary particle.
-
-        Returns
-        -------
-        I3Particle
-            The muon from the frame
-
-        Raises
-        ------
-        ValueError
-            If not muon is found.
-        """
-
-        # NuGen Dataset
-        if primary.is_neutrino:
-            muon = mu_utils.get_muon_of_inice_neutrino(frame)
-
-            if muon is None:
-                print(frame["I3MCTree"])
-                raise ValueError("Did not find a muon!")
-
-        # MuonGun Dataset
-        elif (
-            primary.type_string == "unknown" and primary.pdg_encoding == 0
-        ) or mu_utils.is_muon(primary):
-
-            if mu_utils.is_muon(primary):
-                muon = primary
-
-                # -----------------------------
-                # muon primary: MuonGun dataset
-                # -----------------------------
-                daugters = frame["I3MCTree"].get_daughters(muon)
-                if len(daugters) == 1:
-                    daughter = daugters[0]
-                    if mu_utils.is_muon(daughter) and (
-                        (daughter.id == primary.id)
-                        and (daughter.dir == primary.dir)
-                        and (daughter.pos == primary.pos)
-                        and (daughter.energy == primary.energy)
-                    ):
-                        muon = daughter
-
-            else:
-                daughters = frame["I3MCTree"].get_daughters(primary)
-                muon = daughters[0]
-
-                # Perform some safety checks to make sure that this is MuonGun
-                assert (
-                    len(daughters) == 1
-                ), "Expected 1 daughter for MuonGun, but got {!r}".format(
-                    daughters
-                )
-                assert mu_utils.is_muon(
-                    muon
-                ), "Expected muon but got {!r}".format(muon)
-
-        return muon
