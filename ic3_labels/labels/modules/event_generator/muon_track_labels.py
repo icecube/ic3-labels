@@ -30,7 +30,7 @@ class EventGeneratorSphereInfTrackLabels(MCLabelsBase):
         self.AddParameter(
             "SphereRadius",
             "The radius of the sphere around IceCube [in meters].",
-            600,
+            750,
         )
 
     def Configure(self):
