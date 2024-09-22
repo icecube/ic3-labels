@@ -12,6 +12,81 @@ from ic3_labels.labels.modules.event_generator.utils import (
 )
 
 
+def get_sphere_inf_track_geometry_values(muon, sphere_radius):
+    """Generate geometry values for tracks in the sphere
+
+    The values contain information of the track such as:
+
+        - information at the entry point of the infinite
+          track in the sphere: (x, y, z, theta, phi, t)
+        - information at the exit point of the infinite
+          track in the sphere: (x, y, z, theta, phi, t)
+        - Direction of the track (theta, phi)
+        - Length of infinite track in sphere
+        - Length of the (finite) track in the sphere
+
+    Parameters
+    ----------
+    muon : I3Particle
+        The muon track for which to calculate the values.
+    sphere_radius : float
+        The radius of the sphere around IceCube [in meters].
+
+    Returns
+    -------
+    values : I3MapStringDouble
+        The values for the track.
+    dist_entry : float
+        The distance from the start of the track to the entry point
+        of the sphere.
+    dist_exit : float
+        The distance from the start of the track to the exit point
+        of the sphere.
+    """
+
+    # get intersectios with sphere
+    intersections = geo_utils.get_sphere_intersection(
+        radius=sphere_radius,
+        anchor=muon.pos,
+        direction=muon.dir,
+    )
+    if intersections is None:
+        raise ValueError("No intersection with sphere found!")
+
+    dist_entry, dist_exit = intersections
+    entry_pos = muon.pos + dist_entry * muon.dir
+    exit_pos = muon.pos + dist_exit * muon.dir
+
+    # compute length in detector of finite track
+    end_point = min(dist_exit, muon.length)
+    finite_length = end_point - dist_entry
+
+    # compute angle representation
+    entry_dir = dataclasses.I3Direction(-entry_pos)
+    exit_dir = dataclasses.I3Direction(-exit_pos)
+
+    # gather labels
+    labels = dataclasses.I3MapStringDouble()
+    labels["entry_x"] = entry_pos.x
+    labels["entry_y"] = entry_pos.y
+    labels["entry_z"] = entry_pos.z
+    labels["entry_t"] = muon.time + dist_entry / muon.speed
+    labels["entry_zenith"] = entry_dir.zenith
+    labels["entry_azimuth"] = entry_dir.azimuth
+    labels["exit_x"] = exit_pos.x
+    labels["exit_y"] = exit_pos.y
+    labels["exit_z"] = exit_pos.z
+    labels["exit_t"] = muon.time + dist_exit / muon.speed
+    labels["exit_zenith"] = exit_dir.zenith
+    labels["exit_azimuth"] = exit_dir.azimuth
+    labels["zenith"] = muon.dir.zenith
+    labels["azimuth"] = muon.dir.azimuth
+    labels["inf_length"] = dist_exit - dist_entry
+    labels["finite_length"] = finite_length
+
+    return labels, dist_entry, dist_exit
+
+
 class EventGeneratorSphereInfTrackLabels(MCLabelsBase):
     """Generate labels for tracks in the sphere
 
@@ -57,26 +132,11 @@ class EventGeneratorSphereInfTrackLabels(MCLabelsBase):
         # get muon
         muon = get_muon_from_frame(frame, primary=frame[self._primary_key])
 
-        # get intersectios with sphere
-        intersections = geo_utils.get_sphere_intersection(
-            radius=self._sphere_radius,
-            anchor=muon.pos,
-            direction=muon.dir,
+        # get geometry values based on the infinite track
+        labels, dist_entry, dist_exit = get_sphere_inf_track_geometry_values(
+            muon=muon,
+            sphere_radius=self._sphere_radius,
         )
-        if intersections is None:
-            raise ValueError("No intersection with sphere found!")
-
-        dist_entry, dist_exit = intersections
-        entry_pos = muon.pos + dist_entry * muon.dir
-        exit_pos = muon.pos + dist_exit * muon.dir
-
-        # compute length in detector of finite track
-        end_point = min(dist_exit, muon.length)
-        finite_length = end_point - dist_entry
-
-        # compute angle representation
-        entry_dir = dataclasses.I3Direction(-entry_pos)
-        exit_dir = dataclasses.I3Direction(-exit_pos)
 
         # get energy at entry and exit point
         entry_energy = mu_utils.get_muon_energy_at_distance(
@@ -93,25 +153,8 @@ class EventGeneratorSphereInfTrackLabels(MCLabelsBase):
         )
 
         # gather labels
-        labels = dataclasses.I3MapStringDouble()
-        labels["entry_x"] = entry_pos.x
-        labels["entry_y"] = entry_pos.y
-        labels["entry_z"] = entry_pos.z
-        labels["entry_t"] = muon.time + dist_entry / muon.speed
-        labels["entry_zenith"] = entry_dir.zenith
-        labels["entry_azimuth"] = entry_dir.azimuth
         labels["entry_energy"] = entry_energy
-        labels["exit_x"] = exit_pos.x
-        labels["exit_y"] = exit_pos.y
-        labels["exit_z"] = exit_pos.z
-        labels["exit_t"] = muon.time + dist_exit / muon.speed
-        labels["exit_zenith"] = exit_dir.zenith
-        labels["exit_azimuth"] = exit_dir.azimuth
         labels["exit_energy"] = exit_energy
-        labels["zenith"] = muon.dir.zenith
-        labels["azimuth"] = muon.dir.azimuth
-        labels["inf_length"] = dist_exit - dist_entry
-        labels["finite_length"] = finite_length
         labels["deposited_energy"] = entry_energy - exit_energy
 
         # write to frame
