@@ -45,6 +45,20 @@ def get_sphere_intersection(radius, anchor, direction):
     return dist_entry, dist_exit
 
 
+class Sphere:
+    """Wrapper class for sphere as a convex hull"""
+
+    def __init__(self, radius):
+        self.radius = radius
+
+    def intersection(self, pos, direction):
+        return get_sphere_intersection(
+            radius=self.radius,
+            anchor=pos,
+            direction=direction,
+        )
+
+
 def ray_triangle_intersection(ray_near, ray_dir, triangle):
     """
     Möller–Trumbore intersection algorithm in pure python

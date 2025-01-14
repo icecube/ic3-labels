@@ -5,6 +5,7 @@ from ic3_labels.labels.base_module import MCLabelsBase
 from ic3_labels.labels.utils import high_level as hl
 from ic3_labels.labels.utils import muon as mu_utils
 from ic3_labels.labels.utils import geometry as geo_utils
+from ic3_labels.labels.utils.geometry_scipy import Sphere
 from ic3_labels.labels.modules.event_generator.utils import (
     get_track_energy_depositions,
     compute_stochasticity,
@@ -113,10 +114,18 @@ class EventGeneratorSphereInfTrackLabels(MCLabelsBase):
             "The radius of the sphere around IceCube [in meters].",
             750,
         )
+        self.AddParameter(
+            "EnergyLossBinWidth",
+            "If provided, the energy losses are binned in this "
+            "width [in GeV] and added to the labels.",
+            None,
+        )
 
     def Configure(self):
         MCLabelsBase.Configure(self)
         self._sphere_radius = self.GetParameter("SphereRadius")
+        self._bin_width = self.GetParameter("EnergyLossBinWidth")
+        self._sphere_convex_hull = Sphere(radius=self._sphere_radius)
 
     def add_labels(self, frame):
         """Add labels to frame
@@ -151,6 +160,23 @@ class EventGeneratorSphereInfTrackLabels(MCLabelsBase):
             distance=dist_exit,
             track_cache=track_cache,
         )
+
+        # -----------------
+        # add energy losses
+        # -----------------
+        if self._bin_width is not None:
+            energy_losses = mu_utils.get_inf_muon_binned_energy_losses(
+                frame=frame,
+                convex_hull=self._sphere_convex_hull,
+                muon=muon,
+                bin_width=self._bin_width,
+                extend_boundary=0,
+                compute_em_equivalent=True,
+                include_under_over_flow=False,
+            )
+            for i, energy_loss in enumerate(energy_losses):
+                labels["energy_loss_{:04d}".format(i)] = energy_loss
+        # -----------------
 
         # gather labels
         labels["entry_energy"] = entry_energy

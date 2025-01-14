@@ -11,6 +11,7 @@ from ic3_labels.labels.utils import geometry
 from ic3_labels.labels.utils.general import get_ids_of_particle_and_daughters
 from ic3_labels.labels.utils.general import particle_is_inside
 from ic3_labels.labels.utils.general import get_weighted_primary
+from ic3_labels.labels.utils.cascade import get_cascade_em_equivalent
 
 
 def is_muon(particle):
@@ -510,6 +511,7 @@ def get_inf_muon_binned_energy_losses(
     muon,
     bin_width=10,
     extend_boundary=150,
+    compute_em_equivalent=False,
     include_under_over_flow=False,
 ):
     """Function to get binned energy losses along an infinite track.
@@ -533,14 +535,16 @@ def get_inf_muon_binned_energy_losses(
         defining the desired convex volume
     muon : I3Particle
         Muon
-    bin_width : float.
+    bin_width : float
         defines width of bins [in meters]
         Energy losses in I3MCtree are binned along the
         track in bins of this width
-    extend_boundary : float.
+    extend_boundary : float
         Extend boundary of convex_hull by this distance [in meters].
         The first bin will be at convex_hull + extend_boundary
-    include_under_over_flow : bool.
+    compute_em_equivalent : bool
+        If True, the energy losses are converted to EM-equivalent energy.
+    include_under_over_flow : bool
         If True, an underflow and overflow bin is added for energy
         losses outside of convex_hull + extend_boundary
 
@@ -587,8 +591,14 @@ def get_inf_muon_binned_energy_losses(
             # this is likely a track segment update: skip this
             continue
 
+        # compute EM-equivalent energy of daughter
+        if compute_em_equivalent:
+            energy = get_cascade_em_equivalent(frame["I3MCTree"], daughter)
+        else:
+            energy = daughter.energy
+
         distances.append((daughter.pos - bin_start).magnitude)
-        energies.append(daughter.energy)
+        energies.append(energy)
 
     # bin energy losses in bins along track
     binnned_energy_losses, _ = np.histogram(
