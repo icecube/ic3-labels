@@ -593,7 +593,7 @@ def get_inf_muon_binned_energy_losses(
 
         # compute EM-equivalent energy of daughter
         if compute_em_equivalent:
-            energy = get_cascade_em_equivalent(frame["I3MCTree"], daughter)
+            energy = get_cascade_em_equivalent(frame["I3MCTree"], daughter)[0]
         else:
             energy = daughter.energy
 

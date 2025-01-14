@@ -126,6 +126,7 @@ class EventGeneratorSphereInfTrackLabels(MCLabelsBase):
         self._sphere_radius = self.GetParameter("SphereRadius")
         self._bin_width = self.GetParameter("EnergyLossBinWidth")
         self._sphere_convex_hull = Sphere(radius=self._sphere_radius)
+        self._max_bins = (2 * self._sphere_radius) // self._bin_width
 
     def add_labels(self, frame):
         """Add labels to frame
@@ -174,8 +175,11 @@ class EventGeneratorSphereInfTrackLabels(MCLabelsBase):
                 compute_em_equivalent=True,
                 include_under_over_flow=False,
             )
-            for i, energy_loss in enumerate(energy_losses):
-                labels["energy_loss_{:04d}".format(i)] = energy_loss
+            for i in range(self._max_bins):
+                if i >= len(energy_losses):
+                    labels[f"energy_loss_{i:04d}"] = 0.0
+                else:
+                    labels[f"energy_loss_{i:04d}"] = energy_losses[i]
         # -----------------
 
         # gather labels
