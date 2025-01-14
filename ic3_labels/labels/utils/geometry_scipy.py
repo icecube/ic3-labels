@@ -45,6 +45,12 @@ def get_sphere_intersection(radius, anchor, direction):
     return dist_entry, dist_exit
 
 
+class Pair:
+    def __init__(self, first, second):
+        self.first = first
+        self.second = second
+
+
 class Sphere:
     """Wrapper class for sphere as a convex hull"""
 
@@ -52,11 +58,14 @@ class Sphere:
         self.radius = radius
 
     def intersection(self, pos, direction):
-        return get_sphere_intersection(
+        result = get_sphere_intersection(
             radius=self.radius,
             anchor=pos,
             direction=direction,
         )
+        if result is None:
+            return Pair(np.nan, np.nan)
+        return Pair(*result)
 
 
 def ray_triangle_intersection(ray_near, ray_dir, triangle):
