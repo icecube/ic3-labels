@@ -51,6 +51,7 @@ class MCLabelsBase(icetray.I3ConditionalModule):
         self._convex_hull = self.GetParameter("ConvexHull")
         self._output_key = self.GetParameter("OutputKey")
         self._run_on_daq = self.GetParameter("RunOnDAQFrames")
+        print(self._mcpe_series_map_name)
 
     def DAQ(self, frame):
         """Run on DAQ frames.
@@ -94,14 +95,15 @@ class MCLabelsBase(icetray.I3ConditionalModule):
 
     def Geometry(self, frame):
         geoMap = frame["I3Geometry"].omgeo
+
         domPosDict = {
-            (i[0][0], i[0][1]): (
-                i[1].position.x,
-                i[1].position.y,
-                i[1].position.z,
+            (omkey[0], omkey[1]): (
+                om.position.x,
+                om.position.y,
+                om.position.z,
             )
-            for i in geoMap
-            if i[1].omtype.name == "IceCube"
+            for omkey, om in geoMap.items()
+            if om.omtype.name == "IceCube"
         }
 
         if self._convex_hull is None:
