@@ -63,14 +63,15 @@ class AtmosphericSelfVetoModule(icetray.I3ConditionalModule):
 
     def Geometry(self, frame):
         geoMap = frame["I3Geometry"].omgeo
+
         domPosDict = {
-            (i[0][0], i[0][1]): (
-                i[1].position.x,
-                i[1].position.y,
-                i[1].position.z,
+            (omkey[0], omkey[1]): (
+                om.position.x,
+                om.position.y,
+                om.position.z,
             )
-            for i in geoMap
-            if i[1].omtype.name == "IceCube"
+            for omkey, om in geoMap.items()
+            if om.omtype.name == "IceCube"
         }
         points = [
             domPosDict[(31, 1)],
