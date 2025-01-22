@@ -51,7 +51,6 @@ class MCLabelsBase(icetray.I3ConditionalModule):
         self._convex_hull = self.GetParameter("ConvexHull")
         self._output_key = self.GetParameter("OutputKey")
         self._run_on_daq = self.GetParameter("RunOnDAQFrames")
-        print(self._mcpe_series_map_name)
 
     def DAQ(self, frame):
         """Run on DAQ frames.
