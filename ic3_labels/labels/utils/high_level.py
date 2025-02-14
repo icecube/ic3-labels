@@ -1431,6 +1431,17 @@ def get_cascade_parameters(
                 extend_boundary=float("inf"),
                 sanity_check=False,
             )
+            if cascade is None:
+                cascade = dataclasses.I3Particle()
+                cascade.pos.x = float("nan")
+                cascade.pos.y = float("nan")
+                cascade.pos.z = float("nan")
+                cascade.time = float("nan")
+                cascade.energy = float("nan")
+                cascade.length = float("nan")
+                cascade.dir = dataclasses.I3Direction(
+                    float("nan"), float("nan")
+                )
 
         else:
             # ------------------------------
@@ -1454,7 +1465,7 @@ def get_cascade_parameters(
             e_hadron = 0.0
             e_track = energy
 
-    if write_mc_cascade_to_frame:
+    if write_mc_cascade_to_frame and cascade is not None:
         frame["MCCascade"] = cascade
 
     labels["cascade_x"] = cascade.pos.x
@@ -1467,8 +1478,13 @@ def get_cascade_parameters(
     labels["cascade_max_extension"] = cascade.length
 
     # compute fraction of energy for each component: EM, hadronic, track
-    labels["energy_fraction_em"] = e_em / cascade.energy
-    labels["energy_fraction_hadron"] = e_hadron / cascade.energy
-    labels["energy_fraction_track"] = e_track / cascade.energy
+    if cascade.energy > 0:
+        labels["energy_fraction_em"] = e_em / cascade.energy
+        labels["energy_fraction_hadron"] = e_hadron / cascade.energy
+        labels["energy_fraction_track"] = e_track / cascade.energy
+    else:
+        labels["energy_fraction_em"] = float("nan")
+        labels["energy_fraction_hadron"] = float("nan")
+        labels["energy_fraction_track"] = float("nan")
 
     return labels
