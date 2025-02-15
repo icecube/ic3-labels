@@ -120,11 +120,18 @@ class EventGeneratorSphereInfTrackLabels(MCLabelsBase):
             "width [in GeV] and added to the labels.",
             None,
         )
+        self.AddParameter(
+            "NumCascades",
+            "If provided, the n highest energy losses are "
+            "added to the labels.",
+            None,
+        )
 
     def Configure(self):
         MCLabelsBase.Configure(self)
         self._sphere_radius = self.GetParameter("SphereRadius")
         self._bin_width = self.GetParameter("EnergyLossBinWidth")
+        self._n_cascades = self.GetParameter("NumCascades")
         self._sphere_convex_hull = Sphere(radius=self._sphere_radius)
         self._max_bins = (2 * self._sphere_radius) // self._bin_width
 
@@ -180,6 +187,28 @@ class EventGeneratorSphereInfTrackLabels(MCLabelsBase):
                     labels[f"energy_loss_{i:04d}"] = 0.0
                 else:
                     labels[f"energy_loss_{i:04d}"] = energy_losses[i]
+
+        # ------------
+        # Add cascades
+        # ------------
+        if self._n_cascades is not None:
+            energy_depositions_dict = get_track_energy_depositions(
+                mc_tree=frame["I3MCTree"],
+                track=muon,
+                num_to_remove=self._n_cascades,
+                correct_for_em_loss=True,
+                extend_boundary=max(0, self._sphere_radius - 600),
+            )
+            cascades = energy_depositions_dict["cascades"]
+            for i in range(self._n_cascades):
+                if i >= len(cascades):
+                    labels[f"cascade_{i:04d}_energy"] = 0.0
+                    labels[f"cascade_{i:04d}_distance"] = 0.0
+                else:
+                    cascade = cascades[i]
+                    distance = (cascade.pos - muon.pos).magnitude - dist_entry
+                    labels[f"cascade_{i:04d}_energy"] = cascade.energy
+                    labels[f"cascade_{i:04d}_distance"] = distance
         # -----------------
 
         # gather labels
