@@ -1045,6 +1045,7 @@ def get_cascade_labels(
     labels["PrimaryDirectionZ"] = primary.dir.z
 
     # set pid variables to false per default
+    labels["p_neutrino"] = 0
     labels["p_starting"] = 0
     labels["p_starting_300m"] = 0
     labels["p_starting_glashow"] = 0
@@ -1067,6 +1068,7 @@ def get_cascade_labels(
         # --------------------
         # NuGen dataset
         # --------------------
+        labels["p_neutrino"] = 1
         mctree = frame[mctree_name]
         cascade = get_cascade_of_primary_nu(
             frame, primary, convex_hull=None, extend_boundary=extend_boundary
