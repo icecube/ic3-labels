@@ -52,8 +52,9 @@ def get_interaction_neutrino(
     nu_in_ice = None
     for p in mctree:
         if p.is_neutrino and p.location_type_string == "InIce":
-            nu_in_ice = p
-            break
+            if mctree.is_in_subtree(primary.id, p.id):
+                nu_in_ice = p
+                break
 
     if nu_in_ice is not None:
 

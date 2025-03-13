@@ -17,6 +17,7 @@ from ic3_labels.labels.utils.geometry_scipy import (
     distance_to_axis_aligned_Volume,
     distance_to_icecube_hull,
     distance_to_deepcore_hull,
+    get_sphere_intersection,
 )
 
 

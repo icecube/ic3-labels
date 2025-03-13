@@ -136,6 +136,16 @@ class MCLabelsBase(icetray.I3ConditionalModule):
                     detector.icecube_hull_points_i3,
                     padding=extension,
                 )
+
+            elif self._convex_hull.startswith("sphere_r"):
+                radius = float(self._convex_hull.split("_r")[-1])
+
+                # Note: Sphere.intersection method is broken in older
+                # icetray versions. Use the following instead:
+                from ic3_labels.labels.utils.geometry_scipy import Sphere
+
+                self._convex_hull = Sphere(radius)
+                # self._convex_hull = phys_services.Sphere(0.0, radius)
             else:
                 self._convex_hull = getattr(detector, self._convex_hull)
 

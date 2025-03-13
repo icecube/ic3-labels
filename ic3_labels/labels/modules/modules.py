@@ -271,7 +271,12 @@ class MCLabelsMuonScattering(MCLabelsBase):
 class MCLabelsMuonEnergyLosses(MCLabelsBase):
     def __init__(self, context):
         MCLabelsBase.__init__(self, context)
-        self.AddParameter("MuonKey", "Name of the muon.", "MCPrimary")
+        self.AddParameter(
+            "MuonKey",
+            "Name of the muon to consider for the energy losses."
+            "If None, the muon from the primary key is used.",
+            None,
+        )
         self.AddParameter("BinWidth", "Bin width [in meters].", 10)
         self.AddParameter(
             "ExtendBoundary",
@@ -300,12 +305,26 @@ class MCLabelsMuonEnergyLosses(MCLabelsBase):
 
     def add_labels(self, frame):
 
+        # get muon
+        if self._muon_key is None:
+            # get track_cache
+            track_cache, _ = mu_utils.get_muongun_track_cache(frame)
+
+            muon = mu_utils.get_muon(
+                frame=frame,
+                primary=frame[self._primary_key],
+                convex_hull=self._convex_hull,
+                track_cache=track_cache,
+            )
+        else:
+            muon = frame[self._muon_key]
+
         labels = dataclasses.I3MapStringDouble()
 
         binned_energy_losses = mu_utils.get_inf_muon_binned_energy_losses(
             frame=frame,
             convex_hull=self._convex_hull,
-            muon=frame[self._muon_key],
+            muon=muon,
             bin_width=self._bin_width,
             extend_boundary=self._extend_boundary,
             include_under_over_flow=self._include_under_over_flow,

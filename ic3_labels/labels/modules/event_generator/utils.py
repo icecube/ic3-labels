@@ -7,6 +7,74 @@ from ic3_labels.labels.utils import muon as mu_utils
 from ic3_labels.labels.utils.cascade import convert_to_em_equivalent
 
 
+def get_muon_from_frame(frame, primary):
+    """Get muon from frame
+
+    Parameters
+    ----------
+    frame : I3Frame
+        The current frame.
+    primary : I3Particle
+        The primary particle.
+
+    Returns
+    -------
+    I3Particle
+        The muon from the frame
+
+    Raises
+    ------
+    ValueError
+        If not muon is found.
+    """
+
+    # NuGen Dataset
+    if primary.is_neutrino:
+        muon = mu_utils.get_muon_of_inice_neutrino(frame)
+
+        if muon is None:
+            print(frame["I3MCTree"])
+            raise ValueError("Did not find a muon!")
+
+    # MuonGun Dataset
+    elif (
+        primary.type_string == "unknown" and primary.pdg_encoding == 0
+    ) or mu_utils.is_muon(primary):
+
+        if mu_utils.is_muon(primary):
+            muon = primary
+
+            # -----------------------------
+            # muon primary: MuonGun dataset
+            # -----------------------------
+            daugters = frame["I3MCTree"].get_daughters(muon)
+            if len(daugters) == 1:
+                daughter = daugters[0]
+                if mu_utils.is_muon(daughter) and (
+                    (daughter.id == primary.id)
+                    and (daughter.dir == primary.dir)
+                    and (daughter.pos == primary.pos)
+                    and (daughter.energy == primary.energy)
+                ):
+                    muon = daughter
+
+        else:
+            daughters = frame["I3MCTree"].get_daughters(primary)
+            muon = daughters[0]
+
+            # Perform some safety checks to make sure that this is MuonGun
+            assert (
+                len(daughters) == 1
+            ), "Expected 1 daughter for MuonGun, but got {!r}".format(
+                daughters
+            )
+            assert mu_utils.is_muon(muon), "Expected muon but got {!r}".format(
+                muon
+            )
+
+    return muon
+
+
 def get_track_energy_depositions(
     mc_tree,
     track,
